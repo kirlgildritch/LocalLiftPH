@@ -1,0 +1,165 @@
+.auth {
+ 
+    padding: 40px 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.auth-container {
+    max-width: 900px;
+    margin: auto;
+    padding: 0 20px;
+}
+.input-wrap select {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    outline: none;
+    background: #fff;
+}
+
+.input-wrap select:focus {
+    border-color: #ff4da6;
+}
+.checkout-breadcrumb {
+    max-width: 1250px;
+    margin: 0 auto 24px;
+    padding: 0 20px;
+    font-size: 15px;
+    color: #8a7890;
+}
+
+.checkout-breadcrumb a {
+    color: #f45aaa;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.checkout-breadcrumb span {
+    margin: 0 6px;
+}
+    
+
+.auth-card {
+    background: #fff;
+    padding: 40px;
+    border-radius: 18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+    text-align: center;
+}
+
+.auth-card h2 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.auth-card p {
+    color: #777;
+    margin-bottom: 30px;
+}
+
+.input-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    font-weight: 500;
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.input-group label i {
+    margin-right: 8px;
+    color: #888;
+}
+
+.input-wrap {
+    position: relative;
+}
+
+.input-wrap i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+
+.input-wrap input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    outline: none;
+}
+
+.input-wrap input:focus {
+    border-color: #ff4da6;
+}
+
+.forgot {
+    text-align: right;
+    margin-bottom: 20px;
+}
+
+.forgot a {
+    color: #ff4da6;
+    font-size: 14px;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(180deg,#ff6aa9,#ff3d8d);
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.auth-btn:hover {
+    opacity: 0.9;
+}
+
+.terms {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+
+.terms input {
+    accent-color: #ff4da6;
+}
+
+.terms a {
+    color: #ff4da6;
+    font-weight: 500;
+}
+
+.auth-footer {
+    margin-top: 20px;
+    color: #666;
+}
+
+.auth-footer a {
+    color: #ff4da6;
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* responsive */
+@media(max-width:768px){
+    .auth-card {
+        padding: 25px;
+    }
+
+    .auth-card h2 {
+        font-size: 24px;
+    }
+}
