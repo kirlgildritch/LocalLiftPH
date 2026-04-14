@@ -38,26 +38,49 @@
             </button>
         </form>
 
-        <div class="header-icons">
-            <a href="{{ route('login') }}" class="icon-box">
-                <i class="fa-regular fa-user"></i>
-                <span>Login</span>
-            </a>
+                <div class="header-icons">
 
-            <a href="{{ route('register') }}" class="icon-box">
-                <i class="fa-regular fa-id-badge"></i>
-                <span>Register</span>
-            </a>
+            @auth
+                <!-- Profile -->
+                <a href="{{ url('/profile') }}" class="icon-box">
+                    <i class="fa-regular fa-user"></i>
+                    <span>{{ Auth::user()->name }}</span>
+                </a>
 
+                <!-- Logout -->
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" class="icon-box logout-btn">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            @else
+                <!-- Login -->
+                <a href="{{ route('login') }}" class="icon-box">
+                    <i class="fa-regular fa-user"></i>
+                    <span>Login</span>
+                </a>
+
+                <!-- Register -->
+                <a href="{{ route('register') }}" class="icon-box">
+                    <i class="fa-regular fa-id-badge"></i>
+                    <span>Register</span>
+                </a>
+            @endauth
+
+            <!-- Wishlist -->
             <a href="#" class="icon-box">
                 <i class="fa-regular fa-heart"></i>
                 <span>Wishlist</span>
             </a>
 
+            <!-- Cart -->
             <a href="{{ url('/cart') }}" class="icon-box">
                 <i class="fa-solid fa-cart-shopping"></i>
                 <span>Cart</span>
             </a>
+
         </div>
     </div>
 </header>
@@ -68,6 +91,22 @@
         <a href="{{ route('shops.index') }}" class="{{ request()->routeIs('shops.index') ? 'active' : '' }}">SHOPS</a>
         <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">PRODUCTS</a>
         <a href="#">ABOUT</a>
-        <a href="#" class="seller-link"><i class="fa-solid fa-store"></i>BECOME A SELLER</a>
+        
+        @auth
+            @if(auth()->user()->is_seller)
+                <a href="{{ route('seller.dashboard') }}" class="seller-link">
+                    <i class="fa-solid fa-store"></i>SELLER DASHBOARD
+                </a>
+            @else
+                <a href="{{ route('seller.setup') }}" class="seller-link">
+                    <i class="fa-solid fa-store"></i>BECOME A SELLER
+                </a>
+            @endif
+        @else
+            <a href="{{ route('login') }}" class="seller-link">
+                <i class="fa-solid fa-store"></i>BECOME A SELLER
+            </a>
+        @endauth
+      
     </div>
 </nav>

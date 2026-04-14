@@ -1,0 +1,61 @@
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.products-table th,
+.products-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f3d8e5;
+    text-align: left;
+    font-size: 15px;
+}
+
+.products-table th {
+    background: #fff6fa;
+    color: #5b435d;
+}
+
+.status {
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* STATUS COLORS */
+.status.completed {
+    background: #e6f7ec;
+    color: #2e7d32;
+}
+
+.status.processing {
+    background: #fff4e5;
+    color: #b26a00;
+}
+
+.status.shipped {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.status.pending {
+    background: #fdecea;
+    color: #c62828;
+}
+
+.edit-btn {
+    background: #ffe4f0;
+    color: #d63384;
+    padding: 8px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.empty-text {
+    text-align: center;
+    color: #888;
+    padding: 20px;
+}

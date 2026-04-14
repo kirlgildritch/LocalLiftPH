@@ -1,24 +1,3 @@
- <div class="topbar">
-    <div class="container">
-      <div class="topbar-left">
-        <div class="social-icons">
-          <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
-          <a href="#"><i class="fa-brands fa-instagram"></i></a>
-          <a href="#"><i class="fa-solid fa-check"></i></a>
-          <a href="#"><i class="fa-solid fa-video"></i></a>
-        </div>
-      </div>
-
-      <div class="topbar-center">
-        <i class="fa-solid fa-truck"></i> FREE SHIPPING THIS WEEK! ORDER OVER ₱500
-      </div>
-
-      <div class="topbar-right">
-        <span>PHP <i class="fa-solid fa-chevron-down" style="font-size:12px;"></i></span>
-        <span>ENGLISH <i class="fa-solid fa-chevron-down" style="font-size:12px;"></i></span>
-      </div>
-    </div>
-  </div>
 
   <!-- HEADER -->
   <header class="main-header">
@@ -37,28 +16,86 @@
       </div>
 
       <div class="header-right">
-        <div class="icon-badge">
-          <i class="fa-regular fa-bell"></i>
-          <span class="badge">3</span>
-        </div>
+          <div class="notification-dropdown">
+        <button class="notification-btn" id="notificationToggle" type="button">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notif-badge">3</span>
+        </button>
 
-        <div class="icon-badge">
-          <i class="fa-regular fa-user"></i>
-          <span class="badge">3</span>
+        <div class="notification-menu" id="notificationMenu">
+            <div class="notification-header">
+                <h4>Notifications</h4>
+            </div>
+
+            <a href="#" class="notification-item unread">
+                <div class="notif-icon"><i class="fa-solid fa-bag-shopping"></i></div>
+                <div class="notif-content">
+                    <p><strong>New Order</strong></p>
+                    <span>You received a new order from Anna Santos.</span>
+                    <small>2 mins ago</small>
+                </div>
+            </a>
+
+            <a href="#" class="notification-item unread">
+                <div class="notif-icon"><i class="fa-regular fa-envelope"></i></div>
+                <div class="notif-content">
+                    <p><strong>New Message</strong></p>
+                    <span>Mark Reyes sent you a message.</span>
+                    <small>10 mins ago</small>
+                </div>
+            </a>
+
+            <a href="#" class="notification-item">
+                <div class="notif-icon"><i class="fa-solid fa-box"></i></div>
+                <div class="notif-content">
+                    <p><strong>Order Shipped</strong></p>
+                    <span>Your order #1021 has been marked as shipped.</span>
+                    <small>1 hour ago</small>
+                </div>
+            </a>
+
+            <div class="notification-footer">
+                <a href="#">View All Notifications</a>
+            </div>
         </div>
+    </div>
+
+      
 
         <div class="user-box">
-          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=300&auto=format&fit=crop" alt="User">
-          <h4>Hi, Maria!</h4>
-        </div>
+          <div class="profile-dropdown">
+              <div class="profile-btn" id="profileToggle">
+                    @if(auth()->user()->profile_image)
+                        <img src="{{ asset('storage/' . auth()->user()->profile_image) }}" alt="Profile" class="header-profile-img">
+                    @else
+                        <i class="fa-regular fa-circle-user profile-icon"></i>
+                    @endif
+
+                    <span>Hi, {{ auth()->user()->name }}!</span>
+                </div>
+              <div class="profile-menu" id="profileMenu">
+                  <a href="{{ route('seller.profile') }}">My Profile</a>
+                 
+                  <a href="{{ route('seller.settings') }}">
+                      Settings
+                  </a>
+
+                  <form action="{{ route('logout') }}" method="POST">
+                      @csrf
+                      <button type="submit" class="logout">Logout</button>
+                  </form>
+              </div>
+          </div>
       </div>
+
+
     </div>
   </header>
 
   <!-- NAV -->
   <nav class="seller-nav">
     <div class="container">
-      <a href="#" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
+      <a href="{{ url('/seller-dashboard') }}" class="active"><i class="fa-solid fa-house"></i> Dashboard</a>
       <a href="#"><i class="fa-solid fa-location-dot"></i> AI Contacts</a>
       <a href="#"><i class="fa-regular fa-envelope"></i> Shop</a>
       <a href="#"><i class="fa-solid fa-gear"></i> Info</a>
@@ -66,3 +103,4 @@
       <a href="#">More <i class="fa-solid fa-chevron-down" style="font-size:12px;"></i></a>
     </div>
   </nav>
+

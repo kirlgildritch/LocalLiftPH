@@ -11,12 +11,23 @@
           <p>LocalLift PH connects local businesses with customers in one easy-to-use marketplace.</p>
 
           <div class="hero-buttons">
-            <a href="products.php" class="btn btn-primary">
+            <a href="{{ url('/products') }}" class="btn btn-primary">
               <i class="fa-solid fa-bag-shopping"></i> SHOP NOW
             </a>
-            <a href="seller_register.php" class="btn btn-outline">
-              <i class="fa-solid fa-store"></i> BECOME A SELLER
+            
+            @auth
+            @if(auth()->user()->is_seller)
+                
+            @else
+                <a href="{{ route('seller.setup') }}" class="btn btn-outline">
+                    <i class="fa-solid fa-store"></i>BECOME A SELLER
+                </a>
+            @endif
+        @else
+            <a href="{{ route('login') }}" class="btn btn-outline">
+                <i class="fa-solid fa-store"></i>BECOME A SELLER
             </a>
+        @endauth
           </div>
         </div>
 

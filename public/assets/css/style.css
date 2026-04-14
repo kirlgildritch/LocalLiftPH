@@ -221,6 +221,19 @@
       margin-right:8px;
     }
 
+    .logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    padding: 0;
+    }
+
+    .header-icons form {
+        display: inline-block;
+    }
+
 
     footer{
       margin-top:16px;

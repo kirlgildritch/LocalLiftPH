@@ -1,0 +1,234 @@
+.shop-preview-card {
+    background: #fff8fb;
+    border: 1px solid #f3d8e5;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.shop-top {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+}
+
+.shop-logo-wrap {
+    flex-shrink: 0;
+}
+
+.shop-logo {
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 18px;
+    border: 2px solid #ffd6e8;
+    background: #fff;
+}
+
+.shop-logo-placeholder {
+    width: 110px;
+    height: 110px;
+    border-radius: 18px;
+    background: #ffe7f1;
+    color: #ff4f93;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    border: 2px solid #ffd6e8;
+}
+
+.shop-main-info h3 {
+    margin: 0 0 10px;
+    font-size: 30px;
+    color: #332433;
+}
+
+.shop-description {
+    margin: 0 0 14px;
+    color: #5b435d;
+    line-height: 1.6;
+}
+
+.shop-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 20px;
+    color: #6b556c;
+    font-size: 14px;
+}
+
+.shop-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shop-status.open {
+    color: #2e7d32;
+}
+
+.shop-status.closed {
+    color: #c62828;
+}
+
+.shop-status.vacation {
+    color: #b26a00;
+}
+
+.preview-section {
+    margin-top: 28px;
+}
+
+.section-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-title-row h3 {
+    margin: 0;
+    font-size: 24px;
+    color: #332433;
+}
+
+.product-count {
+    background: #ffe4f0;
+    color: #c53a7b;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.policy-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.policy-card {
+    background: #fff8fb;
+    border: 1px solid #f3d8e5;
+    border-radius: 18px;
+    padding: 20px;
+}
+
+.policy-card h4 {
+    margin: 0 0 10px;
+    color: #3d2b3d;
+    font-size: 18px;
+}
+
+.policy-card p {
+    margin: 0;
+    color: #5b435d;
+    line-height: 1.6;
+}
+
+.policy-card.full-width {
+    grid-column: 1 / -1;
+}
+
+.product-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.product-preview-card {
+    background: #fff;
+    border: 1px solid #f3d8e5;
+    border-radius: 18px;
+    overflow: hidden;
+    transition: 0.3s ease;
+}
+
+.product-preview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(244, 114, 182, 0.10);
+}
+
+.product-image-wrap {
+    height: 210px;
+    background: #fff8fb;
+}
+
+.product-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ff4f93;
+    font-size: 36px;
+    background: #ffe7f1;
+}
+
+.product-preview-content {
+    padding: 16px;
+}
+
+.product-preview-content h4 {
+    margin: 0 0 6px;
+    color: #332433;
+    font-size: 18px;
+}
+
+.product-category {
+    margin: 0 0 12px;
+    color: #8a738c;
+    font-size: 14px;
+}
+
+.product-preview-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.product-price {
+    color: #ff4f93;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.product-stock {
+    color: #6c596e;
+    font-size: 13px;
+}
+
+.empty-preview {
+    grid-column: 1 / -1;
+    background: #fff8fb;
+    border: 1px dashed #f3d8e5;
+    border-radius: 18px;
+    padding: 30px;
+    text-align: center;
+    color: #8a738c;
+}
+
+@media (max-width: 1100px) {
+    .product-preview-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .shop-top {
+        flex-direction: column;
+    }
+
+    .policy-grid,
+    .product-preview-grid {
+        grid-template-columns: 1fr;
+    }
+}

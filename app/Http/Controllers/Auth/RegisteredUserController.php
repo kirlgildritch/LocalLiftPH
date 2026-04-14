@@ -37,12 +37,13 @@ class RegisteredUserController extends Controller
             'role' => ['required', 'in:buyer,seller'],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'role' => $request->role,
-            'password' => Hash::make($request->password),
-        ]);
+       $user = User::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'role' => $request->role,
+        'is_seller' => $request->role === 'seller' ? 1 : 0,
+        'password' => Hash::make($request->password),
+    ]);
 
         event(new Registered($user));
 

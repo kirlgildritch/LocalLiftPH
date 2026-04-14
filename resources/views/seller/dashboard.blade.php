@@ -8,34 +8,7 @@
       <div class="dashboard-layout">
 
         <!-- SIDEBAR -->
-        <aside class="sidebar">
-          <div class="sidebar-title">
-            <i class="fa-solid fa-house"></i> Dashboard
-          </div>
-
-          <div class="sidebar-menu">
-            <a href="#">
-              <div class="left"><i class="fa-solid fa-circle-check"></i> My Products</div>
-            </a>
-            <a href="#">
-              <div class="left"><i class="fa-solid fa-bag-shopping"></i> Orders</div>
-            </a>
-            <a href="#">
-              <div class="left"><i class="fa-solid fa-dollar-sign"></i> Earnings</div>
-            </a>
-            <a href="#">
-              <div class="left"><i class="fa-regular fa-envelope"></i> Messages</div>
-              <span class="mini-badge">2</span>
-            </a>
-            <a href="#">
-              <div class="left"><i class="fa-solid fa-gear"></i> Settings</div>
-            </a>
-            <a href="#">
-              <div class="left"><i class="fa-solid fa-power-off"></i> Logout</div>
-            </a>
-          </div>
-        </aside>
-
+       @include('seller.partials.sidebar')
         <!-- MAIN -->
         <main class="dashboard-main">
           <h2>Welcome to Your Seller Dashboard!</h2>

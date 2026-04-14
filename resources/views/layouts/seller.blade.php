@@ -10,17 +10,25 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <link rel="stylesheet" href="{{ asset('assets/css/seller_dashboard.css') }}">
-    
+    <style>
+            html, body {
+            height: 100%;
+            margin: 0;
+        }
+
+    </style>
     
 </head>
 <body>
+    <div class="page-wrapper">
+        @include('partials.seller-header')
 
-    @include('partials.seller-header')
+        <main class="page-content">
+            @yield('content')
+        </main>
 
-    <main>
-        @yield('content')
-    </main>
+        @include('partials.seller-footer')
+    </div>
 
-    @include('partials.seller-footer')
 </body>
 </html>
