@@ -2,37 +2,54 @@
 
 @section('content')
   <link rel="stylesheet" href="{{ asset('assets/css/home.css') }}">
-  <section class="hero">
-    <div class="container">
-      <div class="hero-box">
-        <div class="hero-content">
-          <div class="small">Support Local, Shop Local</div>
-          <h1>Discover Amazing Local Products Near You</h1>
-          <p>LocalLift PH connects local businesses with customers in one easy-to-use marketplace.</p>
 
-          <div class="hero-buttons">
-            <a href="{{ url('/products') }}" class="btn btn-primary">
-              <i class="fa-solid fa-bag-shopping"></i> SHOP NOW
-            </a>
-            
-            @auth
-            @if(auth()->user()->is_seller)
-                
-            @else
-                <a href="{{ route('seller.setup') }}" class="btn btn-outline">
-                    <i class="fa-solid fa-store"></i>BECOME A SELLER
-                </a>
-            @endif
-        @else
-            <a href="{{ route('login') }}" class="btn btn-outline">
-                <i class="fa-solid fa-store"></i>BECOME A SELLER
-            </a>
-        @endauth
-          </div>
+  <section class="hero">
+    <div class="container hero-shell">
+      <div class="hero-copy">
+        <div class="hero-background-carousel" aria-hidden="true">
+          <span class="hero-slide"></span>
+          <span class="hero-slide"></span>
+          <span class="hero-slide"></span>
         </div>
 
-        <div class="hero-image">
-          <img src="{{ asset('assets/image/heroBanner.png') }}" alt="Hero Banner">
+        <div class="hero-overlay"></div>
+
+        <div class="hero-content">
+          <div class="hero-pill">
+            <span class="status-dot"></span>
+            Independent marketplace for local products and trusted sellers
+          </div>
+
+          <h1>
+            <span class="hero-accent">LocalLift</span>
+            for buyers discovering
+            standout local products
+          </h1>
+
+          <p>
+            Explore curated categories, reliable shops, and product collections designed to help local businesses look more premium online.
+          </p>
+
+          <div class="hero-actions">
+            <a href="{{ url('/products') }}" class="btn btn-primary">
+              <i class="fa-solid fa-bag-shopping"></i>
+              Explore Products
+            </a>
+
+            @auth
+              @if(!auth()->user()->is_seller)
+                <a href="{{ route('seller.setup') }}" class="btn btn-outline">
+                  <i class="fa-solid fa-store"></i>
+                  Become a Seller
+                </a>
+              @endif
+            @else
+              <a href="{{ route('login') }}" class="btn btn-outline">
+                <i class="fa-solid fa-store"></i>
+                Become a Seller
+              </a>
+            @endauth
+          </div>
         </div>
       </div>
     </div>
@@ -41,35 +58,27 @@
   <section class="section">
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title">Featured Categories</h2>
-        <a href="categories.php" class="view-all">View All Categories <i class="fa-solid fa-arrow-right"></i></a>
+        <div>
+          <span class="section-kicker">Browse</span>
+          <h2 class="section-title">Featured Categories</h2>
+        </div>
+        <a href="{{ route('categories.index') }}" class="view-all">View all categories <i class="fa-solid fa-arrow-right"></i></a>
       </div>
 
       <div class="categories">
-        <a href="products.php?category=food" class="category-card">
-          <div class="cat-icon"><i class="fa-solid fa-utensils"></i></div>
-          <h4>Food & Drinks</h4>
-        </a>
-
-        <a href="products.php?category=clothing" class="category-card">
-          <div class="cat-icon"><i class="fa-solid fa-shirt"></i></div>
-          <h4>Clothing & Fashion</h4>
-        </a>
-
-        <a href="products.php?category=crafts" class="category-card">
-          <div class="cat-icon"><i class="fa-solid fa-palette"></i></div>
-          <h4>Handmade Crafts</h4>
-        </a>
-
-        <a href="products.php?category=accessories" class="category-card">
-          <div class="cat-icon"><i class="fa-solid fa-bag-shopping"></i></div>
-          <h4>Accessories</h4>
-        </a>
-
-        <a href="products.php?category=souvenirs" class="category-card">
-          <div class="cat-icon"><i class="fa-solid fa-gift"></i></div>
-          <h4>Souvenirs & Gifts</h4>
-        </a>
+        @forelse($featuredCategories ?? collect() as $category)
+          <a href="{{ route('products.index', ['search' => $category->name]) }}" class="category-card">
+            <div class="cat-icon"><i class="fa-solid {{ $category->icon }}"></i></div>
+            <h4>{{ $category->name }}</h4>
+            <p>{{ $category->count }} products available in this category.</p>
+          </a>
+        @empty
+          <a href="{{ route('categories.index') }}" class="category-card">
+            <div class="cat-icon"><i class="fa-solid fa-grid-2"></i></div>
+            <h4>Browse Categories</h4>
+            <p>Explore available categories once sellers publish active products.</p>
+          </a>
+        @endforelse
       </div>
     </div>
   </section>
@@ -77,121 +86,60 @@
   <section class="section">
     <div class="container">
       <div class="section-header">
-        <h2 class="section-title">Featured Shops</h2>
-        <a href="{{ url('/shops') }}" class="view-all">View All Shops <i class="fa-solid fa-arrow-right"></i></a>
-      </div>
-
-      <div class="shops">
-        <div class="shop-card">
-          <div class="shop-logo">
-            <img src="assets/shop1.png" alt="Brew & Beans Café">
-          </div>
-          <div class="shop-info">
-            <h3>Brew & Beans Café</h3>
-            <p>Food & Drinks</p>
-            <div class="rating"><i class="fa-solid fa-star"></i> 4.8 (120)</div>
-            <a href="shop_details.php?id=1" class="mini-btn">VISIT SHOP</a>
-          </div>
+        <div>
+          <span class="section-kicker">Products</span>
+          <h2 class="section-title">Featured Products</h2>
         </div>
-
-        <div class="shop-card">
-          <div class="shop-logo">
-            <img src="assets/shop2.png" alt="Threads & Style PH">
-          </div>
-          <div class="shop-info">
-            <h3>Threads & Style PH</h3>
-            <p>Clothing & Fashion</p>
-            <div class="rating"><i class="fa-solid fa-star"></i> 4.7 (98)</div>
-            <a href="shop_details.php?id=2" class="mini-btn">VISIT SHOP</a>
-          </div>
-        </div>
-
-        <div class="shop-card">
-          <div class="shop-logo">
-            <img src="assets/shop3.png" alt="Likhang Kamay Crafts">
-          </div>
-          <div class="shop-info">
-            <h3>Likhang Kamay Crafts</h3>
-            <p>Handmade Crafts</p>
-            <div class="rating"><i class="fa-solid fa-star"></i> 4.9 (150)</div>
-            <a href="shop_details.php?id=3" class="mini-btn">VISIT SHOP</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="section-header">
-        <h2 class="section-title">Featured Products</h2>
-        <a href="{{ url('/products') }}" class="view-all">View All Products <i class="fa-solid fa-arrow-right"></i></a>
+        <a href="{{ url('/products') }}" class="view-all">View all products <i class="fa-solid fa-arrow-right"></i></a>
       </div>
 
       <div class="products">
+        @forelse($featuredProducts ?? collect() as $product)
+          <div class="product-card">
+            <div class="product-image">
+              <img
+                src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/image/heroBanner.png') }}"
+                alt="{{ $product->name }}"
+              >
+            </div>
+            <div class="product-info">
+              <span class="product-label">{{ $product->category }}</span>
+              <h4>{{ $product->name }}</h4>
+              <div class="sub">{{ $product->user->name ?? 'LocalLift Seller' }}</div>
+              <div class="price"><small>P</small>{{ number_format($product->price, 2) }}</div>
+              <div class="product-actions">
+                <a href="{{ route('products.show', $product->id) }}" class="details-btn">View Details</a>
 
-        <div class="product-card">
-          <div class="product-image">
-            <img src="assets/product1.png" alt="Banana Chips">
-          </div>
-          <div class="product-info">
-            <h4>Banana Chips</h4>
-            <div class="sub">Crispy & Sweet</div>
-            <div class="price"><small>₱</small>120.00</div>
-            <div class="product-actions">
-              <a href="product_details.php?id=1" class="details-btn">VIEW DETAILS</a>
-              <a href="cart.php" class="cart-btn"><i class="fa-solid fa-cart-shopping"></i> ADD TO CART</a>
+                @auth
+                  @if(auth()->user()->role === 'buyer')
+                    <form action="{{ route('cart.add', $product->id) }}" method="POST" class="add-to-cart-form">
+                      @csrf
+                      <input type="hidden" name="quantity" value="1">
+                      <button type="submit" class="mini-cart-btn">
+                        <i class="fa-solid fa-cart-shopping"></i> Add to Cart
+                      </button>
+                    </form>
+                  @else
+                    <button type="button" class="mini-cart-btn" disabled>
+                      <i class="fa-solid fa-cart-shopping"></i> Add to Cart
+                    </button>
+                  @endif
+                @else
+                  <a href="{{ route('login') }}" class="mini-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Add to Cart</a>
+                @endauth
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image">
-            <img src="assets/product2.png" alt="Handwoven Bag">
-          </div>
-          <div class="product-info">
-            <h4>Handwoven Bag</h4>
-            <div class="sub">Native Style</div>
-            <div class="price"><small>₱</small>350.00</div>
-            <div class="product-actions">
-              <a href="product_details.php?id=2" class="details-btn">VIEW DETAILS</a>
-              <a href="cart.php" class="cart-btn"><i class="fa-solid fa-cart-shopping"></i> ADD TO CART</a>
+        @empty
+          <div class="product-card">
+            <div class="product-info">
+              <span class="product-label">No products yet</span>
+              <h4>Featured products will appear here</h4>
+              <div class="sub">Active seller listings will automatically populate this section.</div>
             </div>
           </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image">
-            <img src="assets/product3.png" alt="Beaded Bracelet">
-          </div>
-          <div class="product-info">
-            <h4>Beaded Bracelet</h4>
-            <div class="sub">Colorful Design</div>
-            <div class="price"><small>₱</small>180.00</div>
-            <div class="product-actions">
-              <a href="product_details.php?id=3" class="details-btn">VIEW DETAILS</a>
-              <a href="cart.php" class="cart-btn"><i class="fa-solid fa-cart-shopping"></i> ADD TO CART</a>
-            </div>
-          </div>
-        </div>
-
-        <div class="product-card">
-          <div class="product-image">
-            <img src="assets/product4.png" alt="Herbal Soap">
-          </div>
-          <div class="product-info">
-            <h4>Herbal Soap</h4>
-            <div class="sub">All-Natural</div>
-            <div class="price"><small>₱</small>95.00</div>
-            <div class="product-actions">
-              <a href="product_details.php?id=4" class="details-btn">VIEW DETAILS</a>
-              <a href="cart.php" class="cart-btn"><i class="fa-solid fa-cart-shopping"></i> ADD TO CART</a>
-            </div>
-          </div>
-        </div>
-
+        @endforelse
       </div>
     </div>
   </section>
-
 @endsection

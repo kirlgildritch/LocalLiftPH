@@ -1,260 +1,180 @@
 @extends('layouts.app')
+@section('title', 'LocalLift PH - Products')
 
- 
-    
 @section('content')
+<link rel="stylesheet" href="{{ asset('assets/css/productsStyle.css') }}">
 
-  <link rel="stylesheet" href="{{ asset('assets/css/productsStyle.css') }}">
-
-   
-  <section class="products-page">
-
-
-
+<section class="market-page products-page">
     <div class="container">
-      <div class="checkout-breadcrumb">
-        <a href="#">Home</a>
-        <span>&gt;</span>
-        <span>Products</span>
+        <div class="page-intro">
+            <div class="checkout-breadcrumb">
+                <a href="{{ route('home') }}">Home</a>
+                <span>&gt;</span>
+                <span>Products</span>
+            </div>
+        </div>
+
+        <div class="market-layout">
+            <aside class="market-sidebar">
+                <div class="panel sidebar-panel">
+                    <h3>Category</h3>
+                    <div class="filter-list">
+                        <a href="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}" class="filter-item {{ empty($category) ? 'active' : '' }}">
+                            <div class="filter-label"><span class="dot"></span> All</div>
+                            <span class="count">{{ $categories->sum('product_count') }}</span>
+                        </a>
+                        @foreach($categories as $categoryOption)
+                            <a
+                                href="{{ route('products.index', array_filter(['search' => $search, 'category' => $categoryOption->category, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                class="filter-item {{ $category === $categoryOption->category ? 'active' : '' }}"
+                            >
+                                <div class="filter-label"><span class="dot"></span> {{ $categoryOption->category }}</div>
+                                <span class="count">{{ $categoryOption->product_count }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+
+                <form action="{{ route('products.index') }}" method="GET" class="panel sidebar-panel">
+                    <h3>Filter By Price</h3>
+                    <div class="price-labels">
+                        <span>Min</span>
+                        <span>Max</span>
+                    </div>
+
+                    @if(!empty($search))
+                        <input type="hidden" name="search" value="{{ $search }}">
+                    @endif
+                    @if(!empty($category))
+                        <input type="hidden" name="category" value="{{ $category }}">
+                    @endif
+                    <input type="hidden" name="sort" value="{{ $sort }}">
+
+                    <div class="price-filter-inputs">
+                        <input type="number" name="min_price" min="0" step="0.01" value="{{ $minPrice }}" placeholder="0">
+                        <input type="number" name="max_price" min="0" step="0.01" value="{{ $maxPrice }}" placeholder="1000">
+                    </div>
+
+                    <button class="action-btn primary-btn full-btn" type="submit">Filter</button>
+                </form>
+
+                <form action="{{ route('products.index') }}" method="GET" class="panel sidebar-panel">
+                    <h3>Sort Results</h3>
+                    @if(!empty($search))
+                        <input type="hidden" name="search" value="{{ $search }}">
+                    @endif
+                    @if(!empty($category))
+                        <input type="hidden" name="category" value="{{ $category }}">
+                    @endif
+                    @if($minPrice !== null)
+                        <input type="hidden" name="min_price" value="{{ $minPrice }}">
+                    @endif
+                    @if($maxPrice !== null)
+                        <input type="hidden" name="max_price" value="{{ $maxPrice }}">
+                    @endif
+                    <select name="sort" onchange="this.form.submit()">
+                        <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Newest</option>
+                        <option value="oldest" {{ $sort === 'oldest' ? 'selected' : '' }}>Oldest</option>
+                        <option value="price_asc" {{ $sort === 'price_asc' ? 'selected' : '' }}>Price Low to High</option>
+                        <option value="price_desc" {{ $sort === 'price_desc' ? 'selected' : '' }}>Price High to Low</option>
+                    </select>
+                </form>
+
+            </aside>
+
+            <div class="market-main">
+                @if(session('success'))
+                    <div style="margin-bottom: 15px; padding: 12px; background: #e8f7ee; color: #1f7a3d; border-radius: 8px;">
+                        {{ session('success') }}
+                    </div>
+                @endif
+                @if(!empty($search))
+                    <div class="panel" style="padding: 16px; margin-bottom: 16px;">
+                        <p>Search results for: <strong>{{ $search }}</strong></p>
+                    </div>
+                @endif
+                @if(!empty($search) && isset($shops) && $shops->count())
+                    <div class="panel" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 14px;">Matching Shops</h3>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+                            @foreach($shops as $shop)
+                                <div style="padding: 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;">
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                                        <img
+                                            src="{{ !empty($shop->profile_image) ? asset('storage/' . $shop->profile_image) : asset('assets/images/default-product.png') }}"
+                                            alt="{{ $shop->name }}"
+                                            style="width: 52px; height: 52px; object-fit: cover; border-radius: 50%;"
+                                        >
+                                        <div>
+                                            <h4 style="margin: 0;">{{ $shop->name }}</h4>
+                                            <small style="color: #9fb3c8;">
+                                                {{ $shop->products_count }} product{{ $shop->products_count != 1 ? 's' : '' }}
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <a href="{{ route('shops.show', $shop->id) }}" class="action-btn secondary-btn">
+                                        Visit Shop
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                <div class="product-grid">
+                    @forelse($products as $product)
+                        <article class="product-card panel">
+                            <div class="product-image">
+                                <img
+                                    src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/images/default-product.png') }}"
+                                    alt="{{ $product->name }}"
+                                >
+                            </div>
+
+                            <div class="product-info">
+                                <span class="product-badge">{{ $product->category }}</span>
+                                <h4>{{ $product->name }}</h4>
+                                <p>{{ $product->user->name ?? 'LocalLift Seller' }}</p>
+                                <div class="price">₱{{ number_format($product->price, 2) }}</div>
+
+                                <div class="product-actions">
+                                    <a href="{{ route('products.show', $product->id) }}" class="action-btn secondary-btn">
+                                        View
+                                    </a>
+
+                                    @auth
+                                        @if(auth()->user()->role === 'buyer')
+                                            <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display: inline;" class="add-to-cart-form">
+                                                @csrf
+                                                <button type="submit" class="action-btn primary-btn">Add to Cart</button>
+                                            </form>
+                                        @else
+                                            <button type="button" class="action-btn primary-btn" disabled>
+                                                Add to Cart
+                                            </button>
+                                        @endif
+                                    @else
+                                        <a href="{{ route('login') }}" class="action-btn primary-btn">Add to Cart</a>
+                                    @endauth
+                                </div>
+                            </div>
+                        </article>
+                    @empty
+                        <div class="panel" style="padding: 20px;">
+                            <p>
+                                @if(!empty($search))
+                                    No products found for "<strong>{{ $search }}</strong>".
+                                @else
+                                    No products available yet.
+                                @endif
+                            </p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
     </div>
+</section>
 
-      <div class="products-wrapper">
-        <aside class="sidebar">
-          <div class="filter-card">
-            <h3>CATEGORY</h3>
-
-            <div class="category-list">
-              <div class="category-item active">
-                <div class="category-left">
-                  <span class="radio-dot active-dot"></span>
-                  <span>All</span>
-                </div>
-                <div class="category-right">
-                  <span class="count">128</span>
-                  <i class="fa-solid fa-chevron-down"></i>
-                </div>
-              </div>
-
-              <div class="category-item">
-                <div class="category-left">
-                  <span class="radio-dot"></span>
-                  <span>Food & Drinks</span>
-                </div>
-                <span class="count">42</span>
-              </div>
-
-              <div class="category-item">
-                <div class="category-left">
-                  <span class="radio-dot"></span>
-                  <span>Clothing & Fashion</span>
-                </div>
-                <span class="count">33</span>
-              </div>
-
-              <div class="category-item">
-                <div class="category-left">
-                  <span class="radio-dot"></span>
-                  <span>Handmade Crafts</span>
-                </div>
-                <span class="count">13</span>
-              </div>
-
-              <div class="category-item">
-                <div class="category-left">
-                  <span class="radio-dot"></span>
-                  <span>Accessories</span>
-                </div>
-                <span class="count">24</span>
-              </div>
-
-              <div class="category-item">
-                <div class="category-left">
-                  <span class="radio-dot"></span>
-                  <span>Souvenirs & Gifts</span>
-                </div>
-                <span class="count">12</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="filter-card">
-            <h3>FILTER BY PRICE</h3>
-
-            <div class="price-labels">
-              <span>PHP 50</span>
-              <span>PHP 500</span>
-            </div>
-
-            <div class="fake-range">
-              <div class="range-line"></div>
-              <div class="range-fill"></div>
-              <span class="range-thumb thumb-left"></span>
-              <span class="range-thumb thumb-right"></span>
-            </div>
-
-            <button class="filter-btn">FILTER</button>
-          </div>
-
-          <div class="filter-simple">
-            <h3>SORT BY</h3>
-            <select>
-              <option>Newest</option>
-              <option>Price Low-High</option>
-              <option>Price High-Low</option>
-            </select>
-          </div>
-        </aside>
-
-        <main class="products-content">
-          <div class="products-top">
-            <h1>Products</h1>
-
-            <div class="products-toolbar">
-              <div class="sort-inline">
-                <label>Sort By:</label>
-                <select>
-                  <option>Newest</option>
-                  <option>Price Low-High</option>
-                  <option>Price High-Low</option>
-                </select>
-              </div>
-
-              <div class="right-tools">
-                <select class="second-sort">
-                  <option>Newest</option>
-                  <option>Popular</option>
-                </select>
-
-                <div class="view-icons">
-                  <i class="fa-solid fa-table-cells-large"></i>
-                  <i class="fa-solid fa-bars"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="product-grid">
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product1.png" alt="Banana Chips"></div>
-              <div class="product-info">
-                <h4>Banana Chips</h4>
-                <p>Brew & Reans Cafe</p>
-                <div class="price">P 120.00</div>
-                <div class="product-actions">
-                  <a href="{{ route('products.show') }}" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product2.png" alt="Handwoven Bag"></div>
-              <div class="product-info">
-                <h4>Handwoven Bag</h4>
-                <p>Throads & Style PH</p>
-                <div class="price">P 950.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product3.png" alt="Herbal Soap"></div>
-              <div class="product-info">
-                <h4>Herbal Soap</h4>
-                <p>Lithong Ramay Crafts</p>
-                <div class="price">P 95.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product4.png" alt="Tote Bag"></div>
-              <div class="product-info">
-                <h4>Tote Bag</h4>
-                <p>Throads & Style PH</p>
-                <div class="price">P 190.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product5.png" alt="Wooden Cooking Set"></div>
-              <div class="product-info">
-                <h4>Wooden Cooking Set</h4>
-                <p>Brew & Beans Cafe</p>
-                <div class="price">P 250.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product6.png" alt="Handmade Necklace"></div>
-              <div class="product-info">
-                <h4>Handmade Necklace</h4>
-                <p>Lithong Ramay Crafts</p>
-                <div class="price">P 220.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product7.png" alt="Tote Bag"></div>
-              <div class="product-info">
-                <h4>Tote Bag</h4>
-                <p>Throads & Style PH</p>
-                <div class="price">P 190.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product8.png" alt="Organic Honey"></div>
-              <div class="product-info">
-                <h4>Organic Honey</h4>
-                <p>Brew & Beans Cafe</p>
-                <div class="price">P 460.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-
-            <div class="product-card">
-              <div class="product-image"><img src="assets/images/product9.png" alt="Eco-Friendly Straw Set"></div>
-              <div class="product-info">
-                <h4>Eco-Friendly Straw Set</h4>
-                <p>Lithong Ramay Crafts</p>
-                <div class="price">P 150.00</div>
-                <div class="product-actions">
-                  <a href="product_details.php" class="btn-view">VIEW</a>
-                  <a href="cart.php" class="btn-cart">ADDT CART</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-  </section>
-
-    
 @endsection

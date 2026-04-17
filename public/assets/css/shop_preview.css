@@ -1,5 +1,5 @@
 .shop-preview-card {
-    background: #fff8fb;
+    background: #F7FBFF;
     border: 1px solid #f3d8e5;
     border-radius: 20px;
     padding: 24px;
@@ -21,7 +21,7 @@
     height: 110px;
     object-fit: cover;
     border-radius: 18px;
-    border: 2px solid #ffd6e8;
+    border: 2px solid #BBDEFB;
     background: #fff;
 }
 
@@ -29,13 +29,13 @@
     width: 110px;
     height: 110px;
     border-radius: 18px;
-    background: #ffe7f1;
-    color: #ff4f93;
+    background: #E8F3FE;
+    color: #1565C0;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 42px;
-    border: 2px solid #ffd6e8;
+    border: 2px solid #BBDEFB;
 }
 
 .shop-main-info h3 {
@@ -46,7 +46,7 @@
 
 .shop-description {
     margin: 0 0 14px;
-    color: #5b435d;
+    color: #1F4E86;
     line-height: 1.6;
 }
 
@@ -94,7 +94,7 @@
 }
 
 .product-count {
-    background: #ffe4f0;
+    background: #E8F3FE;
     color: #c53a7b;
     padding: 8px 12px;
     border-radius: 999px;
@@ -109,7 +109,7 @@
 }
 
 .policy-card {
-    background: #fff8fb;
+    background: #F7FBFF;
     border: 1px solid #f3d8e5;
     border-radius: 18px;
     padding: 20px;
@@ -117,13 +117,13 @@
 
 .policy-card h4 {
     margin: 0 0 10px;
-    color: #3d2b3d;
+    color: #173F6B;
     font-size: 18px;
 }
 
 .policy-card p {
     margin: 0;
-    color: #5b435d;
+    color: #1F4E86;
     line-height: 1.6;
 }
 
@@ -152,7 +152,7 @@
 
 .product-image-wrap {
     height: 210px;
-    background: #fff8fb;
+    background: #F7FBFF;
 }
 
 .product-image-wrap img {
@@ -167,9 +167,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ff4f93;
+    color: #1565C0;
     font-size: 36px;
-    background: #ffe7f1;
+    background: #E8F3FE;
 }
 
 .product-preview-content {
@@ -196,7 +196,7 @@
 }
 
 .product-price {
-    color: #ff4f93;
+    color: #1565C0;
     font-size: 18px;
     font-weight: 700;
 }
@@ -208,7 +208,7 @@
 
 .empty-preview {
     grid-column: 1 / -1;
-    background: #fff8fb;
+    background: #F7FBFF;
     border: 1px dashed #f3d8e5;
     border-radius: 18px;
     padding: 30px;
@@ -232,3 +232,6 @@
         grid-template-columns: 1fr;
     }
 }
+
+
+

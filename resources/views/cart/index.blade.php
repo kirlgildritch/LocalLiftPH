@@ -5,219 +5,286 @@
 
 <section class="cart-page">
     <div class="container">
-      <div class="checkout-breadcrumb">
-        <a href="#">Home</a>
-        <span>&gt;</span>
-        <span>Products</span>
-        <span>&gt;</span>
-        <span>Cart</span>
-    </div>
+        <div class="checkout-breadcrumb">
+            <a href="{{ route('home') }}">Home</a>
+            <span>&gt;</span>
+            <a href="{{ route('products.index') }}">Products</a>
+            <span>&gt;</span>
+            <span>Cart</span>
+        </div>
 
-      
-        <div class="cart-wrapper">
-            <div class="cart-header">
-                <h1>Shopping Cart</h1>
-                <div class="free-shipping-note">
-                    <span>Amazing! You're eligible for <strong>FREE SHIPPING!</strong></span>
-                    <i class="fa-solid fa-circle-check"></i>
-                    <i class="fa-solid fa-chevron-right arrow-right"></i>
-                </div>
-            </div>
+        @php
+            $total = 0;
+            $selectedCartItemId = session('selected_cart_item_id');
+            $selectedCartItemIds = collect(session('selected_cart_item_ids', []))
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+            $hasSelectedCartItem = filled($selectedCartItemId);
+            $hasSelectedCartItems = $selectedCartItemIds->isNotEmpty();
+            $selectedSubtotal = 0;
+        @endphp
 
-          
+
+        <div
+            class="cart-layout"
+            data-selected-cart-item-id="{{ $selectedCartItemId ?? '' }}"
+            data-selected-cart-item-ids='@json($selectedCartItemIds)'
+            data-selection-storage-key="locallift-cart-selection-{{ auth()->id() }}"
+        >
             <div class="cart-main">
-                <div class="cart-table-box">
-                    <div class="select-all">
+                <div class="cart-toolbar panel">
+                    <div class="toolbar-copy">
+                        <span class="toolbar-label">Selection</span>
+                        <h2>Shopping Cart</h2>
+                    </div>
+
+                    <div class="toolbar-note">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>You are eligible for free shipping.</span>
+                    </div>
+                </div>
+
+                <div class="cart-list panel">
+                    <div class="select-all-row">
                         <label>
-                            <input type="checkbox" checked>
+                            <input type="checkbox" id="select-all-cart-items" {{ $hasSelectedCartItem || $hasSelectedCartItems ? '' : 'checked' }}>
                             <span>Select All</span>
                         </label>
                     </div>
 
-                    <div class="cart-table">
-                        <div class="cart-table-head">
-                            <div>Select</div>
-                            <div>Product</div>
-                            <div>Price</div>
-                            <div>Subtotal</div>
-                        </div>
-
-                        <div class="cart-row">
-                            <div class="col-select">
-                                <input type="checkbox" checked>
-                            </div>
-
-                            <div class="col-product">
-                                <div class="cart-product">
-                                    <div class="cart-product-image">
-                                        <img src="{{ asset('assets/images/cart-item1.png') }}" alt="Beaded Bracelet">
-                                    </div>
-                                    <div class="cart-product-info">
-                                        <h4>Beaded Bracelet</h4>
-                                        <p>Likhang Kamay Crafts</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-price">₱180.00</div>
-
-                            <div class="col-subtotal">
-                                <div class="qty-box">
-                                    <button>-</button>
-                                    <input type="text" value="1" readonly>
-                                    <button>+</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="cart-row">
-                            <div class="col-select">
-                                <input type="checkbox" checked>
-                            </div>
-
-                            <div class="col-product">
-                                <div class="cart-product">
-                                    <div class="cart-product-image">
-                                        <img src="{{ asset('assets/images/cart-item2.png') }}" alt="Herbal Soap">
-                                    </div>
-                                    <div class="cart-product-info">
-                                        <h4>Herbal Soap</h4>
-                                        <p>Likhang Kamay Crafts</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-price">₱95.00</div>
-
-                            <div class="col-subtotal">
-                                <div class="qty-box">
-                                    <button>-</button>
-                                    <input type="text" value="2" readonly>
-                                    <button>+</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="cart-row">
-                            <div class="col-select">
-                                <input type="checkbox" checked>
-                            </div>
-
-                            <div class="col-product">
-                                <div class="cart-product">
-                                    <div class="cart-product-image">
-                                        <img src="{{ asset('assets/images/cart-item3.png') }}" alt="Banana Chips">
-                                    </div>
-                                    <div class="cart-product-info">
-                                        <h4>Banana Chips</h4>
-                                        <p>Brew & Beans Cafe</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-price">₱240.00</div>
-
-                            <div class="col-subtotal">
-                                <div class="qty-box">
-                                    <button>-</button>
-                                    <input type="text" value="2" readonly>
-                                    <button>+</button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="cart-table-head">
+                        <div>Select</div>
+                        <div>Product</div>
+                        <div>Price</div>
+                        <div>Quantity</div>
+                        <div>Subtotal</div>
                     </div>
-                </div>
 
-                <aside class="cart-summary">
+                    @forelse($cartItems as $item)
+                        @php
+                            $subtotal = $item->product->price * $item->quantity;
+                            $total += $subtotal;
+                            $isChecked = !$hasSelectedCartItem && !$hasSelectedCartItems
+                                || (int) $selectedCartItemId === (int) $item->id
+                                || $selectedCartItemIds->contains((int) $item->id);
+                            if ($isChecked) {
+                                $selectedSubtotal += $subtotal;
+                            }
+                        @endphp
+
+                        <article class="cart-item" data-cart-item-id="{{ $item->id }}" data-subtotal="{{ $subtotal }}">
+                            <div class="item-select">
+                                <input
+                                    type="checkbox"
+                                    class="cart-item-checkbox"
+                                    value="{{ $item->id }}"
+                                    {{ $isChecked ? 'checked' : '' }}
+                                >
+                            </div>
+
+                            <div class="item-product">
+                                <div class="product-image">
+                                    <img src="{{ $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}" alt="{{ $item->product->name }}">
+                                </div>
+
+                                <div class="product-copy">
+                                    <span class="product-badge">Cart Item</span>
+                                    <h3>{{ $item->product->name }}</h3>
+                                    <p>{{ $item->product->shop_name ?? 'LocalLift Shop' }}</p>
+                                </div>
+                            </div>
+
+                            <div class="item-price">P{{ number_format($item->product->price, 2) }}</div>
+
+                            <div class="item-quantity">
+                                <div class="qty-box">
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="quantity" value="{{ max(1, $item->quantity - 1) }}">
+                                        <button type="submit">-</button>
+                                    </form>
+
+                                    <input type="text" value="{{ $item->quantity }}" readonly>
+
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST">
+                                        @csrf
+                                        @method('PATCH')
+                                        <input type="hidden" name="quantity" value="{{ $item->quantity + 1 }}">
+                                        <button type="submit">+</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="item-subtotal">
+                                <strong>P{{ number_format($subtotal, 2) }}</strong>
+
+                                <form action="{{ route('cart.remove', $item->id) }}" method="POST">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="remove-btn">Remove</button>
+                                </form>
+                            </div>
+                        </article>
+                    @empty
+                        <div class="empty-state">
+                            <span class="section-kicker">Empty Cart</span>
+                            <h3>No products in your cart yet</h3>
+                            <p>Browse the product catalog and add items here when you are ready to check out.</p>
+                            <a href="{{ route('products.index') }}" class="action-btn primary-btn">Explore Products</a>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            <aside class="cart-sidebar">
+                <div class="cart-summary panel">
+                    <span class="section-kicker">Summary</span>
                     <h3>Cart Summary</h3>
 
                     <div class="summary-line">
-                        <span>Subtotal:</span>
-                        <strong>₱515.00</strong>
+                        <span>Subtotal</span>
+                        <strong id="cart-summary-subtotal">P{{ number_format($selectedSubtotal, 2) }}</strong>
                     </div>
 
                     <div class="summary-line">
-                        <span>Free Shipping:</span>
-                        <strong>₱0.00</strong>
+                        <span>Shipping</span>
+                        <strong>P0.00</strong>
                     </div>
 
                     <div class="summary-total">
-                        <span>Total:</span>
-                        <strong>₱515.00</strong>
+                        <span>Total</span>
+                        <strong id="cart-summary-total">P{{ number_format($selectedSubtotal, 2) }}</strong>
                     </div>
 
-                    <a href="{{ url('/checkout') }}" class="checkout-btn">CHECKOUT</a>
+                    <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form">
+                        <div id="selected-cart-items-inputs"></div>
+                        <button type="submit" class="action-btn primary-btn full-btn">Checkout</button>
+                    </form>
 
                     <div class="coupon-box">
                         <input type="text" placeholder="Enter coupon code">
-                        <button>Apply</button>
-                    </div>
-                </aside>
-            </div>
-
-            <div class="recommended-section">
-                <h2>Recommended Products</h2>
-
-                <div class="recommended-grid">
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="{{ asset('assets/images/recommend1.png') }}" alt="Woven Tote with Handle">
-                        </div>
-                        <div class="product-info">
-                            <h4>Woven Tote with Handle</h4>
-                            <div class="price old-price">₱190.00</div>
-                            <div class="product-actions">
-                                <a href="{{ url('/products/2') }}" class="btn-view">VIEW</a>
-                                <a href="{{ url('/cart') }}" class="btn-cart">ADD TO CART</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="{{ asset('assets/images/recommend2.png') }}" alt="Beaded Bracelet">
-                        </div>
-                        <div class="product-info">
-                            <h4>Beaded Bracelet</h4>
-                            <div class="price">₱180.00</div>
-                            <div class="product-actions">
-                                <a href="{{ url('/products/3') }}" class="btn-view">VIEW</a>
-                                <a href="{{ url('/cart') }}" class="btn-cart">ADD TO CART</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="{{ asset('assets/images/recommend3.png') }}" alt="Handmade Soap Trio">
-                        </div>
-                        <div class="product-info">
-                            <h4>Handmade Soap Trio</h4>
-                            <div class="price">₱290.00</div>
-                            <div class="product-actions">
-                                <a href="{{ url('/products/5') }}" class="btn-view">VIEW</a>
-                                <a href="{{ url('/cart') }}" class="btn-cart">ADD TO CART</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="product-image">
-                            <img src="{{ asset('assets/images/recommend4.png') }}" alt="Eco-Friendly Straw Set">
-                        </div>
-                        <div class="product-info">
-                            <h4>Eco-Friendly Straw Set</h4>
-                            <div class="price">₱240.00</div>
-                            <div class="product-actions">
-                                <a href="{{ url('/products/9') }}" class="btn-view">VIEW</a>
-                                <a href="{{ url('/cart') }}" class="btn-cart">ADD TO CART</a>
-                            </div>
-                        </div>
+                        <button type="button">Apply</button>
                     </div>
                 </div>
-            </div>
-
+            </aside>
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const cartLayout = document.querySelector('.cart-layout');
+    const selectAll = document.getElementById('select-all-cart-items');
+    const itemCheckboxes = Array.from(document.querySelectorAll('.cart-item-checkbox'));
+    const subtotalEl = document.getElementById('cart-summary-subtotal');
+    const totalEl = document.getElementById('cart-summary-total');
+    const selectedInputsContainer = document.getElementById('selected-cart-items-inputs');
+    const checkoutForm = document.getElementById('cart-checkout-form');
+
+    if (!cartLayout || !selectAll || !itemCheckboxes.length || !subtotalEl || !totalEl || !selectedInputsContainer || !checkoutForm) {
+        return;
+    }
+
+    const storageKey = cartLayout.dataset.selectionStorageKey;
+    const buyNowSelectedId = cartLayout.dataset.selectedCartItemId;
+    const flashedSelectedIds = (() => {
+        try {
+            return JSON.parse(cartLayout.dataset.selectedCartItemIds || '[]');
+        } catch (error) {
+            return [];
+        }
+    })();
+
+    const formatPeso = (value) => `P${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+    const loadSavedSelection = () => {
+        try {
+            const raw = window.localStorage.getItem(storageKey);
+            return raw ? JSON.parse(raw) : [];
+        } catch (error) {
+            return [];
+        }
+    };
+
+    const saveSelection = (selectedIds) => {
+        try {
+            window.localStorage.setItem(storageKey, JSON.stringify(selectedIds));
+        } catch (error) {
+            // Ignore storage failures and keep the cart usable.
+        }
+    };
+
+    const applySelection = (selectedIds) => {
+        const selectedSet = new Set(selectedIds.map(String));
+
+        itemCheckboxes.forEach((checkbox) => {
+            checkbox.checked = selectedSet.has(String(checkbox.value));
+        });
+    };
+
+    const syncSummary = () => {
+        let selectedTotal = 0;
+        let selectedCount = 0;
+        const selectedIds = [];
+
+        selectedInputsContainer.innerHTML = '';
+
+        itemCheckboxes.forEach((checkbox) => {
+            const row = checkbox.closest('.cart-item');
+            if (!row) return;
+
+            if (checkbox.checked) {
+                selectedCount += 1;
+                selectedTotal += Number(row.dataset.subtotal || 0);
+                selectedIds.push(String(checkbox.value));
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'selected_cart_items[]';
+                input.value = checkbox.value;
+                selectedInputsContainer.appendChild(input);
+            }
+        });
+
+        subtotalEl.textContent = formatPeso(selectedTotal);
+        totalEl.textContent = formatPeso(selectedTotal);
+        selectAll.checked = selectedCount === itemCheckboxes.length;
+        selectAll.indeterminate = selectedCount > 0 && selectedCount < itemCheckboxes.length;
+        saveSelection(selectedIds);
+    };
+
+    selectAll.addEventListener('change', function () {
+        itemCheckboxes.forEach((checkbox) => {
+            checkbox.checked = selectAll.checked;
+        });
+        syncSummary();
+    });
+
+    itemCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', syncSummary);
+    });
+
+    checkoutForm.addEventListener('submit', function (event) {
+        if (!selectedInputsContainer.querySelector('input[name="selected_cart_items[]"]')) {
+            event.preventDefault();
+            window.alert('Select at least one cart item before checkout.');
+        }
+    });
+
+    if (flashedSelectedIds.length) {
+        applySelection(flashedSelectedIds);
+    } else if (buyNowSelectedId) {
+        applySelection([buyNowSelectedId]);
+    } else {
+        const savedSelection = loadSavedSelection();
+        if (savedSelection.length) {
+            applySelection(savedSelection);
+        }
+    }
+
+    syncSummary();
+});
+</script>
 @endsection

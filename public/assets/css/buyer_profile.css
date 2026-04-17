@@ -1,0 +1,139 @@
+/* PAGE */
+.buyer-profile-page {
+    padding: 40px 0;
+    background: #F7FBFF;
+    min-height: 100vh;
+}
+
+.buyer-profile-card {
+    max-width: 700px;
+    margin: auto;
+    background: #fff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 8px 25px rgba(255, 105, 180, 0.08);
+}
+
+/* TITLE */
+.buyer-profile-card h2 {
+    font-size: 24px;
+    font-weight: 600;
+    color: #153B63;
+}
+
+.divider {
+    height: 1px;
+    background: #f3d6e4;
+    margin: 15px 0 25px;
+}
+
+/* SUCCESS */
+.success-message {
+    background: #e8fff0;
+    color: #1c8c4c;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+/* PROFILE IMAGE */
+.profile-image-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.profile-preview {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #BBDEFB;
+}
+
+.default-profile-icon {
+    font-size: 70px;
+    color: #1565C0;
+}
+
+/* FORM */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1F4E86;
+    margin-bottom: 6px;
+}
+
+/* INPUTS */
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #D2E6FB;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: 0.2s;
+    font-family: 'Poppins', sans-serif;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #1565C0;
+    box-shadow: 0 0 0 2px rgba(47, 143, 107, 0.12);
+}
+
+/* ERROR */
+.error-text {
+    color: #e53935;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* SECTION LINE */
+.section-line {
+    margin: 25px 0;
+    border: none;
+    border-top: 1px solid #D2E6FB;
+}
+
+/* PASSWORD TITLE */
+h4 {
+    margin-bottom: 10px;
+    color: #153B63;
+}
+
+/* BUTTON */
+.save-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #1565C0, #42A5F5);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.25s ease;
+}
+
+.save-btn:hover {
+    background: linear-gradient(135deg, #0D47A1, #42A5F5);
+    transform: translateY(-1px);
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .buyer-profile-card {
+        padding: 20px;
+    }
+}   
+
+
+
+
+

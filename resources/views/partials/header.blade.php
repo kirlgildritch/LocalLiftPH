@@ -1,24 +1,7 @@
-<div class="topbar">
-    <div class="container">
-        <div class="topbar-left">
-            <a href="#"><i class="fa-brands fa-facebook-f"></i></a>
-            <a href="#"><i class="fa-brands fa-instagram"></i></a>
-            <a href="#"><i class="fa-brands fa-tiktok"></i></a>
-            <a href="#"><i class="fa-solid fa-envelope"></i></a>
-        </div>
 
-        <div class="topbar-center">
-            <i class="fa-solid fa-truck"></i>
-            <span>FREE SHIPPING THIS WEEK! ORDER OVER ₱500</span>
-        </div>
-
-        <div class="topbar-right">
-            <span>ENGLISH <i class="fa-solid fa-chevron-down"></i></span>
-        </div>
-    </div>
-</div>
 
 <header class="header">
+
     <div class="container header-main">
         <a href="{{ url('/') }}" class="logo">
             <div class="logo-icon">
@@ -31,82 +14,446 @@
             </div>
         </a>
 
-        <form action="{{ url('/products') }}" method="GET" class="search-bar">
-            <input type="text" name="search" placeholder="Search for products, shops, and more...">
-            <button type="submit" class="search-btn">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </button>
+            <form action="{{ url('/products') }}" method="GET" class="search-bar" style="position: relative;">
+            <i class="fa-solid fa-magnifying-glass"></i>
+
+            <input
+                type="text"
+                id="searchInput"
+                name="search"
+                value="{{ request('search') }}"
+                placeholder="Search for products, shops, and more..."
+                title="Search"
+                autocomplete="off"
+            >
+
+            <button type="submit" class="search-btn" title="Search">Search</button>
+
+            <div id="searchSuggestions" class="search-suggestions"></div>
         </form>
 
-                <div class="header-icons">
 
+        <div class="header-actions">
             @auth
-                <!-- Profile -->
-                <a href="{{ url('/profile') }}" class="icon-box">
-                    <i class="fa-regular fa-user"></i>
-                    <span>{{ Auth::user()->name }}</span>
-                </a>
-
-                <!-- Logout -->
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="icon-box logout-btn">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Logout</span>
+                <div class="buyer-profile-dropdown">
+                    <button type="button" class="profile-trigger buyer-profile-btn">
+                        @if(auth()->user()->profile_image)
+                            <img src="{{ asset('storage/' . auth()->user()->profile_image) }}" alt="Profile" class="buyer-profile-img">
+                        @else
+                            <i class="fa-regular fa-user"></i>
+                        @endif
+                        <span>{{ Auth::user()->name }}</span>
                     </button>
-                </form>
-            @else
-                <!-- Login -->
-                <a href="{{ route('login') }}" class="icon-box">
-                    <i class="fa-regular fa-user"></i>
-                    <span>Login</span>
-                </a>
 
-                <!-- Register -->
-                <a href="{{ route('register') }}" class="icon-box">
-                    <i class="fa-regular fa-id-badge"></i>
-                    <span>Register</span>
-                </a>
+                    <div class="buyer-profile-menu">
+                        <a href="javascript:void(0)" id="openProfileModal">
+                            <i class="fa-regular fa-user"></i>
+                            <span>My Profile</span>
+                        </a>
+                        <a href="{{ route('buyer.orders') }}">
+                            <i class="fa-solid fa-box"></i>
+                            <span>My Orders</span>
+                        </a>
+                        <a href="{{ route('login') }}" class="seller-link">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Start Selling</span>
+                        </a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="logout-btn">
+                                <i class="fa-solid fa-right-from-bracket"></i>
+                                <span>Logout</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @else
+                <a href="{{ route('login') }}" class="action-link action-link-muted">Log In</a>
+                <a href="{{ route('register') }}" class="action-link action-link-primary">Create Account</a>
             @endauth
 
-            <!-- Wishlist -->
-            <a href="#" class="icon-box">
-                <i class="fa-regular fa-heart"></i>
-                <span>Wishlist</span>
-            </a>
+            @if(!request()->is('cart'))
+                <div class="cart-dropdown">
+                    <a href="{{ url('/cart') }}" class="cart-trigger" title="Cart">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        <span>Cart</span>
+                    </a>
 
-            <!-- Cart -->
-            <a href="{{ url('/cart') }}" class="icon-box">
-                <i class="fa-solid fa-cart-shopping"></i>
-                <span>Cart</span>
-            </a>
+                    <div class="cart-menu">
+                        <div class="cart-menu-header">
+                            <h4>Recently Added Products</h4>
+                        </div>
 
+                        <div class="cart-preview-list" id="header-cart-preview-list">
+                            @auth
+                                @php
+                                    $previewItems = $miniCartItems ?? collect();
+                                    $extraCount = max(($miniCartCount ?? 0) - $previewItems->count(), 0);
+                                @endphp
+
+                                @forelse($previewItems as $item)
+                                    <div class="cart-preview-item">
+                                        <img
+                                            src="{{ !empty($item->product?->image) ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
+                                            alt="{{ $item->product->name ?? 'Product' }}"
+                                        >
+
+                                        <div class="cart-preview-info">
+                                            <p>{{ $item->product->name ?? 'Product' }}</p>
+                                            <small>{{ $item->product->user->name ?? 'LocalLift Seller' }}</small>
+                                        </div>
+
+                                        <span class="cart-preview-price">
+                                            ₱{{ number_format($item->product->price ?? 0, 2) }}
+                                        </span>
+                                    </div>
+                                @empty
+                                    <div class="cart-preview-empty">
+                                        <p>Your cart is empty.</p>
+                                    </div>
+                                @endforelse
+                            @else
+                                <div class="cart-preview-empty" style="color: gray;">
+                                    <p>&ensp;&ensp;Please log in to view your cart.</p>
+                                </div>
+                            @endauth
+                        </div>
+
+                        <div class="cart-menu-footer">
+                            @auth
+                                <span id="header-cart-preview-count">
+                                    @if(($miniCartCount ?? 0) > $previewItems->count())
+                                        {{ $extraCount }} more product{{ $extraCount > 1 ? 's' : '' }} in cart
+                                    @else
+                                        {{ $miniCartCount ?? 0 }} product{{ ($miniCartCount ?? 0) != 1 ? 's' : '' }} in cart
+                                    @endif
+                                </span>
+                            @else
+                                <span>Cart preview unavailable</span>
+                            @endauth
+
+                            <a href="{{ route('cart.index') }}" class="view-cart-btn">Open Cart</a>
+                        </div>
+                    </div>
+
+                </div>
+            @endif
         </div>
+
+        <nav class="navbar">
+            <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Overview</a>
+            <a href="{{ route('shops.index') }}" class="{{ request()->routeIs('shops.index') ? 'active' : '' }}">Shops</a>
+            <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">Products</a>
+            <a href="{{ route('about') }}" class="{{ request()->routeIs('about') ? 'active' : '' }}">About</a>
+        </nav>
+
+
     </div>
+
+
 </header>
 
-<nav class="navbar">
-    <div class="container">
-        <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">HOME</a>
-        <a href="{{ route('shops.index') }}" class="{{ request()->routeIs('shops.index') ? 'active' : '' }}">SHOPS</a>
-        <a href="{{ route('products.index') }}" class="{{ request()->routeIs('products.index') ? 'active' : '' }}">PRODUCTS</a>
-        <a href="#">ABOUT</a>
-        
-        @auth
-            @if(auth()->user()->is_seller)
-                <a href="{{ route('seller.dashboard') }}" class="seller-link">
-                    <i class="fa-solid fa-store"></i>SELLER DASHBOARD
-                </a>
-            @else
-                <a href="{{ route('seller.setup') }}" class="seller-link">
-                    <i class="fa-solid fa-store"></i>BECOME A SELLER
-                </a>
-            @endif
-        @else
-            <a href="{{ route('login') }}" class="seller-link">
-                <i class="fa-solid fa-store"></i>BECOME A SELLER
-            </a>
-        @endauth
-      
+@auth
+<div class="profile-modal-overlay" id="profileModal">
+    <div class="profile-modal">
+        <div class="header-modal">
+            <button class="close-modal" id="closeProfileModal">&times;</button>
+            <h2>My Profile</h2>
+            <div class="divider"></div>
+        </div>
+
+        @if(session('success'))
+            <p class="success-message">{{ session('success') }}</p>
+        @endif
+
+        <form action="{{ route('buyer.profile.update') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            @method('PATCH')
+
+            <div class="profile-image-section">
+                @if(auth()->user()->profile_image)
+                    <img src="{{ asset('storage/' . auth()->user()->profile_image) }}" alt="Profile" class="profile-preview">
+                @else
+                    <i class="fa-regular fa-circle-user default-profile-icon"></i>
+                @endif
+            </div>
+
+            <div class="form-group">
+                <label for="profile_image">Profile Image</label>
+                <input type="file" name="profile_image" id="profile_image" accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label for="name">Full Name</label>
+                <input type="text" name="name" id="name" value="{{ old('name', auth()->user()->name) }}">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" name="email" id="email" value="{{ old('email', auth()->user()->email) }}">
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="text" name="phone" id="phone" value="{{ old('phone', auth()->user()->phone ?? '') }}">
+            </div>
+
+            <div class="form-group address-group">
+                <div class="address-label-row">
+                    <label for="address">Address</label>
+                    <a href="{{ route('buyer.addresses') }}" class="edit-address-link">Edit</a>
+                </div>
+
+                <textarea id="address" rows="3" readonly>
+{{ $defaultAddress
+    ? trim(
+        ($defaultAddress->street_address ?? '') .
+        ', ' . ($defaultAddress->barangay ?? '') .
+        ', ' . ($defaultAddress->city ?? '') .
+        ', ' . ($defaultAddress->province ?? '') .
+        ', ' . ($defaultAddress->region ?? '') .
+        ($defaultAddress->postal_code ? ', ' . $defaultAddress->postal_code : '')
+    , ', ')
+    : 'No address added yet.'
+}}
+                </textarea>
+            </div>
+
+            <h4 class="modal-section-title">Change Email and Password</h4>
+            <hr class="section-line">
+
+            <div class="form-group">
+                <label for="current_email">Email</label>
+                <input type="email" name="email" id="current_email" value="{{ old('email', auth()->user()->email) }}">
+            </div>
+
+            <div class="form-group">
+                <label for="current_password">Current Password</label>
+                <input type="password" name="current_password" id="current_password">
+            </div>
+
+            <div class="form-group">
+                <label for="password">New Password</label>
+                <input type="password" name="password" id="password">
+            </div>
+
+            <div class="form-group">
+                <label for="password_confirmation">Confirm New Password</label>
+                <input type="password" name="password_confirmation" id="password_confirmation">
+            </div>
+
+            <button type="submit" class="save-btn">Update Profile</button>
+        </form>
     </div>
-</nav>
+</div>
+@endauth
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const openBtn = document.getElementById('openProfileModal');
+    const closeBtn = document.getElementById('closeProfileModal');
+    const modal = document.getElementById('profileModal');
+
+    if (openBtn && modal) {
+        openBtn.addEventListener('click', function () {
+            modal.classList.add('show');
+            document.body.classList.add('modal-open');
+        });
+    }
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', function () {
+            modal.classList.remove('show');
+            document.body.classList.remove('modal-open');
+        });
+    }
+
+    if (modal) {
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                document.body.classList.remove('modal-open');
+            }
+        });
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('searchInput');
+    const suggestionsBox = document.getElementById('searchSuggestions');
+
+    if (!searchInput || !suggestionsBox) return;
+
+    searchInput.addEventListener('input', async function () {
+        const query = this.value.trim();
+
+        if (query.length < 1) {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch(`/products/suggestions?q=${encodeURIComponent(query)}`);
+            const suggestions = await response.json();
+
+            if (!suggestions.length) {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                return;
+            }
+
+            suggestionsBox.innerHTML = suggestions.map(item => `
+                <div class="suggestion-item">${item}</div>
+            `).join('');
+
+            suggestionsBox.style.display = 'block';
+
+            document.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    searchInput.value = this.textContent;
+                    suggestionsBox.innerHTML = '';
+                    suggestionsBox.style.display = 'none';
+                    searchInput.form.submit();
+                });
+            });
+        } catch (error) {
+            console.error(error);
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none';
+        }
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const cartTrigger = document.querySelector('.cart-trigger');
+    const previewList = document.getElementById('header-cart-preview-list');
+    const previewCount = document.getElementById('header-cart-preview-count');
+
+    if (!previewList || !previewCount) {
+        return;
+    }
+
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const updateMiniCart = (data) => {
+        const items = Array.isArray(data.preview_items) ? data.preview_items : [];
+        const miniCartCount = Number(data.mini_cart_count || 0);
+        const extraCount = Number(data.extra_count || 0);
+
+        if (!items.length) {
+            previewList.innerHTML = `
+                <div class="cart-preview-empty">
+                    <p>Your cart is empty.</p>
+                </div>
+            `;
+        } else {
+            previewList.innerHTML = items.map((item) => `
+                <div class="cart-preview-item">
+                    <img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">
+                    <div class="cart-preview-info">
+                        <p>${escapeHtml(item.name)}</p>
+                        <small>${escapeHtml(item.seller_name)}</small>
+                    </div>
+                    <span class="cart-preview-price">P${escapeHtml(item.price)}</span>
+                </div>
+            `).join('');
+        }
+
+        previewCount.textContent = extraCount > 0
+            ? `${extraCount} more product${extraCount > 1 ? 's' : ''} in cart`
+            : `${miniCartCount} product${miniCartCount !== 1 ? 's' : ''} in cart`;
+    };
+
+    const showSuccessToast = (message) => {
+        const toast = document.createElement('div');
+        toast.className = 'toast-success';
+        toast.innerHTML = `<i class="fa-solid fa-circle-check"></i><span>${escapeHtml(message)}</span>`;
+        document.body.appendChild(toast);
+
+        window.setTimeout(() => {
+            toast.classList.add('toast-hide');
+            window.setTimeout(() => toast.remove(), 400);
+        }, 1800);
+    };
+
+    const animateCartTrigger = () => {
+        if (!cartTrigger) {
+            return;
+        }
+
+        cartTrigger.classList.remove('cart-bump');
+        void cartTrigger.offsetWidth;
+        cartTrigger.classList.add('cart-bump');
+
+        window.setTimeout(() => {
+            cartTrigger.classList.remove('cart-bump');
+        }, 520);
+    };
+
+    document.addEventListener('submit', async function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) {
+            return;
+        }
+
+        if (!form.matches('form[action*="/cart/add/"]')) {
+            return;
+        }
+
+        if (form.querySelector('input[name="buy_now"][value="1"]')) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalDisabled = submitButton ? submitButton.disabled : false;
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: new FormData(form),
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to add product to cart.');
+            }
+
+            const data = await response.json();
+            updateMiniCart(data);
+            animateCartTrigger();
+            showSuccessToast(data.message || 'Product added to cart successfully.');
+        } catch (error) {
+            console.error(error);
+            window.alert('Unable to update the cart right now. Please try again.');
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = originalDisabled;
+            }
+        }
+    });
+});
+</script>

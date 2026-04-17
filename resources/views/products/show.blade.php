@@ -1,152 +1,190 @@
 @extends('layouts.app')
+@section('title', 'LocalLift PH - Product')
 
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/product_details.css') }}">
- 
-<section class="details-page">
+
+<section class="product-detail-page">
     <div class="container">
         <div class="checkout-breadcrumb">
-        <a href="#">Home</a>
-        <span>&gt;</span>
-        <span>Products</span>
-         <span>&gt;</span>
-        <span>Product Details</span>
+            <a href="{{ route('home') }}">Home</a>
+            <span>&gt;</span>
+            <a href="{{ route('products.index') }}">Products</a>
+            <span>&gt;</span>
+            <span>{{ $product->name }}</span>
+        </div>
+
+        <div class="product-detail-layout">
+            <div class="product-main panel">
+                <div class="product-gallery">
+                    <div class="product-visual">
+                        <img
+                            src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/images/default-product.png') }}"
+                            alt="{{ $product->name }}"
+                        >
+                    </div>
+
+                    <div class="product-thumbnail-row">
+                        <button class="thumb-card active" type="button">Main View</button>
+                        <button class="thumb-card" type="button">Details</button>
+                        <button class="thumb-card" type="button">Preview</button>
+                    </div>
+                </div>
+
+                <div class="product-copy">
+                    <span class="section-kicker">{{ $product->category }}</span>
+                    <h1>{{ $product->name }}</h1>
+                    <p class="product-subtitle">{{ $product->category }}</p>
+
+                    <div class="product-meta">
+                        <span><i class="fa-solid fa-store"></i> {{ $product->user->name ?? 'LocalLift Seller' }}</span>
+                        <span><i class="fa-solid fa-box-open"></i> {{ $product->stock > 0 ? 'Ready to ship' : 'Out of stock' }}</span>
+                        <span><i class="fa-solid fa-cubes"></i> Stock: {{ $product->stock }}</span>
+                    </div>
+
+                    <div class="product-price">₱{{ number_format($product->price, 2) }}</div>
+
+                    <p class="product-description">
+                        {{ $product->description ?: 'No description available for this product yet.' }}
+                    </p>
+
+                    <div class="product-feature-grid">
+                        <div class="feature-card">
+                            <strong>Category</strong>
+                            <span>{{ $product->category }}</span>
+                        </div>
+                        <div class="feature-card">
+                            <strong>Availability</strong>
+                            <span>{{ $product->stock > 0 ? 'In stock' : 'Currently unavailable' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="purchase-sidebar">
+                <div class="panel purchase-card">
+                    <span class="section-kicker">Purchase</span>
+                    <h2>Order summary</h2>
+
+                    <div class="quantity-box">
+                        <span>Quantity</span>
+                        <div class="quantity-control">
+                            <button type="button">-</button>
+                            <input type="text" value="1" readonly>
+                            <button type="button">+</button>
+                        </div>
+                    </div>
+
+                    <div class="purchase-meta">
+                        <div>
+                            <span>Price</span>
+                            <strong>₱{{ number_format($product->price, 2) }}</strong>
+                        </div>
+                        <div>
+                            <span>Delivery</span>
+                            <strong>Nationwide ready</strong>
+                        </div>
+                    </div>
+
+                    <div class="purchase-actions">
+                        @auth
+                            @if(auth()->user()->role === 'buyer')
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="quantity" value="1">
+                                    <button type="submit" class="action-btn primary-btn">Add to Cart</button>
+                                </form>
+                                <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="quantity" value="1">
+                                    <input type="hidden" name="buy_now" value="1">
+                                    <button type="submit" class="action-btn secondary-btn">Buy Now</button>
+                                </form>
+                            @else
+                                <button type="button" class="action-btn primary-btn" disabled>Add to Cart</button>
+                                <button type="button" class="action-btn secondary-btn" disabled>Buy Now</button>
+                            @endif
+                        @else
+                            <a href="{{ route('login') }}" class="action-btn primary-btn">Add to Cart</a>
+                            <a href="{{ route('login') }}" class="action-btn secondary-btn">Buy Now</a>
+                        @endauth
+
+                        <button type="button" class="icon-btn" aria-label="Add to wishlist">
+                            <i class="fa-regular fa-heart"></i>
+                        </button>
+                    </div>
+
+                    <a href="{{ route('shops.show', $product->user->id) }}" class="action-btn secondary-btn full-btn">View Shop</a>
+                </div>
+
+                <div class="panel seller-card">
+                    <span class="section-kicker">Seller</span>
+                    <div class="seller-row">
+                        <span class="seller-avatar">
+                            {{ strtoupper(substr($product->user->name ?? 'LS', 0, 2)) }}
+                        </span>
+                        <div>
+                            <h3>{{ $product->user->name ?? 'LocalLift Seller' }}</h3>
+                            <p>Local marketplace seller</p>
+                        </div>
+                    </div>
+                    
+                </div>
+            </aside>
+        </div>
+
+        <div class="detail-sections">
+            <section class="panel detail-card">
+                <div class="detail-header">
+                    <div>
+                        <span class="section-kicker">Related Products</span>
+                        <h2>You may also like</h2>
+                    </div>
+                </div>
+
+                <div class="related-grid">
+                    @forelse($relatedProducts as $relatedProduct)
+                        <article class="related-card">
+                            <div class="related-image">
+                                <img
+                                    src="{{ $relatedProduct->image ? asset('storage/' . $relatedProduct->image) : asset('assets/images/default-product.png') }}"
+                                    alt="{{ $relatedProduct->name }}"
+                                    style="width: 100%; height: 100%; object-fit: cover;"
+                                >
+                            </div>
+
+                            <div class="related-info">
+                                <span class="product-badge">{{ $relatedProduct->category }}</span>
+                                <h3>{{ $relatedProduct->name }}</h3>
+                                <p>{{ $relatedProduct->user->name ?? 'LocalLift Seller' }}</p>
+                                <div class="price">₱{{ number_format($relatedProduct->price, 2) }}</div>
+
+                                <div class="card-actions">
+                                    <a href="{{ route('products.show', $relatedProduct->id) }}" class="action-btn secondary-btn">
+                                        View
+                                    </a>
+
+                                    @auth
+                                        @if(auth()->user()->role === 'buyer')
+                                            <form action="{{ route('cart.add', $relatedProduct->id) }}" method="POST" style="display:inline;" class="add-to-cart-form">
+                                                @csrf
+                                                <button type="submit" class="action-btn primary-btn">Add to Cart</button>
+                                            </form>
+                                        @else
+                                            <button type="button" class="action-btn primary-btn" disabled>Add to Cart</button>
+                                        @endif
+                                    @else
+                                        <a href="{{ route('login') }}" class="action-btn primary-btn">Add to Cart</a>
+                                    @endauth
+                                </div>
+                            </div>
+                        </article>
+                    @empty
+                        <p>No related products available.</p>
+                    @endforelse
+                </div>
+            </section>
+        </div>
     </div>
-
-      <div class="details-wrapper">
-        <div class="product-main">
-          <div class="product-image-box">
-            <img src="assets/images/beaded-bracelet.png" alt="Beaded Bracelet">
-          </div>
-
-          <div class="product-description">
-            <h2>About This Product</h2>
-            <h3>Description</h3>
-
-            <ul>
-              <li>Handmade beaded bracelet with colorful, vibrant design</li>
-              <li>Made from high-quality, assorted beads including wooden and glass beads</li>
-              <li>Stretchable, fits most wrist sizes comfortably</li>
-              <li>Perfect for adding a pop of color and style to any outfit</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="product-side">
-          <h1>Beaded Bracelet</h1>
-          <p class="subtitle">Colorful Design</p>
-
-          <div class="divider"></div>
-
-          <div class="price">P 180.00</div>
-
-          <div class="quantity-box">
-            <button>-</button>
-            <input type="text" value="1" readonly>
-            <button>+</button>
-          </div>
-
-          <div class="action-row">
-            <a href="cart.php" class="add-cart-btn">ADD TO CART</a>
-
-            <div class="icon-actions">
-              <button><i class="fa-solid fa-heart"></i></button>
-              <button><i class="fa-regular fa-heart"></i></button>
-            </div>
-          </div>
-
-          <div class="wishlist-link">
-            <i class="fa-solid fa-heart"></i>
-            <span>Add to Wishlist</span>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="shop-box">
-            <div class="shop-logo">
-              <img src="assets/images/shop-likhang.png" alt="Likhang Kamay Crafts">
-            </div>
-
-            <div class="shop-info">
-              <h4>Likhang Kamay Crafts</h4>
-              <div class="shop-rating">
-                <span class="stars">★★★★★</span>
-                <span class="rating-text">4.9 (150)</span>
-              </div>
-              <a href="shop_details.php" class="view-shop">View Shop</a>
-            </div>
-          </div>
-
-          <div class="divider"></div>
-        </div>
-      </div>
-
-      <div class="related-section">
-        <h2>Related Products</h2>
-
-        <div class="related-grid">
-          <div class="related-card">
-            <div class="related-image">
-              <img src="assets/images/related1.png" alt="Herbal Soap">
-            </div>
-            <div class="related-info">
-              <h4>Herbal Soap</h4>
-              <p>Likhang Kamay Crafts</p>
-              <div class="related-price">P 95.00</div>
-              <div class="related-actions">
-                <a href="#" class="btn-view">VIEW</a>
-                <a href="#" class="btn-cart">ADD TO CART</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="related-card">
-            <div class="related-image">
-              <img src="assets/images/related2.png" alt="Banana Chips">
-            </div>
-            <div class="related-info">
-              <h4>Banana Chips</h4>
-              <p>Brew & Beans Café</p>
-              <div class="related-price">P 120.00</div>
-              <div class="related-actions">
-                <a href="#" class="btn-view">VIEW</a>
-                <a href="#" class="btn-cart">ADD TO CART</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="related-card">
-            <div class="related-image">
-              <img src="assets/images/related3.png" alt="Handwoven Bag">
-            </div>
-            <div class="related-info">
-              <h4>Handwoven Bag</h4>
-              <p>Threads & Style PH</p>
-              <div class="related-price">P 360.00</div>
-              <div class="related-actions">
-                <a href="#" class="btn-view">VIEW</a>
-                <a href="#" class="btn-cart">ADD TO CART</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="related-card">
-            <div class="related-image">
-              <img src="assets/images/related4.png" alt="Handmade Necklace">
-            </div>
-            <div class="related-info">
-              <h4>Handmade Necklace</h4>
-              <p>Likhang Kamay Crafts</p>
-              <div class="related-price">P 220.00</div>
-              <div class="related-actions">
-                <a href="#" class="btn-view">VIEW</a>
-                <a href="#" class="btn-cart">ADD TO CART</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </section>
+</section>
 @endsection

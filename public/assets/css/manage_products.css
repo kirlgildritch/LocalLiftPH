@@ -3,7 +3,7 @@ body {
     
     margin: 0;
     padding: 0;
-    color: #3d2b3d;
+    color: #173F6B;
 }
 
 .dashboard-wrapper {
@@ -48,7 +48,7 @@ body {
     align-items: center;
     padding: 18px 20px;
     text-decoration: none;
-    color: #5b435d;
+    color: #1F4E86;
     border: none;
     border-bottom: 1px solid #f3dce5;
     background: #fff;
@@ -62,8 +62,8 @@ body {
 .sidebar-menu a:hover,
 .sidebar-menu a.active,
 .sidebar-menu button:hover {
-    background: #fff3f8;
-    color: #ff4f93;
+    background: #F1F7FE;
+    color: #1565C0;
     font-weight: 600;
 }
 
@@ -74,7 +74,7 @@ body {
 }
 
 .mini-badge {
-    background: #ff4f93;
+    background: #1565C0;
     color: #fff;
     font-size: 12px;
     font-weight: 600;
@@ -113,7 +113,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: #ff4f93;
+    background: #1565C0;
     color: #fff;
     text-decoration: none;
     padding: 12px 18px;
@@ -155,9 +155,9 @@ body {
     text-align: left;
     padding: 16px;
     font-size: 15px;
-    color: #5b435d;
+    color: #1F4E86;
     border-bottom: 1px solid #f0dbe5;
-    background: #fffafd;
+    background: #f7fcfa;
 }
 
 .products-table tbody td {
@@ -199,7 +199,7 @@ body {
 }
 
 .edit-btn {
-    background: #ffe4f0;
+    background: #E8F3FE;
     color: #d63384;
 }
 
@@ -213,3 +213,6 @@ body {
     color: #888;
     padding: 24px;
 }
+
+
+

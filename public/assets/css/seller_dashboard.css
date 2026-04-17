@@ -88,7 +88,7 @@
     }
 
     .topbar-center i{
-      color:#ff4f93;
+      color:#1565C0;
       margin-right:8px;
     }
 
@@ -121,7 +121,7 @@
 
     .logo i{
       font-size:44px;
-      color:#ff4f93;
+      color:#1565C0;
     }
 
     .logo-text{
@@ -138,7 +138,7 @@
       display:block;
       font-size:20px;
       font-weight:700;
-      color:#ff4f93;
+      color:#1565C0;
       margin-top:5px;
     }
 
@@ -186,7 +186,7 @@
       right:-10px;
       width:22px;
       height:22px;
-      background:#ff4f93;
+      background:#1565C0;
       color:#fff;
       border-radius:50%;
       font-size:11px;
@@ -218,7 +218,7 @@
 
     /* secondary nav */
     .seller-nav{
-      background:#fdeff5;
+      background:#edf8f3;
       border-bottom:1px solid #f1dfe7;
     }
 
@@ -242,7 +242,7 @@
     }
 
     .seller-nav a.active{
-      background:#ff4f93;
+      background:#1565C0;
       color:#fff;
     }
 
@@ -299,13 +299,13 @@
     }
 
     .sidebar-menu i{
-      color:#ff4f93;
+      color:#1565C0;
       width:18px;
       text-align:center;
     }
 
     .mini-badge{
-      background:#ff4f93;
+      background:#1565C0;
       color:#fff;
       font-size:11px;
       font-weight:600;
@@ -361,7 +361,7 @@
     }
 
     .stat-card .top i{
-      color:#ff4f93;
+      color:#1565C0;
       font-size:20px;
     }
 
@@ -425,7 +425,7 @@
       border-radius:6px;
     }
 
-    .pink-line{ background:#ff4f93; }
+    .pink-line{ background:#1565C0; }
     .gray-line{ background:#bbb1bc; }
 
     .chart-box{
@@ -577,7 +577,7 @@
     }
 
     .edit-btn{
-      background:#ff4f93;
+      background:#1565C0;
       color:#fff;
       border:none;
       padding:8px 13px;
@@ -694,13 +694,13 @@
     cursor: pointer;
     position: relative;
     font-size: 22px;
-    color: #2f2233;
+    color: #153B63;
     transition: 0.3s ease;
 }
 
 .notification-btn:hover {
-    background: #fff3f8;
-    color: #ff4f93;
+    background: #F1F7FE;
+    color: #1565C0;
 }
 
 .notif-badge {
@@ -711,7 +711,7 @@
     height: 20px;
     padding: 0 5px;
     border-radius: 50px;
-    background: #ff4f93;
+    background: #1565C0;
     color: #fff;
     font-size: 11px;
     font-weight: 700;
@@ -726,7 +726,7 @@
     right: 0;
     width: 340px;
     background: #fff;
-    border: 1px solid #f1d8e3;
+    border: 1px solid #D2E6FB;
     border-radius: 16px;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
     overflow: hidden;
@@ -746,7 +746,7 @@
 .notification-header {
     padding: 14px 16px;
     border-bottom: 1px solid #f3dce5;
-    background: #fff8fb;
+    background: #F7FBFF;
 }
 
 .notification-header h4 {
@@ -770,15 +770,15 @@
 }
 
 .notification-item.unread {
-    background: #fff9fc;
+    background: #F7FBFF;
 }
 
 .notif-icon {
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #ffe7f1;
-    color: #ff4f93;
+    background: #E8F3FE;
+    color: #1565C0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -817,7 +817,7 @@
 
 .notification-footer a {
     text-decoration: none;
-    color: #ff4f93;
+    color: #1565C0;
     font-size: 14px;
     font-weight: 600;
 }
@@ -852,7 +852,7 @@
     right: 0;
     width: 200px;
     background: #fff;
-    border: 1px solid #f1d8e3;
+    border: 1px solid #D2E6FB;
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.08);
     overflow: hidden;
@@ -886,7 +886,7 @@
 
 .profile-menu a:hover,
 .profile-menu button:hover {
-    background: #fff3f8;
+    background: #F1F7FE;
 }
 .logout{
   font-size: 15px;
@@ -896,8 +896,8 @@
     width: 38px;
     height: 38px;
     border-radius: 50%;
-    background: #ffe7f1;
-    color: #ff4f93;
+    background: #E8F3FE;
+    color: #1565C0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -909,10 +909,13 @@
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid #ffd6e8;
+    border: 2px solid #BBDEFB;
 }
 
 .profile-icon {
     font-size: 34px;
-    color: #ff4f93;
+    color: #1565C0;
 }
+
+
+

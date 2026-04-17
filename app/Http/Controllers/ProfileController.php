@@ -87,4 +87,50 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+    public function buyerEdit(Request $request)
+{
+    return view('buyer.profile', [
+        'user' => $request->user(),
+    ]);
+}
+
+public function buyerUpdate(Request $request)
+{
+    $user = $request->user();
+
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255',
+        'phone' => 'nullable|string|max:20',
+        'address' => 'nullable|string|max:255',
+        'profile_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        'current_password' => 'nullable|required_with:password',
+        'password' => 'nullable|confirmed|min:6',
+    ]);
+
+    if ($request->filled('password')) {
+        if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
+            return back()->withErrors([
+                'current_password' => 'Current password is incorrect.'
+            ])->withInput();
+        }
+
+        $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+    }
+
+    if ($request->hasFile('profile_image')) {
+        $path = $request->file('profile_image')->store('profile_images', 'public');
+        $user->profile_image = $path;
+    }
+
+    $user->name = $request->name;
+    $user->email = $request->email;
+    $user->phone = $request->phone;
+    $user->address = $request->address;
+
+    $user->save();
+
+    return back()->with('success', 'Profile updated successfully.');
+    }
+
 }

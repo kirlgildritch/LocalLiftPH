@@ -29,4 +29,31 @@ class User extends Authenticatable
     {
         return $this->hasMany(Product::class);
     }
+    public function addresses()
+    {
+        return $this->hasMany(\App\Models\Address::class);
+    }
+    public function isSeller()
+    {
+        return $this->role === 'seller';
+    }
+
+    public function isBuyer()
+    {
+        return $this->role === 'buyer';
+    }
+
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+    public function carts()
+    {
+        return $this->hasMany(\App\Models\Cart::class);
+    }
+    public function orders()
+    {
+        return $this->hasMany(\App\Models\Order::class);
+    }
+
 }

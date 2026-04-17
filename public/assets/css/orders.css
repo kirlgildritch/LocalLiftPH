@@ -12,8 +12,8 @@
 }
 
 .products-table th {
-    background: #fff6fa;
-    color: #5b435d;
+    background: #F7FBFF;
+    color: #1F4E86;
 }
 
 .status {
@@ -45,7 +45,7 @@
 }
 
 .edit-btn {
-    background: #ffe4f0;
+    background: #E8F3FE;
     color: #d63384;
     padding: 8px 14px;
     border-radius: 10px;
@@ -59,3 +59,6 @@
     color: #888;
     padding: 20px;
 }
+
+
+

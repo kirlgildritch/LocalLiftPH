@@ -1,48 +1,58 @@
 <footer>
     <div class="container footer-top">
-      <div class="footer-about">
-        <div class="footer-logo">
-          <div class="logo-icon"><i class="fa-solid fa-location-dot"></i></div>
-          <h3>LocalLift <span>PH</span></h3>
+        <div class="footer-brand">
+            <div class="footer-logo">
+                <div class="logo-icon"><i class="fa-solid fa-location-dot"></i></div>
+                <h3>LocalLift <span>PH</span></h3>
+            </div>
+
+            <p>
+                A modern marketplace for discovering local products, regional sellers, and communities worth supporting.
+            </p>
+
+            <div class="footer-badges">
+                <span>Trust-first shopping</span>
+                <span>Seller growth tools</span>
+                <span>Responsive storefronts</span>
+            </div>
         </div>
-        <p>Empowering local businesses by providing a centralized marketplace for sellers and buyers.</p>
-      </div>
 
-      <div class="footer-col">
-        <h4>Quick Links</h4>
-        <ul>
-          <li><a href="{{ url('/') }}">Home</a></li>
-          <li><a href="{{ url('/shops') }}">Shops</a></li>
-          <li><a href="{{ url('/products') }}">Products</a></li>
-          <li><a href="{{ url('/about_us') }}">About Us</a></li>
-        </ul>
-      </div>
+        <div class="footer-col">
+            <h4>Marketplace</h4>
+            <ul>
+                <li><a href="{{ route('home') }}">Overview</a></li>
+                <li><a href="{{ route('shops.index') }}">Featured Shops</a></li>
+                <li><a href="{{ route('products.index') }}">Products</a></li>
+                <li><a href="{{ route('about') }}">About LocalLift</a></li>
+            </ul>
+        </div>
 
-      <div class="footer-col">
-        <h4>For Sellers</h4>
-        <ul>
-          <li><a href="create_shop.php">Create a Shop</a></li>
-          <li><a href="seller_guide.php">Seller Guide</a></li>
-          <li><a href="seller_login.php">Dashboard Login</a></li>
-          <li><a href="contact.php">Contact Support</a></li>
-        </ul>
-      </div>
+        <div class="footer-col">
+            <h4>For Sellers</h4>
+            <ul>
+                <li><a href="{{ route('seller.setup') }}">Create a Shop</a></li>
+                <li><a href="{{ route('login') }}">Seller Access</a></li>
+                <li><a href="{{ route('products.index') }}">Product Discovery</a></li>
+                <li><a href="{{ route('buyer.orders') }}">Order Tracking</a></li>
+            </ul>
+        </div>
 
-      <div class="footer-col">
-        <h4>Connect With Us</h4>
-        <ul>
-          <li><i class="fa-brands fa-facebook-f"></i> Facebook</li>
-          <li><i class="fa-brands fa-instagram"></i> Instagram</li>
-          <li><i class="fa-solid fa-envelope"></i> Email</li>
-        </ul>
-      </div>
+        <div class="footer-col">
+            <h4>Connect</h4>
+            <ul>
+                <li><i class="fa-brands fa-facebook-f"></i> Facebook</li>
+                <li><i class="fa-brands fa-instagram"></i> Instagram</li>
+                <li><i class="fa-brands fa-tiktok"></i> TikTok</li>
+                <li><i class="fa-solid fa-envelope"></i> support@locallift.ph</li>
+            </ul>
+        </div>
     </div>
 
     <div class="container footer-bottom">
-      <div>© 2025 LocalLift PH. All Rights Reserved.</div>
-      <div class="right-links">
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms & Conditions</a>
-      </div>
+        <div>Copyright 2026 LocalLift PH. Built for local-first commerce.</div>
+        <div class="right-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms and Conditions</a>
+        </div>
     </div>
-  </footer>
+</footer>
