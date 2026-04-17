@@ -27,7 +27,8 @@
           </h1>
 
           <p>
-            Explore curated categories, reliable shops, and product collections designed to help local businesses look more premium online.
+            Explore curated categories, reliable shops, and product collections designed to help local businesses look
+            more premium online.
           </p>
 
           <div class="hero-actions">
@@ -37,7 +38,7 @@
             </a>
 
             @auth
-              @if(!auth()->user()->is_seller)
+              @if(!auth()->user()->isSeller())
                 <a href="{{ route('seller.setup') }}" class="btn btn-outline">
                   <i class="fa-solid fa-store"></i>
                   Become a Seller
@@ -62,12 +63,13 @@
           <span class="section-kicker">Browse</span>
           <h2 class="section-title">Featured Categories</h2>
         </div>
-        <a href="{{ route('categories.index') }}" class="view-all">View all categories <i class="fa-solid fa-arrow-right"></i></a>
+        <a href="{{ route('categories.index') }}" class="view-all">View all categories <i
+            class="fa-solid fa-arrow-right"></i></a>
       </div>
 
       <div class="categories">
         @forelse($featuredCategories ?? collect() as $category)
-          <a href="{{ route('products.index', ['search' => $category->name]) }}" class="category-card">
+          <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="category-card">
             <div class="cat-icon"><i class="fa-solid {{ $category->icon }}"></i></div>
             <h4>{{ $category->name }}</h4>
             <p>{{ $category->count }} products available in this category.</p>
@@ -97,13 +99,11 @@
         @forelse($featuredProducts ?? collect() as $product)
           <div class="product-card">
             <div class="product-image">
-              <img
-                src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/image/heroBanner.png') }}"
-                alt="{{ $product->name }}"
-              >
+              <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/image/heroBanner.png') }}"
+                alt="{{ $product->name }}">
             </div>
             <div class="product-info">
-              <span class="product-label">{{ $product->category }}</span>
+              <span class="product-label">{{ $product->category?->name ?? 'Uncategorized' }}</span>
               <h4>{{ $product->name }}</h4>
               <div class="sub">{{ $product->user->name ?? 'LocalLift Seller' }}</div>
               <div class="price"><small>P</small>{{ number_format($product->price, 2) }}</div>
@@ -111,7 +111,7 @@
                 <a href="{{ route('products.show', $product->id) }}" class="details-btn">View Details</a>
 
                 @auth
-                  @if(auth()->user()->role === 'buyer')
+                  @if(auth()->user()->isBuyer())
                     <form action="{{ route('cart.add', $product->id) }}" method="POST" class="add-to-cart-form">
                       @csrf
                       <input type="hidden" name="quantity" value="1">
@@ -125,7 +125,8 @@
                     </button>
                   @endif
                 @else
-                  <a href="{{ route('login') }}" class="mini-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Add to Cart</a>
+                  <a href="{{ route('login') }}" class="mini-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Add to
+                    Cart</a>
                 @endauth
               </div>
             </div>

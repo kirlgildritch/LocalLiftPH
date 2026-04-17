@@ -36,7 +36,7 @@ class AuthenticatedSessionController extends Controller
         ]);
     }
 
-    if ($user->role === 'seller') {
+    if ($user->isSeller()) {
         return redirect('/seller-dashboard');
     }
 

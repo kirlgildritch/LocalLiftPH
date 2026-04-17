@@ -4,40 +4,48 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\User;
+use App\Models\Category;
 use Illuminate\Http\Request;
 
 class ProductBrowseController extends Controller
 {
     public function index(Request $request)
     {
-        $search = trim($request->search);
-        $category = trim((string) $request->get('category'));
+        $search = trim((string) $request->search);
+        $categorySlug = trim((string) $request->get('category'));
         $minPrice = $request->filled('min_price') ? (float) $request->get('min_price') : null;
         $maxPrice = $request->filled('max_price') ? (float) $request->get('max_price') : null;
         $sort = $request->get('sort', 'newest');
 
-        $productsQuery = Product::with('user')
-            ->where('is_active', 1)
-            ->when($search, function ($query) use ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%')
-                      ->orWhere('category', 'like', '%' . $search . '%')
-                      ->orWhere('description', 'like', '%' . $search . '%')
-                      ->orWhereHas('user', function ($sellerQuery) use ($search) {
-                          $sellerQuery->where('name', 'like', '%' . $search . '%')
-                                      ->where('role', 'seller');
-                      });
-                });
-            })
-            ->when($category, function ($query) use ($category) {
-                $query->where('category', $category);
-            })
-            ->when($minPrice !== null, function ($query) use ($minPrice) {
-                $query->where('price', '>=', $minPrice);
-            })
-            ->when($maxPrice !== null, function ($query) use ($maxPrice) {
-                $query->where('price', '<=', $maxPrice);
+        $productsQuery = Product::with(['user', 'category'])
+            ->where('is_active', 1);
+
+        if ($search) {
+            $productsQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($sellerQuery) use ($search) {
+                        $sellerQuery->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('category', function ($categoryQuery) use ($search) {
+                        $categoryQuery->where('name', 'like', "%{$search}%");
+                    });
             });
+        }
+
+        if ($categorySlug) {
+            $productsQuery->whereHas('category', function ($categoryQuery) use ($categorySlug) {
+                $categoryQuery->where('slug', $categorySlug);
+            });
+        }
+
+        if ($minPrice !== null) {
+            $productsQuery->where('price', '>=', $minPrice);
+        }
+
+        if ($maxPrice !== null) {
+            $productsQuery->where('price', '<=', $maxPrice);
+        }
 
         $products = match ($sort) {
             'price_asc' => $productsQuery->orderBy('price')->get(),
@@ -46,19 +54,18 @@ class ProductBrowseController extends Controller
             default => $productsQuery->latest()->get(),
         };
 
-        $categories = Product::query()
-            ->where('is_active', 1)
-            ->selectRaw('category, COUNT(*) as product_count')
-            ->whereNotNull('category')
-            ->where('category', '!=', '')
-            ->groupBy('category')
-            ->orderBy('category')
-            ->get();
-
-        $shops = User::withCount(['products' => function ($query) {
+        $categories = Category::withCount([
+            'products' => function ($query) {
                 $query->where('is_active', 1);
-            }])
-            ->where('role', 'seller')
+            }
+        ])->orderBy('name')->get();
+
+        $shops = User::withCount([
+            'products' => function ($query) {
+                $query->where('is_active', 1);
+            }
+        ])
+            ->where('is_seller', 1)
             ->when($search, function ($query) use ($search) {
                 $query->where('name', 'like', '%' . $search . '%');
             })
@@ -71,7 +78,7 @@ class ProductBrowseController extends Controller
             'shops',
             'search',
             'categories',
-            'category',
+            'categorySlug',
             'minPrice',
             'maxPrice',
             'sort'
@@ -80,11 +87,11 @@ class ProductBrowseController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('user');
+        $product->load(['user', 'category']);
 
-        $relatedProducts = Product::with('user')
+        $relatedProducts = Product::with(['user', 'category'])
             ->where('id', '!=', $product->id)
-            ->where('category', $product->category)
+            ->where('category_id', $product->category_id)
             ->where('is_active', 1)
             ->latest()
             ->take(3)
@@ -95,23 +102,26 @@ class ProductBrowseController extends Controller
 
     public function suggestions(Request $request)
     {
-        $query = trim($request->get('q'));
+        $query = trim((string) $request->get('q'));
 
         if (!$query) {
             return response()->json([]);
         }
 
-        $productSuggestions = Product::where('is_active', 1)
+        $productSuggestions = Product::with('category')
+            ->where('is_active', 1)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', '%' . $query . '%')
-                  ->orWhere('category', 'like', '%' . $query . '%')
-                  ->orWhere('description', 'like', '%' . $query . '%');
+                    ->orWhere('description', 'like', '%' . $query . '%')
+                    ->orWhereHas('category', function ($categoryQuery) use ($query) {
+                        $categoryQuery->where('name', 'like', '%' . $query . '%');
+                    });
             })
             ->limit(5)
             ->pluck('name')
             ->toArray();
 
-        $shopSuggestions = User::where('role', 'seller')
+        $shopSuggestions = User::where('is_seller', 1)
             ->where('name', 'like', '%' . $query . '%')
             ->limit(3)
             ->pluck('name')

@@ -11,7 +11,7 @@ class EnsureUserIsSeller
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || Auth::user()->role !== 'seller') {
+        if (!Auth::check() || !Auth::user()->isSeller()) {
             abort(403, 'Unauthorized. Sellers only.');
         }
 

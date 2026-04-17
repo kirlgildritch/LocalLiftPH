@@ -19,17 +19,17 @@
                 <div class="panel sidebar-panel">
                     <h3>Category</h3>
                     <div class="filter-list">
-                        <a href="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}" class="filter-item {{ empty($category) ? 'active' : '' }}">
+                        <a href="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}" class="filter-item {{ empty($categorySlug) ? 'active' : '' }}">
                             <div class="filter-label"><span class="dot"></span> All</div>
-                            <span class="count">{{ $categories->sum('product_count') }}</span>
+                            <span class="count">{{ $categories->sum('products_count') }}</span>
                         </a>
                         @foreach($categories as $categoryOption)
                             <a
-                                href="{{ route('products.index', array_filter(['search' => $search, 'category' => $categoryOption->category, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
-                                class="filter-item {{ $category === $categoryOption->category ? 'active' : '' }}"
+                                href="{{ route('products.index', array_filter(['search' => $search, 'category' => $categoryOption->slug, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                class="filter-item {{ $categorySlug === $categoryOption->slug ? 'active' : '' }}"
                             >
-                                <div class="filter-label"><span class="dot"></span> {{ $categoryOption->category }}</div>
-                                <span class="count">{{ $categoryOption->product_count }}</span>
+                                <div class="filter-label"><span class="dot"></span> {{ $categoryOption->name }}</div>
+                                <span class="count">{{ $categoryOption->products_count }}</span>
                             </a>
                         @endforeach
                     </div>
@@ -45,8 +45,8 @@
                     @if(!empty($search))
                         <input type="hidden" name="search" value="{{ $search }}">
                     @endif
-                    @if(!empty($category))
-                        <input type="hidden" name="category" value="{{ $category }}">
+                    @if(!empty($categorySlug))
+                        <input type="hidden" name="category" value="{{ $categorySlug }}">
                     @endif
                     <input type="hidden" name="sort" value="{{ $sort }}">
 
@@ -63,8 +63,8 @@
                     @if(!empty($search))
                         <input type="hidden" name="search" value="{{ $search }}">
                     @endif
-                    @if(!empty($category))
-                        <input type="hidden" name="category" value="{{ $category }}">
+                    @if(!empty($categorySlug))
+                        <input type="hidden" name="category" value="{{ $categorySlug }}">
                     @endif
                     @if($minPrice !== null)
                         <input type="hidden" name="min_price" value="{{ $minPrice }}">
@@ -133,7 +133,7 @@
                             </div>
 
                             <div class="product-info">
-                                <span class="product-badge">{{ $product->category }}</span>
+                                <span class="product-badge">{{ $product->category?->name ?? 'Uncategorized' }}</span>
                                 <h4>{{ $product->name }}</h4>
                                 <p>{{ $product->user->name ?? 'LocalLift Seller' }}</p>
                                 <div class="price">₱{{ number_format($product->price, 2) }}</div>
@@ -144,7 +144,7 @@
                                     </a>
 
                                     @auth
-                                        @if(auth()->user()->role === 'buyer')
+                                        @if(auth()->user()->isBuyer())
                                             <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display: inline;" class="add-to-cart-form">
                                                 @csrf
                                                 <button type="submit" class="action-btn primary-btn">Add to Cart</button>

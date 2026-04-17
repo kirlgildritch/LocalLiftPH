@@ -1,70 +1,23 @@
 <?php
+
 use App\Http\Controllers\Buyer\AddressController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CartController;
-use App\Http\Controllers\MessageController;
-use App\Http\Controllers\Seller\SellerOrderController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\EarningsController;
-use App\Http\Controllers\OrderController;
-use App\Http\Controllers\SellerController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\Seller\ProductController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\EarningsController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductBrowseController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Seller\ProductController;
+use App\Http\Controllers\Seller\SellerOrderController;
+use App\Http\Controllers\SellerController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShopController;
-use App\Models\Product;
-Route::get('/', function () {
-    $categoryIcons = [
-        'food' => 'fa-utensils',
-        'food and drinks' => 'fa-utensils',
-        'clothing' => 'fa-shirt',
-        'clothing and fashion' => 'fa-shirt',
-        'fashion' => 'fa-shirt',
-        'handmade crafts' => 'fa-palette',
-        'crafts' => 'fa-palette',
-        'accessories' => 'fa-bag-shopping',
-        'souvenirs' => 'fa-gift',
-        'souvenirs and gifts' => 'fa-gift',
-        'beauty' => 'fa-heart',
-        'electronics' => 'fa-mobile-screen',
-        'home & living' => 'fa-couch',
-        'home and living' => 'fa-couch',
-        'bags' => 'fa-bag-shopping',
-        'shoes' => 'fa-shoe-prints',
-        'books' => 'fa-book',
-        'toys' => 'fa-puzzle-piece',
-        'pets' => 'fa-paw',
-    ];
+use Illuminate\Support\Facades\Route;
 
-    $featuredProducts = Product::with('user')
-        ->where('is_active', 1)
-        ->latest()
-        ->take(4)
-        ->get();
-
-    $featuredCategories = Product::query()
-        ->where('is_active', 1)
-        ->selectRaw('category, COUNT(*) as product_count')
-        ->whereNotNull('category')
-        ->where('category', '!=', '')
-        ->groupBy('category')
-        ->orderByDesc('product_count')
-        ->take(5)
-        ->get()
-        ->map(function ($category) use ($categoryIcons) {
-            $key = strtolower(trim($category->category));
-
-            return (object) [
-                'name' => $category->category,
-                'count' => (int) $category->product_count,
-                'icon' => $categoryIcons[$key] ?? 'fa-grid-2',
-            ];
-        });
-
-    return view('home', compact('featuredProducts', 'featuredCategories'));
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/shops', function () {
     return view('shops.index');
@@ -80,16 +33,12 @@ Route::get('/products/{product}', [ProductBrowseController::class, 'show'])->nam
 Route::get('/dashboard', function () {
     $user = auth()->user();
 
-    if ($user->role === 'seller') {
-        return redirect()->route('seller.dashboard');
-    }
-
-    if ($user->role === 'buyer') {
-        return redirect()->route('home');
-    }
-
-    if ($user->role === 'admin') {
+    if ($user->isAdmin()) {
         return redirect()->route('admin.dashboard');
+    }
+
+    if ($user->isSeller()) {
+        return redirect()->route('seller.dashboard');
     }
 
     return redirect()->route('home');
@@ -98,7 +47,7 @@ Route::get('/dashboard', function () {
 Route::view('/about', 'about')->name('about');
 
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
- 
+
 Route::middleware(['auth', 'seller'])->group(function () {
     Route::get('/seller-dashboard', function () {
         return view('seller.dashboard');
@@ -127,7 +76,6 @@ Route::middleware(['auth', 'seller'])->group(function () {
     Route::get('/seller-shop-preview', [SettingsController::class, 'preview'])->name('seller.shop.preview');
 });
 
-
 Route::middleware(['auth', 'buyer'])->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{productId}', [CartController::class, 'store'])->name('cart.add');
@@ -136,9 +84,6 @@ Route::middleware(['auth', 'buyer'])->group(function () {
 
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
-
-    Route::get('/become-seller', [SellerController::class, 'create'])->name('seller.setup');
-    Route::post('/become-seller', [SellerController::class, 'store'])->name('seller.store');
 
     Route::get('/buyer-profile', [ProfileController::class, 'buyerEdit'])->name('buyer.profile');
     Route::patch('/buyer-profile', [ProfileController::class, 'buyerUpdate'])->name('buyer.profile.update');
@@ -151,8 +96,14 @@ Route::middleware(['auth', 'buyer'])->group(function () {
     Route::patch('/my-addresses/{address}/default', [AddressController::class, 'setDefault'])->name('buyer.addresses.default');
 
     Route::get('/my-orders', [OrderController::class, 'index'])->name('buyer.orders');
-
-
+    Route::get('/my-orders/{order}', [OrderController::class, 'show'])->name('buyer.orders.show');
+    Route::post('/my-orders/{order}/buy-again', [OrderController::class, 'buyAgain'])->name('buyer.orders.buyAgain');
+    Route::patch('/my-orders/{order}/cancel', [OrderController::class, 'cancel'])->name('buyer.orders.cancel');
 });
 
-require __DIR__.'/auth.php';
+Route::middleware(['auth'])->group(function () {
+    Route::get('/become-seller', [SellerController::class, 'create'])->name('seller.setup');
+    Route::post('/become-seller', [SellerController::class, 'store'])->name('seller.store');
+});
+
+require __DIR__ . '/auth.php';

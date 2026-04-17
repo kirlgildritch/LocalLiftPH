@@ -9,7 +9,7 @@ class SellerController extends Controller
 {
     public function create()
     {
-        if (auth()->user()->is_seller) {
+        if (auth()->user()->isSeller()) {
             return redirect()->route('seller.dashboard');
         }
 
@@ -36,21 +36,25 @@ class SellerController extends Controller
             'address' => $request->address,
         ]);
 
-        $user->is_seller = 1;
+        $user->is_seller = true;
         $user->save();
 
         return redirect()->route('seller.dashboard')->with('success', 'You are now registered as a seller.');
     }
+
     public function preview()
     {
         $seller = \App\Models\Seller::where('user_id', auth()->id())->first();
 
-    $products = collect();
+        $products = collect();
 
-    if ($seller) {
-        $products = \App\Models\Product::where('seller_id', $seller->id)->get();
-    }
+        if ($seller) {
+            $products = \App\Models\Product::with('category')
+                ->where('user_id', auth()->id())
+                ->latest()
+                ->get();
+        }
 
-    return view('seller.shop-preview', compact('seller', 'products'));
+        return view('seller.shop-preview', compact('seller', 'products'));
     }
 }

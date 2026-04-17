@@ -21,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
             $defaultAddress = null;
             $miniCartItems = collect();
             $miniCartCount = 0;
+            $cartCount = 0;
 
             if (Auth::check()) {
                 $defaultAddress = Address::where('user_id', Auth::id())
@@ -34,11 +35,13 @@ class AppServiceProvider extends ServiceProvider
                     ->get();
 
                 $miniCartCount = Cart::where('user_id', Auth::id())->count();
+                $cartCount = (int) Cart::where('user_id', Auth::id())->sum('quantity');
             }
 
             $view->with('defaultAddress', $defaultAddress);
             $view->with('miniCartItems', $miniCartItems);
             $view->with('miniCartCount', $miniCartCount);
+            $view->with('cartCount', $cartCount);
         });
     }
 }

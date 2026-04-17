@@ -32,9 +32,9 @@
                 </div>
 
                 <div class="product-copy">
-                    <span class="section-kicker">{{ $product->category }}</span>
+                    <span class="section-kicker">{{ $product->category?->name ?? 'Uncategorized' }}</span>
                     <h1>{{ $product->name }}</h1>
-                    <p class="product-subtitle">{{ $product->category }}</p>
+                    <p class="product-subtitle">{{ $product->category?->name ?? 'Uncategorized' }}</p>
 
                     <div class="product-meta">
                         <span><i class="fa-solid fa-store"></i> {{ $product->user->name ?? 'LocalLift Seller' }}</span>
@@ -51,7 +51,7 @@
                     <div class="product-feature-grid">
                         <div class="feature-card">
                             <strong>Category</strong>
-                            <span>{{ $product->category }}</span>
+                            <span>{{ $product->category?->name ?? 'Uncategorized' }}</span>
                         </div>
                         <div class="feature-card">
                             <strong>Availability</strong>
@@ -88,7 +88,7 @@
 
                     <div class="purchase-actions">
                         @auth
-                            @if(auth()->user()->role === 'buyer')
+                            @if(auth()->user()->isBuyer())
                                 <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
                                     @csrf
                                     <input type="hidden" name="quantity" value="1">
@@ -154,7 +154,7 @@
                             </div>
 
                             <div class="related-info">
-                                <span class="product-badge">{{ $relatedProduct->category }}</span>
+                                <span class="product-badge">{{ $relatedProduct->category?->name ?? 'Uncategorized' }}</span>
                                 <h3>{{ $relatedProduct->name }}</h3>
                                 <p>{{ $relatedProduct->user->name ?? 'LocalLift Seller' }}</p>
                                 <div class="price">₱{{ number_format($relatedProduct->price, 2) }}</div>
@@ -165,7 +165,7 @@
                                     </a>
 
                                     @auth
-                                        @if(auth()->user()->role === 'buyer')
+                                        @if(auth()->user()->isBuyer())
                                             <form action="{{ route('cart.add', $relatedProduct->id) }}" method="POST" style="display:inline;" class="add-to-cart-form">
                                                 @csrf
                                                 <button type="submit" class="action-btn primary-btn">Add to Cart</button>

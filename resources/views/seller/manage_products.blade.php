@@ -41,7 +41,7 @@
                             @forelse($products as $product)
                                 <tr>
                                     <td>{{ $product->name }}</td>
-                                    <td>{{ $product->category }}</td>
+                                    <td>{{ $product->category?->name ?? 'Uncategorized' }}</td>
                                     <td>₱{{ number_format($product->price, 2) }}</td>
                                     <td>{{ $product->stock }}</td>
                                     <td>

@@ -64,7 +64,7 @@
 
                                 <div class="product-preview-content">
                                     <h4>{{ $product->name }}</h4>
-                                    <p class="product-category">{{ $product->category }}</p>
+                                    <p class="product-category">{{ $product->category?->name ?? 'Uncategorized' }}</p>
                                     <div class="product-preview-bottom">
                                         <span class="product-price">₱{{ number_format($product->price, 2) }}</span>
                                         <span class="product-stock">Stock: {{ $product->stock }}</span>

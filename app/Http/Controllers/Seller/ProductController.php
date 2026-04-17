@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Seller;
-
+use App\Models\Category;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -18,18 +18,20 @@ class ProductController extends Controller
 
     public function create()
     {
-        return view('seller.add_product');
+        $categories = Category::orderBy('name')->get();
+
+        return view('seller.add_product', compact('categories'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'category' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'category_id' => 'required|exists:categories,id',
+            'price' => 'required|numeric',
+            'stock' => 'required|integer',
+            'description' => 'required|string',
+            'image' => 'nullable|image|max:2048',
         ]);
 
         $imagePath = null;
@@ -38,16 +40,17 @@ class ProductController extends Controller
             $imagePath = $request->file('image')->store('products', 'public');
         }
 
-        Product::create([
-            'user_id' => Auth::id(),
+    Product::create([
             'name' => $request->name,
-            'category' => $request->category,
-            'description' => $request->description,
+            'category_id' => $request->category_id,
             'price' => $request->price,
             'stock' => $request->stock,
+            'description' => $request->description,
             'image' => $imagePath,
+            'user_id' => auth()->id(),
+            'is_active' => 1,
         ]);
 
-        return redirect()->route('seller.products.index')->with('success', 'Product added successfully.');
+        return redirect()->back()->with('success', 'Product added successfully.');
     }
 }

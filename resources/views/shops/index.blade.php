@@ -19,17 +19,17 @@
                 <div class="panel sidebar-panel">
                     <h3>Categories</h3>
                     <div class="filter-list">
-                        <a href="{{ route('shops.index', array_filter(['sort' => $sort])) }}" class="filter-item {{ empty($category) ? 'active' : '' }}">
+                        <a href="{{ route('shops.index', array_filter(['sort' => $sort])) }}" class="filter-item {{ empty($categorySlug) ? 'active' : '' }}">
                             <div class="filter-label"><span class="dot"></span> All</div>
-                            <span class="count">{{ $shops->count() }}</span>
+                            <span class="count">{{ $categories->sum('products_count') }}</span>
                         </a>
                         @foreach($categories as $categoryOption)
                             <a
-                                href="{{ route('shops.index', array_filter(['category' => $categoryOption->category, 'sort' => $sort])) }}"
-                                class="filter-item {{ $category === $categoryOption->category ? 'active' : '' }}"
+                                href="{{ route('shops.index', array_filter(['category' => $categoryOption->slug, 'sort' => $sort])) }}"
+                                class="filter-item {{ $categorySlug === $categoryOption->slug ? 'active' : '' }}"
                             >
-                                <div class="filter-label"><span class="dot"></span> {{ $categoryOption->category }}</div>
-                                <span class="count">{{ $categoryOption->product_count }}</span>
+                                <div class="filter-label"><span class="dot"></span> {{ $categoryOption->name }}</div>
+                                <span class="count">{{ $categoryOption->products_count }}</span>
                             </a>
                         @endforeach
                     </div>
@@ -47,8 +47,8 @@
                         <div class="inline-select">
                             <label>Sort By</label>
                             <form action="{{ route('shops.index') }}" method="GET">
-                                @if(!empty($category))
-                                    <input type="hidden" name="category" value="{{ $category }}">
+                                @if(!empty($categorySlug))
+                                    <input type="hidden" name="category" value="{{ $categorySlug }}">
                                 @endif
                                 <select name="sort" onchange="this.form.submit()">
                                     <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Newest</option>

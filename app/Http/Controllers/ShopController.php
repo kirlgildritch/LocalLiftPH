@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
+use App\Models\Category;
 use App\Models\User;
 use Illuminate\Http\Request;
 
@@ -10,26 +10,30 @@ class ShopController extends Controller
 {
     public function index(Request $request)
     {
-        $category = trim((string) $request->get('category'));
+        $categorySlug = trim((string) $request->get('category'));
         $sort = $request->get('sort', 'newest');
 
-        $categories = Product::query()
-            ->where('is_active', 1)
-            ->selectRaw('category, COUNT(*) as product_count')
-            ->whereNotNull('category')
-            ->where('category', '!=', '')
-            ->groupBy('category')
-            ->orderBy('category')
+        $categories = Category::withCount([
+            'products' => function ($query) {
+                $query->where('is_active', 1);
+            },
+        ])
+            ->whereHas('products', function ($query) {
+                $query->where('is_active', 1);
+            })
+            ->orderBy('name')
             ->get();
 
         $shopsQuery = User::withCount(['products' => function ($query) {
                 $query->where('is_active', 1);
             }])
-            ->where('role', 'seller')
-            ->whereHas('products', function ($query) use ($category) {
+            ->where('is_seller', 1)
+            ->whereHas('products', function ($query) use ($categorySlug) {
                 $query->where('is_active', 1)
-                    ->when($category, function ($categoryQuery) use ($category) {
-                        $categoryQuery->where('category', $category);
+                    ->when($categorySlug, function ($categoryQuery) use ($categorySlug) {
+                        $categoryQuery->whereHas('category', function ($nestedCategoryQuery) use ($categorySlug) {
+                            $nestedCategoryQuery->where('slug', $categorySlug);
+                        });
                     });
             });
 
@@ -40,16 +44,17 @@ class ShopController extends Controller
             default => $shopsQuery->latest()->get(),
         };
 
-        return view('shops.index', compact('shops', 'categories', 'category', 'sort'));
+        return view('shops.index', compact('shops', 'categories', 'categorySlug', 'sort'));
     }
 
     public function show(User $user)
     {
-        if ($user->role !== 'seller') {
+        if (! $user->isSeller()) {
             abort(404);
         }
 
         $products = $user->products()
+            ->with('category')
             ->where('is_active', 1)
             ->latest()
             ->get();
