@@ -75,7 +75,7 @@
                         <span class="user-chip__avatar">AD</span>
                         <span>{{ auth()->user()?->name ?? 'Admin User' }}</span>
                     </div>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <form method="POST" action="{{ route('admin.logout') }}">
                         @csrf
                         <button type="submit" class="topbar__logout" aria-label="Log out">
                             <i class="fa-solid fa-right-from-bracket"></i>

@@ -1,4 +1,3 @@
-
 <aside class="sidebar">
     <button class="sidebar-close" type="button" data-close-seller-sidebar aria-label="Close seller navigation">
         <i class="fa-solid fa-xmark"></i>
@@ -24,24 +23,16 @@
         </a>
 
         <a href="{{ route('seller.earnings') }}" class="{{ request()->is('seller-earnings') ? 'active' : '' }}">
-    <div class="left">
-        <i class="fa-solid fa-dollar-sign"></i> Earnings
-    </div>
-</a>
+            <div class="left">
+                <i class="fa-solid fa-dollar-sign"></i> Earnings
+            </div>
+        </a>
+        <a href="{{ route('seller.shop.preview') }}" class="{{ request()->is('seller-shop-preview') ? 'active' : '' }}">
+            <div class="left">
+                <i class="fa-solid fa-store"></i> View Shop
+            </div>
+        </a>
 
-        <a href="{{ route('seller.messages') }}" class="{{ request()->is('seller-messages') ? 'active' : '' }}">
-        <div class="left">
-            <i class="fa-regular fa-envelope"></i> Messages
-        </div>
-        <span class="mini-badge">2</span>
-    </a>
 
-    <a href="{{ route('seller.shop.preview') }}" class="{{ request()->is('seller-shop-preview') ? 'active' : '' }}">
-    <div class="left">
-        <i class="fa-solid fa-store"></i> View Shop
-    </div>
-</a>
-
-        
     </div>
 </aside>

@@ -1,8 +1,9 @@
 <div class="messages-layout">
+    @php($isSellerInbox = auth('seller')->check())
     <div class="chat-list-panel panel">
         @forelse($conversations as $conversation)
             @php($otherParticipant = $conversation->otherParticipant(auth()->user()))
-            <a href="{{ route('messages.show', $conversation) }}" class="chat-item {{ optional($activeConversation)->id === $conversation->id ? 'active' : '' }}">
+            <a href="{{ $isSellerInbox ? route('seller.messages.show', $conversation) : route('messages.show', $conversation) }}" class="chat-item {{ optional($activeConversation)->id === $conversation->id ? 'active' : '' }}">
                 @if(!empty($otherParticipant?->profile_image))
                     <img src="{{ asset('storage/' . $otherParticipant->profile_image) }}" alt="{{ $otherParticipant->name }}">
                 @else
@@ -31,7 +32,7 @@
             <div class="chat-window-header">
                 <div class="chat-window-heading">
                     <h3>{{ $otherParticipant->name ?? 'Conversation' }}</h3>
-                    <span>{{ auth()->user()->isSeller() ? 'Buyer conversation' : 'Seller conversation' }}</span>
+                    <span>{{ $isSellerInbox ? 'Buyer conversation' : 'Seller conversation' }}</span>
                 </div>
             </div>
 
@@ -52,7 +53,7 @@
                 @endforelse
             </div>
 
-            <form class="chat-input-area" action="{{ route('messages.store', $activeConversation) }}" method="POST">
+            <form class="chat-input-area" action="{{ $isSellerInbox ? route('seller.messages.store', $activeConversation) : route('messages.store', $activeConversation) }}" method="POST">
                 @csrf
                 <input type="text" name="message" placeholder="Type your message here..." value="{{ old('message') }}">
                 <button class="send-btn" type="submit">Send</button>

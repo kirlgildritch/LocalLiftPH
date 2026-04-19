@@ -25,36 +25,32 @@ class AppServiceProvider extends ServiceProvider
             $cartCount = 0;
             $messagePreviewConversations = collect();
             $messageConversationCount = 0;
+            $buyerGuard = Auth::guard('web');
 
-            if (Auth::check()) {
-                $defaultAddress = Address::where('user_id', Auth::id())
+            if ($buyerGuard->check()) {
+                $buyerId = $buyerGuard->id();
+                $buyerUser = $buyerGuard->user();
+
+                $defaultAddress = Address::where('user_id', $buyerId)
                     ->where('is_default', true)
                     ->first();
 
                 $miniCartItems = Cart::with(['product.user'])
-                    ->where('user_id', Auth::id())
+                    ->where('user_id', $buyerId)
                     ->latest()
                     ->take(4)
                     ->get();
 
-                $miniCartCount = Cart::where('user_id', Auth::id())->count();
-                $cartCount = (int) Cart::where('user_id', Auth::id())->sum('quantity');
+                $miniCartCount = Cart::where('user_id', $buyerId)->count();
+                $cartCount = (int) Cart::where('user_id', $buyerId)->sum('quantity');
 
                 $messagePreviewConversations = Conversation::with(['buyer', 'seller', 'latestMessage.sender'])
-                    ->when(Auth::user()->isSeller(), function ($query) {
-                        $query->where('seller_id', Auth::id());
-                    }, function ($query) {
-                        $query->where('buyer_id', Auth::id());
-                    })
+                    ->where('buyer_id', $buyerId)
                     ->latest('updated_at')
                     ->take(5)
                     ->get();
 
-                $messageConversationCount = Conversation::when(Auth::user()->isSeller(), function ($query) {
-                    $query->where('seller_id', Auth::id());
-                }, function ($query) {
-                    $query->where('buyer_id', Auth::id());
-                })->count();
+                $messageConversationCount = Conversation::where('buyer_id', $buyerId)->count();
             }
 
             $view->with('defaultAddress', $defaultAddress);

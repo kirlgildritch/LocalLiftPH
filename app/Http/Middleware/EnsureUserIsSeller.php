@@ -11,9 +11,15 @@ class EnsureUserIsSeller
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->isSeller()) {
-            abort(403, 'Unauthorized. Sellers only.');
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
         }
+
+        if (!Auth::guard('seller')->check()) {
+            return redirect()->route('seller.login');
+        }
+
+        Auth::shouldUse('seller');
 
         return $next($request);
     }

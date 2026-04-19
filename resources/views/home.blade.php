@@ -38,14 +38,12 @@
             </a>
 
             @auth
-              @if(!auth()->user()->is_seller)
-                <a href="{{ route('seller.setup') }}" class="btn btn-outline">
-                  <i class="fa-solid fa-store"></i>
-                  Become a Seller
-                </a>
-              @endif
+              <a href="{{ route('seller.login') }}" class="btn btn-outline">
+                <i class="fa-solid fa-store"></i>
+                Become a Seller
+              </a>
             @else
-              <a href="{{ route('login') }}" class="btn btn-outline">
+              <a href="{{ route('seller.login') }}" class="btn btn-outline">
                 <i class="fa-solid fa-store"></i>
                 Become a Seller
               </a>

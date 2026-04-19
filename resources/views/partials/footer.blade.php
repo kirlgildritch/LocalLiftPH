@@ -30,8 +30,8 @@
         <div class="footer-col">
             <h4>For Sellers</h4>
             <ul>
-                <li><a href="">Create a Shop</a></li>
-                <li><a href="{{ route('login') }}">Seller Access</a></li>
+                <li><a href="{{ route('seller.register') }}">Create a Shop</a></li>
+                <li><a href="{{ route('seller.login') }}">Seller Access</a></li>
                 <li><a href="{{ route('products.index') }}">Product Discovery</a></li>
 
             </ul>

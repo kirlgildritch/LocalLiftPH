@@ -5,7 +5,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
 
-            <a href="{{ url('/seller-dashboard') }}" class="seller-brand">
+            <a href="{{ route('seller.dashboard') }}" class="seller-brand">
                 <span class="seller-brand-icon">
                     <i class="fa-solid fa-store"></i>
                 </span>
@@ -80,7 +80,7 @@
                         <a href="{{ route('seller.profile') }}">My Profile</a>
                         <a href="{{ route('seller.settings') }}">Settings</a>
 
-                        <form action="{{ route('logout') }}" method="POST">
+                        <form action="{{ route('seller.logout') }}" method="POST">
                             @csrf
                             <button type="submit" class="logout">Logout</button>
                         </form>

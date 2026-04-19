@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.seller')
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/seller_setup.css') }}">
@@ -8,7 +8,7 @@
             <div class="checkout-breadcrumb">
                 <a href="{{ route('home') }}">Home</a>
                 <span>&gt;</span>
-                <span>Become a Seller</span>
+                <span>Seller Setup</span>
             </div>
 
 
@@ -17,7 +17,7 @@
                 <div class="setup-topbar">
                     <div>
                         <span class="section-kicker">Application Flow</span>
-                        <h2>Become a Seller</h2>
+                        <h2>Complete Seller Setup</h2>
                         <p>Fill in your shop details, business information, and final confirmation before submitting your
                             application.</p>
                     </div>
@@ -53,7 +53,7 @@
                     </div>
                 </div>
 
-                <form action="{{ route('seller.store') }}" method="POST" class="seller-form">
+                <form action="{{ route('seller.setup.store') }}" method="POST" class="seller-form">
                     @csrf
 
                     <div class="form-step active" id="step-1">

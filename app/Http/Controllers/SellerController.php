@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Seller;
+use Illuminate\Support\Facades\Auth;
 
 class SellerController extends Controller
 {
     public function create()
     {
-        if (auth()->user()->isSeller()) {
+        if (!Auth::guard('seller')->check()) {
+            return redirect()->route('seller.login');
+        }
+
+        if (Seller::where('user_id', Auth::guard('seller')->id())->exists()) {
             return redirect()->route('seller.dashboard');
         }
 
@@ -26,20 +31,16 @@ class SellerController extends Controller
             'agree' => 'required',
         ]);
 
-        $user = auth()->user();
-
-        Seller::create([
-            'user_id' => $user->id,
+        Seller::updateOrCreate([
+            'user_id' => Auth::guard('seller')->id(),
+        ], [
             'store_name' => $request->store_name,
             'store_description' => $request->store_description,
             'contact_number' => $request->contact_number,
             'address' => $request->address,
         ]);
 
-        $user->is_seller = true;
-        $user->save();
-
-        return redirect()->route('seller.dashboard')->with('success', 'You are now registered as a seller.');
+        return redirect()->route('seller.dashboard')->with('success', 'Your seller center setup is complete.');
     }
 
     public function preview()

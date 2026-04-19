@@ -139,6 +139,7 @@ footer {
 }
 
 .header-main {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(180px, auto) minmax(0, 1fr) minmax(180px, auto);
   grid-template-areas:
@@ -188,6 +189,27 @@ footer {
   color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.24em;
+}
+
+.header-menu-toggle {
+  display: none;
+  grid-area: toggle;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), background var(--transition);
+}
+
+.header-menu-toggle:hover {
+  transform: translateY(-2px);
+  border-color: rgba(66, 165, 245, 0.34);
+  background: rgba(66, 165, 245, 0.08);
 }
 
 .navbar {
@@ -921,11 +943,11 @@ footer {
 
 @media (max-width: 1180px) {
   .header-main {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "logo actions"
-      "search search"
-      "nav nav";
+      "logo actions toggle"
+      "search search search"
+      "nav nav nav";
     align-items: center;
   }
 
@@ -957,15 +979,21 @@ footer {
   }
 
   .header-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "logo"
-      "actions"
-      "search"
-      "nav";
+      "logo actions toggle"
+      "search search search"
+      "nav nav nav";
     justify-items: stretch;
     gap: 14px;
     padding: 18px;
+    overflow: visible;
+  }
+
+  .header-menu-toggle {
+    display: inline-flex;
+    grid-area: toggle;
+    justify-self: end;
   }
 
   .header-main,
@@ -1014,15 +1042,86 @@ footer {
   }
 
   .header-actions {
-    justify-content: flex-start;
+    width: auto;
+    display: flex;
     flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
     gap: 10px;
+    justify-self: end;
+  }
+
+  .header-actions > * {
+    min-width: 0;
+    width: auto;
+  }
+
+  .buyer-profile-dropdown,
+  .cart-dropdown {
+    justify-self: auto;
+  }
+
+  .buyer-profile-menu,
+  .cart-menu {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, 8px);
+  }
+
+  .buyer-profile-dropdown:hover .buyer-profile-menu,
+  .cart-dropdown:hover .cart-menu,
+  .buyer-profile-dropdown.is-hover-open .buyer-profile-menu,
+  .cart-dropdown.is-hover-open .cart-menu {
+    transform: translate(-50%, 0);
+  }
+
+  .buyer-profile-dropdown.is-open .buyer-profile-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, 0);
+    pointer-events: auto;
+  }
+
+  .buyer-profile-dropdown:hover .buyer-profile-menu,
+  .buyer-profile-dropdown.is-hover-open .buyer-profile-menu {
+    opacity: 0;
+    visibility: hidden;
+    transform: translate(-50%, 10px);
+    pointer-events: none;
   }
 
   .navbar {
-    justify-content: center;
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 18px;
+    right: 18px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: auto;
+    gap: 8px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: rgba(7, 15, 27, 0.98);
+    box-shadow: 0 24px 54px rgba(0, 0, 0, 0.34);
+    z-index: 170;
+  }
+
+  .navbar.is-open {
+    display: flex;
+  }
+
+  .navbar a {
     width: 100%;
-    gap: 10px;
+    min-height: 44px;
+    justify-content: flex-start;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.015);
   }
 
   .search-bar {
@@ -1040,6 +1139,12 @@ footer {
   }
 
   .header-main {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "logo toggle"
+      "actions actions"
+      "search search"
+      "nav nav";
     gap: 12px;
     padding: 14px;
     margin-top: 0.75rem;
@@ -1071,11 +1176,6 @@ footer {
     padding-bottom: 6px;
   }
 
-  .buyer-profile-dropdown,
-  .cart-dropdown {
-    width: auto;
-  }
-
   .topbar-links,
   .header-tags,
   .navbar {
@@ -1099,14 +1199,16 @@ footer {
   .header-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
     align-items: stretch;
     justify-content: stretch;
     gap: 8px;
+    justify-self: stretch;
   }
 
   .header-actions > * {
     min-width: 0;
+    width: 100%;
   }
 
   .search-bar {
@@ -1137,22 +1239,9 @@ footer {
   }
 
   .navbar {
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-  }
-
-  .navbar::-webkit-scrollbar {
-    display: none;
-  }
-
-  .navbar a {
-    flex: 0 0 auto;
-    min-height: 40px;
-    padding: 8px 12px;
-    font-size: 13px;
+    left: 14px;
+    right: 14px;
+    padding: 12px;
   }
 
   .action-link,
@@ -1192,10 +1281,10 @@ footer {
 
   .buyer-profile-menu {
     position: fixed;
-    top: 132px;
-    left: 10px;
-    right: 10px;
-    width: auto;
+    top: 140px;
+    left: 50%;
+    right: auto;
+    width: min(280px, calc(100vw - 24px));
     max-width: none;
     max-height: min(60vh, 460px);
     overflow: hidden;
@@ -1205,20 +1294,20 @@ footer {
   .buyer-profile-menu {
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
+    transform: translate(-50%, 10px);
   }
 
   .buyer-profile-dropdown.is-open .buyer-profile-menu {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: translate(-50%, 0);
     pointer-events: auto;
   }
 
   .buyer-profile-dropdown:hover .buyer-profile-menu {
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px);
+    transform: translate(-50%, 10px);
   }
 
   .buyer-profile-menu {
@@ -1306,12 +1395,23 @@ footer {
     padding: 12px;
   }
 
+  .header-menu-toggle {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
   .action-link,
   .cart-trigger,
   .profile-trigger {
     min-height: 42px;
     padding: 0 6px;
     font-size: 11px;
+  }
+
+  .header-actions {
+    grid-template-columns: 1fr 1fr;
+    justify-content: stretch;
   }
 
   .message-trigger span:not(.cart-badge),

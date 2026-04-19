@@ -3,7 +3,6 @@
     $currentUser = $isLoggedIn ? auth()->user() : null;
     $previewItems = $isLoggedIn ? ($miniCartItems ?? collect()) : collect();
     $extraCount = $isLoggedIn ? max(($miniCartCount ?? 0) - $previewItems->count(), 0) : 0;
-    $messagePreviews = $messagePreviewConversations ?? collect();
 @endphp
 
 <header class="header">
@@ -19,6 +18,10 @@
             </div>
         </a>
 
+        <button type="button" class="header-menu-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
         <form action="{{ url('/products') }}" method="GET" class="search-bar" style="position: relative;">
             <i class="fa-solid fa-magnifying-glass"></i>
 
@@ -32,49 +35,6 @@
 
         <div class="header-actions">
             <?php if ($isLoggedIn): ?>
-                <div class="message-dropdown">
-                    <a href="{{ route('messages.index') }}" class="message-trigger action-link" title="Messages">
-                        <i class="fa-regular fa-envelope"></i>
-                        <span>Messages</span>
-                        <span class="cart-badge {{ ($messageConversationCount ?? 0) > 0 ? '' : 'is-hidden' }}">
-                            {{ $messageConversationCount ?? 0 }}
-                        </span>
-                    </a>
-
-                    <div class="message-menu">
-                        <div class="cart-menu-header">
-                            <h4>Conversations</h4>
-                        </div>
-
-                        <div class="message-preview-list">
-                            <?php if ($messagePreviews->isEmpty()): ?>
-                                <div class="cart-preview-empty">
-                                    <p>No conversations yet.</p>
-                                </div>
-                            <?php else: ?>
-                                <?php foreach ($messagePreviews as $conversation): ?>
-                                    @php($otherParticipant = $conversation->otherParticipant($currentUser))
-                                    <a href="{{ route('messages.show', $conversation) }}" class="message-preview-item">
-                                        <span class="message-preview-avatar">
-                                            {{ strtoupper(substr($otherParticipant->name ?? 'LL', 0, 2)) }}
-                                        </span>
-
-                                        <div class="message-preview-copy">
-                                            <strong>{{ $otherParticipant->name ?? 'Conversation' }}</strong>
-                                            <p>{{ \Illuminate\Support\Str::limit(optional($conversation->latestMessage)->message ?? 'Start chatting with this seller.', 44) }}</p>
-                                        </div>
-                                    </a>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="cart-menu-footer">
-                            <span>{{ $messageConversationCount ?? 0 }} conversation{{ ($messageConversationCount ?? 0) !== 1 ? 's' : '' }}</span>
-                            <a href="{{ route('messages.index') }}" class="view-cart-btn">Open Inbox</a>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="buyer-profile-dropdown">
                     <button type="button" class="profile-trigger buyer-profile-btn">
                         <?php if (!empty($currentUser->profile_image)): ?>
@@ -94,17 +54,10 @@
                             <i class="fa-solid fa-box"></i>
                             <span>My Orders</span>
                         </a>
-                        <?php if ($currentUser->isSeller()): ?>
-                            <a href="{{ route('seller.dashboard') }}" class="seller-link">
-                                <i class="fa-solid fa-store"></i>
-                                <span>Seller Dashboard</span>
-                            </a>
-                        <?php else: ?>
-                            <a href="{{ route('seller.setup') }}" class="seller-link">
-                                <i class="fa-solid fa-store"></i>
-                                <span>Start Selling</span>
-                            </a>
-                        <?php endif; ?>
+                        <a href="{{ route('seller.login') }}" class="seller-link">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Start Selling</span>
+                        </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="logout-btn">
@@ -117,6 +70,7 @@
             <?php else: ?>
                 <a href="{{ route('login') }}" class="action-link action-link-muted">Log In</a>
                 <a href="{{ route('register') }}" class="action-link action-link-primary">Create Account</a>
+                <a href="{{ route('seller.login') }}" class="action-link action-link-muted">Start Selling</a>
             <?php endif; ?>
 
             <?php if (!request()->is('cart')): ?>
@@ -291,11 +245,13 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const isMobileViewport = () => window.matchMedia('(max-width: 640px)').matches;
+        const isCompactViewport = () => window.matchMedia('(max-width: 820px)').matches;
+        const headerMain = document.querySelector('.header-main');
+        const nav = document.querySelector('.navbar');
+        const navToggle = document.querySelector('.header-menu-toggle');
         const mobileProfileDropdown = { container: '.buyer-profile-dropdown', trigger: '.profile-trigger' };
         const mobileDropdowns = [mobileProfileDropdown];
         const desktopHoverDropdowns = [
-            { container: '.message-dropdown', menu: '.message-menu' },
             { container: '.cart-dropdown', menu: '.cart-menu' },
             { container: '.buyer-profile-dropdown', menu: '.buyer-profile-menu' },
         ];
@@ -325,6 +281,32 @@
             hoverTimers.set(dropdown, timer);
         };
 
+        const closeCompactNav = () => {
+            if (!headerMain || !nav || !navToggle) {
+                return;
+            }
+
+            headerMain.classList.remove('nav-open');
+            nav.classList.remove('is-open');
+            navToggle.setAttribute('aria-expanded', 'false');
+        };
+
+        if (nav && navToggle && headerMain) {
+            navToggle.addEventListener('click', function (event) {
+                if (!isCompactViewport()) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                const shouldOpen = !nav.classList.contains('is-open');
+                headerMain.classList.toggle('nav-open', shouldOpen);
+                nav.classList.toggle('is-open', shouldOpen);
+                navToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+            });
+        }
+
         mobileDropdowns.forEach(({ container, trigger }) => {
             const dropdown = document.querySelector(container);
             const triggerElement = dropdown ? dropdown.querySelector(trigger) : null;
@@ -334,7 +316,7 @@
             }
 
             triggerElement.addEventListener('click', function (event) {
-                if (!isMobileViewport()) {
+                if (!isCompactViewport()) {
                     return;
                 }
 
@@ -361,7 +343,7 @@
             }
 
             const bindOpen = () => {
-                if (isMobileViewport()) {
+                if (isCompactViewport()) {
                     return;
                 }
 
@@ -369,7 +351,7 @@
             };
 
             const bindClose = () => {
-                if (isMobileViewport()) {
+                if (isCompactViewport()) {
                     return;
                 }
 
@@ -382,7 +364,7 @@
             menuElement.addEventListener('mouseleave', bindClose);
         });
 
-        ['.message-dropdown', '.cart-dropdown'].forEach((container) => {
+        ['.cart-dropdown'].forEach((container) => {
             const dropdown = document.querySelector(container);
             if (!dropdown) {
                 return;
@@ -394,7 +376,7 @@
             }
 
             trigger.addEventListener('click', function () {
-                if (!isMobileViewport()) {
+                if (!isCompactViewport()) {
                     return;
                 }
 
@@ -408,7 +390,7 @@
         });
 
         document.addEventListener('click', function (event) {
-            if (!isMobileViewport()) {
+            if (!isCompactViewport()) {
                 return;
             }
 
@@ -418,16 +400,27 @@
                     dropdown.classList.remove('is-open');
                 }
             });
+
+            if (nav && navToggle && headerMain) {
+                const clickedInsideNav = nav.contains(event.target);
+                const clickedToggle = navToggle.contains(event.target);
+
+                if (!clickedInsideNav && !clickedToggle) {
+                    closeCompactNav();
+                }
+            }
         });
 
         window.addEventListener('resize', function () {
-            if (!isMobileViewport()) {
+            if (!isCompactViewport()) {
                 mobileDropdowns.forEach(({ container }) => {
                     const dropdown = document.querySelector(container);
                     if (dropdown) {
                         dropdown.classList.remove('is-open');
                     }
                 });
+
+                closeCompactNav();
 
                 return;
             }
@@ -440,6 +433,16 @@
                 }
             });
         });
+
+        if (nav) {
+            nav.querySelectorAll('a').forEach((link) => {
+                link.addEventListener('click', function () {
+                    if (isCompactViewport()) {
+                        closeCompactNav();
+                    }
+                });
+            });
+        }
 
         const openBtn = document.getElementById('openProfileModal');
         const closeBtn = document.getElementById('closeProfileModal');

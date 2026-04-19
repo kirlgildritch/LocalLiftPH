@@ -56,7 +56,7 @@ class User extends Authenticatable
 
     public function isBuyer(): bool
     {
-        return ! $this->isAdmin();
+        return ! $this->isSeller() && ! $this->isAdmin();
     }
 
     public function isAdmin(): bool

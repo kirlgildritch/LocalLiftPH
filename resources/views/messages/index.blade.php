@@ -1,9 +1,7 @@
-@extends(auth()->user()->isSeller() ? 'layouts.seller' : 'layouts.app')
+@extends(auth('seller')->check() ? 'layouts.seller' : 'layouts.app')
 
 @section('content')
-    <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
-
-    @if(auth()->user()->isSeller())
+    @if(auth('seller')->check())
         <section class="dashboard-wrapper">
             <div class="container">
                 <div class="dashboard-layout">
@@ -15,10 +13,9 @@
                                 <div>
                                     <span class="section-kicker">Messages</span>
                                     <h2>Seller inbox</h2>
+                                    <p class="floating-chat-page-note">Your floating chat widget is open for this conversation. Minimize it any time and keep browsing Seller Center.</p>
                                 </div>
                             </div>
-
-                            @include('messages.partials.chat-layout')
                         </section>
                     </main>
                 </div>
@@ -35,14 +32,9 @@
                     </div>
 
                     <div class="buyer-messages-intro">
-
                         <h2>Messages</h2>
-
+                        <p class="floating-chat-page-note">The floating chat panel is open for this conversation. You can minimize it and continue shopping without leaving the page.</p>
                     </div>
-                </div>
-
-                <div class="panel buyer-messages-shell">
-                    @include('messages.partials.chat-layout')
                 </div>
             </div>
         </section>

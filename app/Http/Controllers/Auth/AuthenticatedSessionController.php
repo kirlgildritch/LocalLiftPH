@@ -23,29 +23,36 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-{
-    $request->authenticate();
+    {
+        $request->authenticate();
 
-    $request->session()->regenerate();
+        $request->session()->regenerate();
 
-    $user = Auth::user();
+        $user = Auth::guard('web')->user();
 
-    if (!$user) {
-        return redirect('/login')->withErrors([
-            'email' => 'Login failed. Please check your credentials.',
-        ]);
+        if (! $user) {
+            return redirect('/login')->withErrors([
+                'email' => 'Login failed. Please check your credentials.',
+            ]);
+        }
+
+        if ($user->isSeller() || $user->isAdmin()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()
+                ->route('login')
+                ->withInput($request->only('email'))
+                ->withErrors([
+                    'email' => 'This account is not allowed in Buyer login. Use Seller Center or Admin login instead.',
+                ]);
+        }
+
+        Auth::shouldUse('web');
+
+        return redirect()->route('home');
     }
-
-    if ($user->isSeller()) {
-        return redirect('/seller-dashboard');
-    }
-
-    if ($user->isAdmin()) {
-        return redirect()->route('admin.dashboard');
-    }
-
-    return redirect('/');
-}
 
     /**
      * Destroy an authenticated session.

@@ -12,7 +12,9 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductBrowseController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\ProductController;
+use App\Http\Controllers\Seller\SellerAuthenticatedSessionController;
 use App\Http\Controllers\Seller\SellerOrderController;
+use App\Http\Controllers\Seller\SellerRegisteredUserController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShopController;
@@ -34,20 +36,41 @@ Route::middleware('frontend')->group(function () {
 });
 
 Route::get('/dashboard', function () {
-    $user = auth()->user();
-
-    if ($user->isAdmin()) {
+    if (auth('admin')->check()) {
         return redirect()->route('admin.dashboard');
     }
 
-    if ($user->isSeller()) {
+    if (auth('seller')->check()) {
         return redirect()->route('seller.dashboard');
     }
 
-    return redirect()->route('home');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    if (auth('web')->check()) {
+        return redirect()->route('home');
+    }
 
-Route::middleware(['auth', 'seller'])->group(function () {
+    return redirect()->route('login');
+})->name('dashboard');
+
+Route::prefix('seller-center')->name('seller.')->group(function () {
+    Route::middleware('guest:seller')->group(function () {
+        Route::get('/login', [SellerAuthenticatedSessionController::class, 'create'])->name('login');
+        Route::post('/login', [SellerAuthenticatedSessionController::class, 'store'])->name('login.store');
+        Route::get('/register', [SellerRegisteredUserController::class, 'create'])->name('register');
+        Route::post('/register', [SellerRegisteredUserController::class, 'store'])->name('register.store');
+    });
+
+    Route::middleware('seller')->group(function () {
+        Route::post('/logout', [SellerAuthenticatedSessionController::class, 'destroy'])->name('logout');
+        Route::get('/setup', [SellerController::class, 'create'])->name('setup');
+        Route::post('/setup', [SellerController::class, 'store'])->name('setup.store');
+    });
+});
+
+Route::get('/become-seller', function () {
+    return redirect()->route('seller.login');
+})->middleware('frontend')->name('seller.center');
+
+Route::middleware('seller')->group(function () {
     Route::get('/seller-dashboard', function () {
         return view('seller.dashboard');
     })->name('seller.dashboard');
@@ -59,6 +82,9 @@ Route::middleware(['auth', 'seller'])->group(function () {
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
     Route::get('/seller-earnings', [EarningsController::class, 'index'])->name('seller.earnings');
     Route::get('/seller-messages', [MessageController::class, 'index'])->name('seller.messages');
+    Route::get('/seller-messages/{conversation}', [MessageController::class, 'show'])->name('seller.messages.show');
+    Route::post('/seller-messages/{conversation}', [MessageController::class, 'store'])->name('seller.messages.store');
+    Route::get('/seller-chat/widget', [MessageController::class, 'widget'])->name('seller.chat.widget');
 
     Route::get('/seller-settings', [SettingsController::class, 'index'])->name('seller.settings');
     Route::patch('/seller-settings', [SettingsController::class, 'update'])->name('seller.settings.update');
@@ -76,20 +102,22 @@ Route::middleware(['auth', 'seller'])->group(function () {
 });
 
 Route::prefix('admin')->name('admin.')->group(function () {
-    Route::middleware('guest')->group(function () {
+    Route::middleware('guest:admin')->group(function () {
         Route::get('/login', [AdminAuthenticatedSessionController::class, 'create'])->name('login');
         Route::post('/login', [AdminAuthenticatedSessionController::class, 'store'])->name('login.store');
     });
+
+    Route::middleware('admin')->post('/logout', [AdminAuthenticatedSessionController::class, 'destroy'])->name('logout');
 });
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::view('/', 'admin.dashboard')->name('dashboard');
     Route::view('/products', 'admin.products')->name('products');
     Route::view('/sellers', 'admin.sellers')->name('sellers');
     Route::view('/orders', 'admin.orders')->name('orders');
     Route::view('/reports', 'admin.reports')->name('reports');
 });
-Route::middleware(['auth', 'buyer'])->group(function () {
+Route::middleware('buyer')->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{productId}', [CartController::class, 'store'])->name('cart.add');
     Route::patch('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
@@ -112,16 +140,12 @@ Route::middleware(['auth', 'buyer'])->group(function () {
     Route::get('/my-orders/{order}', [OrderController::class, 'show'])->name('buyer.orders.show');
     Route::post('/my-orders/{order}/buy-again', [OrderController::class, 'buyAgain'])->name('buyer.orders.buyAgain');
     Route::patch('/my-orders/{order}/cancel', [OrderController::class, 'cancel'])->name('buyer.orders.cancel');
-});
 
-Route::middleware(['auth', 'frontend'])->group(function () {
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');
     Route::post('/messages/start/{seller}', [MessageController::class, 'start'])->name('messages.start');
     Route::post('/messages/{conversation}', [MessageController::class, 'store'])->name('messages.store');
-
-    Route::get('/become-seller', [SellerController::class, 'create'])->name('seller.setup');
-    Route::post('/become-seller', [SellerController::class, 'store'])->name('seller.store');
+    Route::get('/chat/widget', [MessageController::class, 'widget'])->name('chat.widget');
 });
 
 require __DIR__ . '/auth.php';

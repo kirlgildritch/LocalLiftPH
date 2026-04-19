@@ -11,13 +11,19 @@ class EnsureUserIsBuyer
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
-            abort(403, 'Unauthorized.');
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
         }
 
-        if (method_exists(Auth::user(), 'isAdmin') && Auth::user()->isAdmin()) {
-            abort(403, 'Unauthorized. Buyers only.');
+        if (Auth::guard('seller')->check()) {
+            return redirect()->route('seller.dashboard');
         }
+
+        if (!Auth::guard('web')->check()) {
+            return redirect()->route('login');
+        }
+
+        Auth::shouldUse('web');
 
         return $next($request);
     }

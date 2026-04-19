@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,19 +12,22 @@ use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
-class RegisteredUserController extends Controller
+class SellerRegisteredUserController extends Controller
 {
-    /**
-     * Display the registration view.
-     */
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
-        return view('auth.register');
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if (Auth::guard('seller')->check()) {
+            return redirect()->route('seller.dashboard');
+        }
+
+        return view('seller.auth.register');
     }
 
     /**
-     * Handle an incoming registration request.
-     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
@@ -39,16 +41,14 @@ class RegisteredUserController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'is_seller' => false,
+            'is_seller' => true,
             'is_admin' => false,
             'password' => Hash::make($request->password),
         ]);
 
-        event(new Registered($user));
+        Auth::guard('seller')->login($user);
+        Auth::shouldUse('seller');
 
-        Auth::guard('web')->login($user);
-        Auth::shouldUse('web');
-
-        return redirect()->route('home');
+        return redirect()->route('seller.setup');
     }
 }

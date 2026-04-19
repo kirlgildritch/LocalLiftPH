@@ -10,8 +10,12 @@ class RedirectAdminFromFrontend
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && auth()->user()->isAdmin()) {
+        if (auth('admin')->check()) {
             return redirect()->route('admin.dashboard');
+        }
+
+        if (auth('seller')->check()) {
+            return redirect()->route('seller.dashboard');
         }
 
         return $next($request);

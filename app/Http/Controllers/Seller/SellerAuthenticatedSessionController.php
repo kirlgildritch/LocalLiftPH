@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Models\Seller as SellerProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
-class AdminAuthenticatedSessionController extends Controller
+class SellerAuthenticatedSessionController extends Controller
 {
     public function create(): View|RedirectResponse
     {
@@ -16,7 +17,11 @@ class AdminAuthenticatedSessionController extends Controller
             return redirect()->route('admin.dashboard');
         }
 
-        return view('admin.auth.login');
+        if (Auth::guard('seller')->check()) {
+            return redirect()->route('seller.dashboard');
+        }
+
+        return view('seller.auth.login');
     }
 
     public function store(Request $request): RedirectResponse
@@ -26,7 +31,7 @@ class AdminAuthenticatedSessionController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::guard('admin')->attempt($credentials, $request->boolean('remember'))) {
+        if (! Auth::guard('seller')->attempt($credentials, $request->boolean('remember'))) {
             return back()
                 ->withInput($request->only('email'))
                 ->withErrors([
@@ -36,33 +41,37 @@ class AdminAuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $user = Auth::guard('admin')->user();
+        $user = Auth::guard('seller')->user();
 
-        if (! $user?->isAdmin()) {
-            Auth::guard('admin')->logout();
+        if (! $user?->isSeller() || $user->isAdmin()) {
+            Auth::guard('seller')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
             return redirect()
-                ->route('admin.login')
+                ->route('seller.login')
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'This account does not have admin access.',
+                    'email' => 'This account does not have Seller Center access.',
                 ]);
         }
 
-        Auth::shouldUse('admin');
+        Auth::shouldUse('seller');
 
-        return redirect()->route('admin.dashboard');
+        if (! SellerProfile::where('user_id', $user->id)->exists()) {
+            return redirect()->route('seller.setup');
+        }
+
+        return redirect()->route('seller.dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse
     {
-        Auth::guard('admin')->logout();
+        Auth::guard('seller')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('admin.login');
+        return redirect()->route('seller.login');
     }
 }

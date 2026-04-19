@@ -12,13 +12,19 @@ class EnsureUserIsAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
+        if (!Auth::guard('admin')->check()) {
+            if (Auth::guard('seller')->check()) {
+                return redirect()->route('seller.dashboard');
+            }
+
+            if (Auth::guard('web')->check()) {
+                return redirect()->route('home');
+            }
+
             return redirect()->route('admin.login');
         }
 
-        if (!Auth::user()->isAdmin()) {
-            return redirect()->route('home')->with('error', 'You are not authorized to access admin pages.');
-        }
+        Auth::shouldUse('admin');
 
         return $next($request);
     }
