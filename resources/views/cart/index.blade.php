@@ -23,6 +23,7 @@
             $hasSelectedCartItem = filled($selectedCartItemId);
             $hasSelectedCartItems = $selectedCartItemIds->isNotEmpty();
             $selectedSubtotal = 0;
+            $selectedShipping = 0;
         @endphp
 
 
@@ -64,16 +65,18 @@
                     @forelse($cartItems as $item)
                         @php
                             $subtotal = $item->product->price * $item->quantity;
+                            $shipping = ($item->product->shipping_fee ?? 0) * $item->quantity;
                             $total += $subtotal;
                             $isChecked = !$hasSelectedCartItem && !$hasSelectedCartItems
                                 || (int) $selectedCartItemId === (int) $item->id
                                 || $selectedCartItemIds->contains((int) $item->id);
                             if ($isChecked) {
                                 $selectedSubtotal += $subtotal;
+                                $selectedShipping += $shipping;
                             }
                         @endphp
 
-                        <article class="cart-item" data-cart-item-id="{{ $item->id }}" data-subtotal="{{ $subtotal }}">
+                        <article class="cart-item" data-cart-item-id="{{ $item->id }}" data-subtotal="{{ $subtotal }}" data-shipping="{{ $shipping }}">
                             <div class="item-select">
                                 <input
                                     type="checkbox"
@@ -150,12 +153,12 @@
 
                     <div class="summary-line">
                         <span>Shipping</span>
-                        <strong>P0.00</strong>
+                        <strong id="cart-summary-shipping">P{{ number_format($selectedShipping, 2) }}</strong>
                     </div>
 
                     <div class="summary-total">
                         <span>Total</span>
-                        <strong id="cart-summary-total">P{{ number_format($selectedSubtotal, 2) }}</strong>
+                        <strong id="cart-summary-total">P{{ number_format($selectedSubtotal + $selectedShipping, 2) }}</strong>
                     </div>
 
                     <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form">
@@ -179,11 +182,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const selectAll = document.getElementById('select-all-cart-items');
     const itemCheckboxes = Array.from(document.querySelectorAll('.cart-item-checkbox'));
     const subtotalEl = document.getElementById('cart-summary-subtotal');
+    const shippingEl = document.getElementById('cart-summary-shipping');
     const totalEl = document.getElementById('cart-summary-total');
     const selectedInputsContainer = document.getElementById('selected-cart-items-inputs');
     const checkoutForm = document.getElementById('cart-checkout-form');
 
-    if (!cartLayout || !selectAll || !itemCheckboxes.length || !subtotalEl || !totalEl || !selectedInputsContainer || !checkoutForm) {
+    if (!cartLayout || !selectAll || !itemCheckboxes.length || !subtotalEl || !shippingEl || !totalEl || !selectedInputsContainer || !checkoutForm) {
         return;
     }
 
@@ -226,6 +230,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const syncSummary = () => {
         let selectedTotal = 0;
+        let selectedShipping = 0;
         let selectedCount = 0;
         const selectedIds = [];
 
@@ -238,6 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (checkbox.checked) {
                 selectedCount += 1;
                 selectedTotal += Number(row.dataset.subtotal || 0);
+                selectedShipping += Number(row.dataset.shipping || 0);
                 selectedIds.push(String(checkbox.value));
 
                 const input = document.createElement('input');
@@ -249,7 +255,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         subtotalEl.textContent = formatPeso(selectedTotal);
-        totalEl.textContent = formatPeso(selectedTotal);
+        shippingEl.textContent = formatPeso(selectedShipping);
+        totalEl.textContent = formatPeso(selectedTotal + selectedShipping);
         selectAll.checked = selectedCount === itemCheckboxes.length;
         selectAll.indeterminate = selectedCount > 0 && selectedCount < itemCheckboxes.length;
         saveSelection(selectedIds);

@@ -1,0 +1,17 @@
+.report-thumb {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.85rem;
+    background: #fff3e0;
+    color: #b76b12;
+}
+
+.report-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    font-weight: 700;
+}

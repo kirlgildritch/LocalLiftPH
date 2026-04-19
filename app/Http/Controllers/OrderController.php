@@ -64,6 +64,10 @@ class OrderController extends Controller
                 continue;
             }
 
+            if ((int) $item->product->user_id === (int) Auth::id()) {
+                continue;
+            }
+
             $cartItem = Cart::firstOrNew([
                 'user_id' => Auth::id(),
                 'product_id' => $item->product_id,

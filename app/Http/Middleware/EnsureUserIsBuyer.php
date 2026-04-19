@@ -11,7 +11,11 @@ class EnsureUserIsBuyer
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->isBuyer()) {
+        if (!Auth::check()) {
+            abort(403, 'Unauthorized.');
+        }
+
+        if (method_exists(Auth::user(), 'isAdmin') && Auth::user()->isAdmin()) {
             abort(403, 'Unauthorized. Buyers only.');
         }
 

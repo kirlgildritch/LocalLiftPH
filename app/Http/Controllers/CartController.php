@@ -9,6 +9,17 @@ use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
+    protected function ensureNotOwnProduct(Product $product): ?\Illuminate\Http\RedirectResponse
+    {
+        if ((int) $product->user_id !== (int) Auth::id()) {
+            return null;
+        }
+
+        return redirect()
+            ->back()
+            ->with('error', 'You cannot add your own product to the cart.');
+    }
+
     protected function miniCartPayload(): array
     {
         $previewItems = Cart::with(['product.user'])
@@ -53,6 +64,18 @@ class CartController extends Controller
         $product = Product::findOrFail($productId);
         $quantity = max(1, (int) $request->input('quantity', 1));
         $buyNow = $request->boolean('buy_now');
+
+        if ((int) $product->user_id === (int) Auth::id()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'You cannot add your own product to the cart.',
+                ], 422);
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', 'You cannot add your own product to the cart.');
+        }
 
         $cartItem = Cart::where('user_id', Auth::id())
             ->where('product_id', $product->id)

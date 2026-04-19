@@ -1,64 +1,36 @@
-.products-table {
-    width: 100%;
-    border-collapse: collapse;
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.products-table th,
-.products-table td {
-    padding: 16px;
-    border-bottom: 1px solid #f3d8e5;
-    text-align: left;
-    font-size: 15px;
+.status-chip.completed,
+.status-chip.delivered {
+  background: rgba(76, 175, 80, 0.14);
+  color: #9ae6a4;
 }
 
-.products-table th {
-    background: #F7FBFF;
-    color: #1F4E86;
+.status-chip.processing,
+.status-chip.confirmed {
+  background: rgba(255, 193, 7, 0.14);
+  color: #ffe082;
 }
 
-.status {
-    padding: 5px 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
+.status-chip.shipped {
+  background: rgba(33, 150, 243, 0.14);
+  color: #90caf9;
 }
 
-/* STATUS COLORS */
-.status.completed {
-    background: #e6f7ec;
-    color: #2e7d32;
+.status-chip.pending {
+  background: rgba(255, 152, 0, 0.14);
+  color: #ffcc80;
 }
 
-.status.processing {
-    background: #fff4e5;
-    color: #b26a00;
+.status-chip.cancelled {
+  background: rgba(255, 99, 132, 0.14);
+  color: #ffc0cb;
 }
-
-.status.shipped {
-    background: #e3f2fd;
-    color: #1565c0;
-}
-
-.status.pending {
-    background: #fdecea;
-    color: #c62828;
-}
-
-.edit-btn {
-    background: #E8F3FE;
-    color: #d63384;
-    padding: 8px 14px;
-    border-radius: 10px;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.empty-text {
-    text-align: center;
-    color: #888;
-    padding: 20px;
-}
-
-
-

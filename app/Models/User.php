@@ -20,6 +20,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'is_seller',
+        'is_admin',
         'role',
     ];
 
@@ -34,6 +35,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_seller' => 'boolean',
+            'is_admin' => 'boolean',
         ];
     }
 
@@ -54,12 +56,12 @@ class User extends Authenticatable
 
     public function isBuyer(): bool
     {
-        return ! $this->isSeller() && ! $this->isAdmin();
+        return ! $this->isAdmin();
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return (bool) $this->is_admin || $this->role === 'admin';
     }
 
     public function carts()
@@ -70,5 +72,20 @@ class User extends Authenticatable
     public function orders()
     {
         return $this->hasMany(\App\Models\Order::class);
+    }
+
+    public function buyerConversations()
+    {
+        return $this->hasMany(\App\Models\Conversation::class, 'buyer_id');
+    }
+
+    public function sellerConversations()
+    {
+        return $this->hasMany(\App\Models\Conversation::class, 'seller_id');
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(\App\Models\Message::class, 'sender_id');
     }
 }

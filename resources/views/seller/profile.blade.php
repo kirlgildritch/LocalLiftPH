@@ -6,22 +6,22 @@
 <section class="dashboard-wrapper">
     <div class="container">
         <div class="dashboard-layout">
-
             @include('seller.partials.sidebar')
 
             <main class="dashboard-main">
-                <div class="products-header">
-                    <h2>My Profile</h2>
-                </div>
+                <section class="seller-page-panel panel profile-shell">
+                    <div class="page-header">
+                        <div>
+                            <span class="section-kicker">Profile</span>
+                            <h2>My Profile</h2>
+                        </div>
+                    </div>
 
-                <div class="divider"></div>
+                    @if(session('success'))
+                        <p class="seller-feedback success-message">Profile updated successfully.</p>
+                    @endif
 
-                @if(session('success'))
-                    <p class="success-message">Profile updated successfully.</p>
-                @endif
-
-                <div class="profile-card">
-                    <form method="POST" action="{{ route('seller.profile.update') }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('seller.profile.update') }}" enctype="multipart/form-data" class="profile-form">
                         @csrf
                         @method('PATCH')
 
@@ -59,7 +59,10 @@
 
                         <hr class="section-line">
 
-                        <h4>Change Password</h4>
+                        <div class="subsection-heading">
+                            <h3>Change Password</h3>
+                            <p>Update your seller login details here.</p>
+                        </div>
 
                         <div class="form-group">
                             <label for="current_password">Current Password</label>
@@ -82,11 +85,10 @@
                             <input type="password" name="password_confirmation" id="password_confirmation">
                         </div>
 
-                        <button type="submit" class="save-btn">Update Profile</button>
+                        <button type="submit" class="page-action-btn">Update Profile</button>
                     </form>
-                </div>
+                </section>
             </main>
-
         </div>
     </div>
 </section>

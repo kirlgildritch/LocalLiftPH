@@ -38,7 +38,7 @@
             </a>
 
             @auth
-              @if(!auth()->user()->isSeller())
+              @if(!auth()->user()->is_seller)
                 <a href="{{ route('seller.setup') }}" class="btn btn-outline">
                   <i class="fa-solid fa-store"></i>
                   Become a Seller
@@ -111,7 +111,11 @@
                 <a href="{{ route('products.show', $product->id) }}" class="details-btn">View Details</a>
 
                 @auth
-                  @if(auth()->user()->isBuyer())
+                  @if((int) $product->user_id === (int) auth()->id())
+                    <span class="mini-cart-btn" aria-disabled="true">
+                      <i class="fa-solid fa-store"></i> Your Product
+                    </span>
+                  @else
                     <form action="{{ route('cart.add', $product->id) }}" method="POST" class="add-to-cart-form">
                       @csrf
                       <input type="hidden" name="quantity" value="1">
@@ -119,10 +123,6 @@
                         <i class="fa-solid fa-cart-shopping"></i> Add to Cart
                       </button>
                     </form>
-                  @else
-                    <button type="button" class="mini-cart-btn" disabled>
-                      <i class="fa-solid fa-cart-shopping"></i> Add to Cart
-                    </button>
                   @endif
                 @else
                   <a href="{{ route('login') }}" class="mini-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Add to

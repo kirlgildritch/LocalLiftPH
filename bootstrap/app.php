@@ -15,6 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'seller' => \App\Http\Middleware\EnsureUserIsSeller::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'buyer' => \App\Http\Middleware\EnsureUserIsBuyer::class,
+            'frontend' => \App\Http\Middleware\RedirectAdminFromFrontend::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

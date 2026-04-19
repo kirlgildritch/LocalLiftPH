@@ -41,6 +41,10 @@
             @include('buyer.partials.order-progress', ['order' => $order])
 
             <div class="order-detail-grid">
+                @php
+                    $orderSubtotal = $order->items->sum(fn ($item) => $item->price * $item->quantity);
+                    $orderShipping = $order->shipping_fee ?? $order->items->sum(fn ($item) => ($item->shipping_fee ?? 0) * $item->quantity);
+                @endphp
                 <div class="panel detail-summary-card">
                     <div class="detail-summary-grid">
                         <div>
@@ -54,6 +58,14 @@
                         <div>
                             <span class="toolbar-label">Items</span>
                             <p>{{ $order->items->sum('quantity') }}</p>
+                        </div>
+                        <div>
+                            <span class="toolbar-label">Subtotal</span>
+                            <p>P{{ number_format($orderSubtotal, 2) }}</p>
+                        </div>
+                        <div>
+                            <span class="toolbar-label">Shipping</span>
+                            <p>P{{ number_format($orderShipping, 2) }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Total</span>
@@ -100,8 +112,18 @@
 
                     <div class="order-card-footer">
                         <div class="total-text">
-                            <span>Order Total</span>
-                            <strong>P{{ number_format($order->total_price, 2) }}</strong>
+                            <div>
+                                <span>Subtotal</span>
+                                <strong>P{{ number_format($orderSubtotal, 2) }}</strong>
+                            </div>
+                            <div>
+                                <span>Shipping</span>
+                                <strong>P{{ number_format($orderShipping, 2) }}</strong>
+                            </div>
+                            <div>
+                                <span>Order Total</span>
+                                <strong>P{{ number_format($order->total_price, 2) }}</strong>
+                            </div>
                         </div>
 
                         <div class="order-actions">

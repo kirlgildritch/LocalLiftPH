@@ -18,7 +18,8 @@ class ProductBrowseController extends Controller
         $sort = $request->get('sort', 'newest');
 
         $productsQuery = Product::with(['user', 'category'])
-            ->where('is_active', 1);
+            ->where('is_active', 1)
+            ->where('status', 'approved'); // only approved products visible
 
         if ($search) {
             $productsQuery->where(function ($q) use ($search) {
@@ -56,13 +57,13 @@ class ProductBrowseController extends Controller
 
         $categories = Category::withCount([
             'products' => function ($query) {
-                $query->where('is_active', 1);
+                $query->where('is_active', 1)->where('status', 'approved');
             }
         ])->orderBy('name')->get();
 
         $shops = User::withCount([
             'products' => function ($query) {
-                $query->where('is_active', 1);
+                $query->where('is_active', 1)->where('status', 'approved');
             }
         ])
             ->where('is_seller', 1)
@@ -87,48 +88,19 @@ class ProductBrowseController extends Controller
 
     public function show(Product $product)
     {
+        abort_if($product->status !== 'approved', 404);
+
         $product->load(['user', 'category']);
 
         $relatedProducts = Product::with(['user', 'category'])
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
             ->where('is_active', 1)
+            ->where('status', 'approved')
             ->latest()
             ->take(3)
             ->get();
 
         return view('products.show', compact('product', 'relatedProducts'));
-    }
-
-    public function suggestions(Request $request)
-    {
-        $query = trim((string) $request->get('q'));
-
-        if (!$query) {
-            return response()->json([]);
-        }
-
-        $productSuggestions = Product::with('category')
-            ->where('is_active', 1)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', '%' . $query . '%')
-                    ->orWhere('description', 'like', '%' . $query . '%')
-                    ->orWhereHas('category', function ($categoryQuery) use ($query) {
-                        $categoryQuery->where('name', 'like', '%' . $query . '%');
-                    });
-            })
-            ->limit(5)
-            ->pluck('name')
-            ->toArray();
-
-        $shopSuggestions = User::where('is_seller', 1)
-            ->where('name', 'like', '%' . $query . '%')
-            ->limit(3)
-            ->pluck('name')
-            ->toArray();
-
-        $suggestions = array_values(array_unique(array_merge($productSuggestions, $shopSuggestions)));
-
-        return response()->json($suggestions);
     }
 }

@@ -1,58 +1,31 @@
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+.earnings-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.stat-card {
-    background: #F7FBFF;
-    border: 1px solid #f3d8e5;
-    border-radius: 18px;
-    padding: 22px;
+.mini-stat {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
 }
 
-.stat-card .top {
-    font-size: 15px;
-    color: #6b4f60;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.mini-stat span {
+  color: #bbdefb;
+  font-weight: 600;
 }
 
-.stat-card .value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #332433;
+.mini-stat strong {
+  font-size: 1.9rem;
+  color: #f5f9ff;
 }
 
-.stat-card .value.highlight {
-    color: #1565C0;
+.mini-stat .highlight {
+  color: #79b9ff;
 }
 
-.products-table {
-    width: 100%;
-    border-collapse: collapse;
+@media (max-width: 900px) {
+  .earnings-stats {
+    grid-template-columns: 1fr;
+  }
 }
-
-.products-table th,
-.products-table td {
-    padding: 16px;
-    border-bottom: 1px solid #f3d8e5;
-    text-align: left;
-    font-size: 15px;
-}
-
-.products-table th {
-    background: #F7FBFF;
-    color: #1F4E86;
-}
-
-.empty-text {
-    text-align: center;
-    color: #888;
-    padding: 20px;
-}
-
-
-

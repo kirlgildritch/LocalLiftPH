@@ -17,8 +17,15 @@ class Product extends Model
         'description',
         'price',
         'stock',
+        'condition',
+        'weight',
+        'width_cm',
+        'length_cm',
+        'height_cm',
+        'shipping_fee',
         'image',
         'is_active',
+        'status', // pending, approved, rejected
     ];
 
     public function carts()

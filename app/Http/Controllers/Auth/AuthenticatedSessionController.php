@@ -40,8 +40,8 @@ class AuthenticatedSessionController extends Controller
         return redirect('/seller-dashboard');
     }
 
-    if ($user->role === 'admin') {
-        return redirect('/admin-dashboard');
+    if ($user->isAdmin()) {
+        return redirect()->route('admin.dashboard');
     }
 
     return redirect('/');

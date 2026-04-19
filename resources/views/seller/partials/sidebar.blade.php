@@ -1,7 +1,9 @@
 
-<link rel="stylesheet" href="{{ asset('assets/css/manage_products.css') }}">
 <aside class="sidebar">
-    
+    <button class="sidebar-close" type="button" data-close-seller-sidebar aria-label="Close seller navigation">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+
     <div class="sidebar-menu">
         <a href="{{ url('/seller-dashboard') }}" class="{{ request()->is('seller-dashboard') ? 'active' : '' }}">
             <div class="left">

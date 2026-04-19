@@ -70,12 +70,12 @@
                         <div class="card-body">
                             <div class="info-banner">
                                 <span class="step-number small">1</span>
-                                <strong>Free Shipping</strong>
+                                <strong>Product-Based Shipping</strong>
                             </div>
 
                             <label class="radio-option">
                                 <input type="radio" name="shipping_method" checked disabled>
-                                <span>Standard Shipping (P0.00)</span>
+                                <span>Shipping fee is based on the selected products in your order.</span>
                             </label>
                         </div>
                     </section>
@@ -139,12 +139,12 @@
 
                         <div class="summary-line">
                             <span>Subtotal</span>
-                            <strong>P{{ number_format($total, 2) }}</strong>
+                            <strong>P{{ number_format($subtotal, 2) }}</strong>
                         </div>
 
                         <div class="summary-line">
                             <span>Shipping Fee</span>
-                            <strong>P0.00</strong>
+                            <strong>P{{ number_format($shippingFee, 2) }}</strong>
                         </div>
 
                         <div class="summary-total">
