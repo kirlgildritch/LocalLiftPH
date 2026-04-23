@@ -3,8 +3,10 @@
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/product_details.css') }}">
-    @php($ownsProduct = auth()->check() && (int) $product->user_id === (int) auth()->id())
-    @php($averageRating = round((float) ($product->reviews_avg_rating ?? 0), 1))
+    @php
+        $ownsProduct = auth()->check() && (int) $product->user_id === (int) auth()->id();
+        $averageRating = round((float) ($product->reviews_avg_rating ?? 0), 1);
+    @endphp
 
     <section class="product-detail-page">
         <div class="container">
@@ -138,7 +140,7 @@
 
                         @auth
                             @if(!$ownsProduct)
-                                <form action="{{ route('messages.start', $product->user) }}" method="POST">
+                                <form action="{{ route('messages.start', $product->user) }}" method="POST" data-chat-start-form>
                                     @csrf
                                     <button type="submit" class="action-btn secondary-btn full-btn">Message Seller</button>
                                 </form>
@@ -198,46 +200,48 @@
                         @endfor
                     </div>
 
-                    @auth
-                        @if(auth()->user()->isBuyer() && $reviewableOrderItems->isNotEmpty())
-                            <form action="{{ route('products.reviews.store', $product) }}" method="POST" class="review-form panel">
-                                @csrf
-                                <input type="hidden" name="order_item_id" value="{{ $reviewableOrderItems->first()->id }}">
+                    @if(auth()->check() && auth()->user()->isBuyer() && $reviewableOrderItems->isNotEmpty())
+                        @php
+                            $selectedReviewableOrderItem = $reviewableOrderItems->firstWhere('id', (int) request('review_order_item'))
+                                ?? $reviewableOrderItems->first();
+                        @endphp
+                        <form action="{{ route('products.reviews.store', $product) }}" method="POST" class="review-form panel">
+                            @csrf
+                            <input type="hidden" name="order_item_id" value="{{ $selectedReviewableOrderItem?->id }}">
 
-                                <div class="review-form-header">
-                                    <div>
-                                        <strong>Leave a review</strong>
-                                        <p>Only buyers with delivered purchases can rate this product.</p>
-                                    </div>
-
-                                    @if($reviewableOrderItems->count() > 1)
-                                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} delivered purchases eligible</span>
-                                    @endif
+                            <div class="review-form-header">
+                                <div>
+                                    <strong>Leave a review</strong>
+                                    <p>Only buyers with delivered purchases can rate this product.</p>
                                 </div>
 
-                                <div class="review-form-grid">
-                                    <div class="review-form-field">
-                                        <label for="rating">Your rating</label>
-                                        <select name="rating" id="rating" required>
-                                            <option value="">Select rating</option>
-                                            @for($rating = 5; $rating >= 1; $rating--)
-                                                <option value="{{ $rating }}" {{ (int) old('rating') === $rating ? 'selected' : '' }}>
-                                                    {{ $rating }} Star{{ $rating !== 1 ? 's' : '' }}
-                                                </option>
-                                            @endfor
-                                        </select>
-                                    </div>
+                                @if($reviewableOrderItems->count() > 1)
+                                    <span class="review-order-note">{{ $reviewableOrderItems->count() }} delivered purchases eligible</span>
+                                @endif
+                            </div>
 
-                                    <div class="review-form-field review-form-field-full">
-                                        <label for="comment">Your review</label>
-                                        <textarea name="comment" id="comment" rows="4" placeholder="Share what you liked about this product...">{{ old('comment') }}</textarea>
-                                    </div>
+                            <div class="review-form-grid">
+                                <div class="review-form-field">
+                                    <label for="rating">Your rating</label>
+                                    <select name="rating" id="rating" required>
+                                        <option value="">Select rating</option>
+                                        @for($rating = 5; $rating >= 1; $rating--)
+                                            <option value="{{ $rating }}" {{ (int) old('rating') === $rating ? 'selected' : '' }}>
+                                                {{ $rating }} Star{{ $rating !== 1 ? 's' : '' }}
+                                            </option>
+                                        @endfor
+                                    </select>
                                 </div>
 
-                                <button type="submit" class="action-btn primary-btn review-submit-btn">Submit Review</button>
-                            </form>
-                        @endif
-                    @endauth
+                                <div class="review-form-field review-form-field-full">
+                                    <label for="comment">Your review</label>
+                                    <textarea name="comment" id="comment" rows="4" placeholder="Share what you liked about this product...">{{ old('comment') }}</textarea>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="action-btn primary-btn review-submit-btn">Submit Review</button>
+                        </form>
+                    @endif
 
                     <div class="review-list">
                         @forelse($product->reviews as $review)
@@ -274,27 +278,17 @@
                         </div>
                     </div>
 
-                    <div class="related-grid">
+                    <div class="related-grid product-card-grid">
                         @forelse($relatedProducts as $relatedProduct)
-                            <a href="{{ route('products.show', $relatedProduct->id) }}" class="related-card related-card-link">
-                                <div class="related-image">
-                                    <img src="{{ $relatedProduct->image ? asset('storage/' . $relatedProduct->image) : asset('assets/images/default-product.png') }}"
-                                        alt="{{ $relatedProduct->name }}" style="width: 100%; height: 100%; object-fit: cover;">
-                                </div>
-
-                                <div class="related-info">
-                                    <span class="product-badge">{{ $relatedProduct->category?->name ?? 'Uncategorized' }}</span>
-                                    <h3>{{ $relatedProduct->name }}</h3>
-                                    <p>{{ $relatedProduct->user->name ?? 'LocalLift Seller' }}</p>
-                                    <p class="related-rating">
+                            <x-product-card :product="$relatedProduct">
+                                <x-slot:meta>
+                                    <p class="market-product-card__meta-line">
                                         <i class="fa-solid fa-star"></i>
                                         {{ $relatedProduct->reviews_avg_rating ? number_format((float) $relatedProduct->reviews_avg_rating, 1) : 'New' }}
                                         <span>| {{ $relatedProduct->reviews_count }} review{{ $relatedProduct->reviews_count !== 1 ? 's' : '' }}</span>
                                     </p>
-                                    <div class="price">P{{ number_format($relatedProduct->price, 2) }}</div>
-
-                                </div>
-                            </a>
+                                </x-slot:meta>
+                            </x-product-card>
                         @empty
                             <p>No related products available.</p>
                         @endforelse

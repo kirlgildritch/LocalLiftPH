@@ -90,33 +90,82 @@
           <span class="section-kicker">Products</span>
           <h2 class="section-title">Featured Products</h2>
         </div>
-        <a href="{{ url('/products') }}" class="view-all">View all products <i class="fa-solid fa-arrow-right"></i></a>
+        <div class="featured-products-header-actions">
+          <div class="featured-products-nav" aria-label="Featured products navigation">
+            <button type="button" class="featured-products-arrow" data-featured-products-prev aria-label="Scroll featured products left">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button type="button" class="featured-products-arrow" data-featured-products-next aria-label="Scroll featured products right">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+          <a href="{{ url('/products') }}" class="view-all">View all products <i class="fa-solid fa-arrow-right"></i></a>
+        </div>
       </div>
 
-      <div class="products">
-        @forelse($featuredProducts ?? collect() as $product)
-          <a href="{{ route('products.show', $product->id) }}" class="product-card product-card-link">
-            <div class="product-image">
-              <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/image/heroBanner.png') }}"
-                alt="{{ $product->name }}">
-            </div>
-            <div class="product-info">
-              <span class="product-label">{{ $product->category?->name ?? 'Uncategorized' }}</span>
-              <h4>{{ $product->name }}</h4>
-              <div class="sub">{{ $product->user->name ?? 'LocalLift Seller' }}</div>
-              <div class="price"><small>P</small>{{ number_format($product->price, 2) }}</div>
-            </div>
-          </a>
-        @empty
-          <div class="product-card">
-            <div class="product-info">
-              <span class="product-label">No products yet</span>
-              <h4>Featured products will appear here</h4>
-              <div class="sub">Active seller listings will automatically populate this section.</div>
-            </div>
+      <div class="featured-products-shell">
+        <div class="products-carousel" data-featured-products-track>
+          <div class="products product-card-grid">
+            @forelse($featuredProducts ?? collect() as $product)
+              <x-product-card :product="$product" :fallback-image="asset('assets/image/heroBanner.png')" card-class="featured-product-card" />
+            @empty
+              <div class="market-product-card market-product-card--empty featured-product-card">
+                <div class="market-product-card__body">
+                  <span class="market-product-card__badge">No products yet</span>
+                  <h4 class="market-product-card__title">Featured products will appear here</h4>
+                  <p class="market-product-card__subtitle">Active seller listings will automatically populate this section.</p>
+                </div>
+              </div>
+            @endforelse
           </div>
-        @endforelse
+        </div>
       </div>
     </div>
   </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const track = document.querySelector('[data-featured-products-track]');
+      const prevButton = document.querySelector('[data-featured-products-prev]');
+      const nextButton = document.querySelector('[data-featured-products-next]');
+
+      if (!track || !prevButton || !nextButton) {
+        return;
+      }
+
+      const getScrollAmount = () => {
+        const firstCard = track.querySelector('.featured-product-card');
+        const list = track.querySelector('.products');
+        if (!firstCard) {
+          return Math.max(track.clientWidth * 0.85, 240);
+        }
+
+        const cardWidth = firstCard.getBoundingClientRect().width;
+        const listStyles = list ? window.getComputedStyle(list) : null;
+        const gap = listStyles ? parseFloat(listStyles.columnGap || listStyles.gap) || 16 : 16;
+        return Math.round(cardWidth + gap);
+      };
+
+      const updateButtons = () => {
+        const maxScrollLeft = track.scrollWidth - track.clientWidth;
+        const atStart = track.scrollLeft <= 4;
+        const atEnd = track.scrollLeft >= maxScrollLeft - 4;
+
+        prevButton.disabled = atStart;
+        nextButton.disabled = atEnd;
+      };
+
+      prevButton.addEventListener('click', function () {
+        track.scrollBy({ left: -getScrollAmount(), behavior: 'smooth' });
+      });
+
+      nextButton.addEventListener('click', function () {
+        track.scrollBy({ left: getScrollAmount(), behavior: 'smooth' });
+      });
+
+      track.addEventListener('scroll', updateButtons, { passive: true });
+      window.addEventListener('resize', updateButtons);
+      updateButtons();
+    });
+  </script>
 @endsection

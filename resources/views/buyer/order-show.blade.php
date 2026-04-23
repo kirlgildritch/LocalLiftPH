@@ -5,6 +5,10 @@
 
     <section class="orders-page">
         <div class="container">
+            @php
+                $hasRateableItems = $order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED
+                    && $order->items->contains(fn ($item) => $item->product && !$item->review);
+            @endphp
             <div class="checkout-breadcrumb">
                 <a href="{{ route('home') }}">Home</a>
                 <span>&gt;</span>
@@ -75,7 +79,7 @@
                 </div>
             </div>
 
-            <div class="orders-list">
+            <div class="orders-list" id="rate-products">
                 <article class="order-card panel">
                     <div class="order-card-top">
                         <div class="shop-info">
@@ -101,6 +105,19 @@
                                     <p>Sold by: {{ $item->product->user->name ?? 'LocalLift Seller' }}</p>
                                     <p>Quantity: {{ $item->quantity }}</p>
                                     <p>Unit Price: P{{ number_format($item->price, 2) }}</p>
+
+                                    @if($order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED && $item->product)
+                                        <div class="order-item-actions">
+                                            @if(!$item->review)
+                                                <a href="{{ route('products.show', $item->product) }}?review_order_item={{ $item->id }}#product-reviews"
+                                                    class="order-btn secondary-btn">
+                                                    Rate Product
+                                                </a>
+                                            @else
+                                                <span class="order-btn secondary-btn is-static">Reviewed</span>
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="order-product-price">
@@ -147,6 +164,10 @@
                                     </button>
                                 </form>
                             @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_DELIVERED, \App\Models\Order::SHIPPING_CANCELLED], true))
+                                @if($hasRateableItems)
+                                    <span class="order-btn secondary-btn is-static">Choose an item above to rate</span>
+                                @endif
+
                                 <form action="{{ route('buyer.orders.buyAgain', $order) }}" method="POST" style="display: inline;">
                                     @csrf
                                     <button type="submit" class="order-btn primary-btn">

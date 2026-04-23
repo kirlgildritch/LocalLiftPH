@@ -20,7 +20,7 @@
     <div class="admin-shell">
         <aside class="sidebar">
             <div class="sidebar__brand">
-                <div class="sidebar__logo"><i class="fa-solid fa-store"></i></div>
+                <div class="sidebar__logo"><img src="{{ asset('assets/image/Logo.png') }}" alt="Logo"></div>
                 <div>
                     <p class="sidebar__eyebrow">Marketplace</p>
                     <h1>Admin Dashboard</h1>

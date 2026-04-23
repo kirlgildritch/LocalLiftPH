@@ -92,7 +92,7 @@
                         </div>
                     @endif
                     @if(!empty($search))
-                        <div class="panel" style="padding: 16px; margin-bottom: 16px;">
+                        <div class="panel" style="padding: 10px; margin-bottom: 16px;">
                             <p>Search results for: <strong>{{ $search }}</strong></p>
                         </div>
                     @endif
@@ -123,22 +123,9 @@
                             </div>
                         </div>
                     @endif
-                    <div class="product-grid">
+                    <div class="product-grid product-card-grid">
                         @forelse($products as $product)
-                            <a href="{{ route('products.show', $product->id) }}" class="product-card panel product-card-link">
-                                <div class="product-image">
-                                    <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/images/default-product.png') }}"
-                                        alt="{{ $product->name }}">
-                                </div>
-
-                                <div class="product-info">
-                                    <span class="product-badge">{{ $product->category?->name ?? 'Uncategorized' }}</span>
-                                    <h4>{{ $product->name }}</h4>
-                                    <p>{{ $product->user->name ?? 'LocalLift Seller' }}</p>
-                                    <div class="price">₱{{ number_format($product->price, 2) }}</div>
-
-                                </div>
-                            </a>
+                            <x-product-card :product="$product" />
                         @empty
                             <div class="panel" style="padding: 20px;">
                                 <p>

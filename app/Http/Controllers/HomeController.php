@@ -12,7 +12,7 @@ class HomeController extends Controller
         $featuredProducts = Product::with(['user', 'category'])
             ->visibleToBuyers()
             ->latest()
-            ->take(4)
+            ->take(12)
             ->get();
 
         $featuredCategories = Category::withCount([

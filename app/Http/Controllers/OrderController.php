@@ -27,7 +27,7 @@ class OrderController extends Controller
             $currentStatus = 'all';
         }
 
-        $orders = Order::with(['items.product.user', 'cancellation'])
+        $orders = Order::with(['items.product.user', 'items.review', 'cancellation'])
             ->where('user_id', Auth::id())
             ->when($currentStatus !== 'all', function ($query) use ($currentStatus) {
                 $query->where('shipping_status', $currentStatus);
@@ -48,7 +48,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $order->load(['items.product.user', 'cancellation']);
+        $order->load(['items.product.user', 'items.review', 'cancellation']);
 
         return view('buyer.order-show', compact('order'));
     }

@@ -260,6 +260,13 @@
   font-size: 1.1rem;
 }
 
+.order-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .order-product-price,
 .total-text strong {
   color: var(--text);
@@ -299,6 +306,11 @@
 .secondary-btn {
   background: rgba(255, 255, 255, 0.03);
   color: var(--accent);
+}
+
+.order-btn.is-static {
+  cursor: default;
+  pointer-events: none;
 }
 
 .danger-btn {

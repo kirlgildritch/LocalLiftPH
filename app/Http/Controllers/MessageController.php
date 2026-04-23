@@ -254,7 +254,7 @@ class MessageController extends Controller
         ]);
     }
 
-    public function start(User $seller): RedirectResponse
+    public function start(Request $request, User $seller): RedirectResponse|JsonResponse
     {
         abort_if((int) $seller->id === (int) $this->currentUserId(), 403);
         abort_unless($seller->isSeller(), 404);
@@ -263,6 +263,17 @@ class MessageController extends Controller
             'buyer_id' => $this->currentUserId(),
             'seller_id' => $seller->id,
         ]);
+
+        if ($request->expectsJson()) {
+            $freshConversation = Conversation::with(['messages.sender', 'buyer', 'seller', 'latestMessage.sender'])
+                ->findOrFail($conversation->id);
+
+            return response()->json([
+                'conversation_id' => $freshConversation->id,
+                'redirect_url' => route('messages.show', $freshConversation),
+                'widget' => $this->widgetPayload(new Request(['conversation' => $freshConversation->id]), $freshConversation),
+            ]);
+        }
 
         return redirect()->route('messages.show', $conversation);
     }

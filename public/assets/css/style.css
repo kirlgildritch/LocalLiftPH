@@ -146,35 +146,35 @@ footer {
     "logo search actions"
     "nav nav nav";
   align-items: center;
-  gap: 24px;
-  padding: 20px 24px;
+  gap: 18px;
+  padding: 16px 20px;
   border: 1px solid var(--border);
-  border-radius: 26px;
+  border-radius: 24px;
   background: rgba(7, 15, 27, 0.84);
   box-shadow: var(--shadow);
-  margin-top: 1rem;
+  margin-top: 0.8rem;
 }
 
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   grid-area: logo;
   justify-self: start;
 }
 
 .logo-icon img{
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   font-size: 22px;
- 
+  
 }
 
 .logo-text {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
@@ -182,11 +182,11 @@ footer {
 
 .logo-text span {
   display: block;
-  margin-top: 5px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11px;
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.2em;
 }
 
 .header-menu-toggle {
@@ -194,10 +194,10 @@ footer {
   grid-area: toggle;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.02);
   color: var(--text);
   cursor: pointer;
@@ -215,7 +215,7 @@ footer {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 10px;
   grid-area: nav;
   justify-self: center;
   width: 100%;
@@ -223,10 +223,10 @@ footer {
 
 .navbar a {
 
-  padding: 11px 14px;
+  padding: 9px 13px;
   border-radius: 999px;
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   transition: color var(--transition), background var(--transition), transform var(--transition);
 }
@@ -246,7 +246,7 @@ footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   grid-area: actions;
   justify-self: end;
 }
@@ -261,9 +261,9 @@ footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 46px;
-  padding: 0 16px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.02);
@@ -291,7 +291,7 @@ footer {
 
 .cart-trigger i,
 .profile-trigger i {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .cart-trigger.cart-bump {
@@ -339,8 +339,8 @@ footer {
 }
 
 .buyer-profile-img {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid rgba(187, 222, 251, 0.65);
@@ -361,17 +361,17 @@ footer {
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
-  min-height: 70px;
-  padding: 10px 12px 10px 18px;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 10px 8px 16px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
 }
 
 .search-bar i {
   color: var(--secondary);
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .search-bar input {
@@ -380,6 +380,7 @@ footer {
   outline: none;
   background: transparent;
   color: var(--text);
+  font-size: 14px;
 }
 
 .search-bar input::placeholder {
@@ -388,8 +389,9 @@ footer {
 
 .search-btn {
   border: none;
-  border-radius: 14px;
-  padding: 12px 20px;
+  min-height: 42px;
+  border-radius: 12px;
+  padding: 10px 18px;
   background: linear-gradient(135deg, var(--secondary), var(--primary));
   color: var(--white);
   font-weight: 600;
@@ -988,7 +990,7 @@ footer {
       "nav nav nav";
     justify-items: stretch;
     gap: 14px;
-    padding: 18px;
+    padding: 16px;
     overflow: visible;
   }
 
@@ -1049,7 +1051,7 @@ footer {
     flex-wrap: wrap;
     justify-content: flex-end;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     justify-self: end;
   }
 
@@ -1142,7 +1144,7 @@ footer {
   }
 
   .search-bar {
-    min-height: 56px;
+    min-height: 52px;
   }
 }
 
@@ -1163,23 +1165,22 @@ footer {
       "search search"
       "nav nav";
     gap: 12px;
-    padding: 14px;
+    padding: 13px;
     margin-top: 0.75rem;
   }
 
   .logo {
-    gap: 10px;
+    gap: 9px;
   }
 
-  .logo-icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
-    font-size: 20px;
+  .logo-icon img {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
   }
 
   .logo-text {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .logo-text span {
@@ -1219,7 +1220,7 @@ footer {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: stretch;
     justify-content: stretch;
-    gap: 8px;
+    gap: 7px;
     justify-self: stretch;
   }
 
@@ -1237,26 +1238,26 @@ footer {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    padding: 8px 8px 8px 12px;
-    gap: 10px;
+    padding: 7px 7px 7px 11px;
+    gap: 8px;
     border-radius: 16px;
   }
 
   .search-btn {
-    min-width: 88px;
-    min-height: 40px;
-    padding: 10px 14px;
+    min-width: 80px;
+    min-height: 38px;
+    padding: 9px 13px;
     white-space: nowrap;
     border-radius: 12px;
   }
 
   .search-bar input {
     min-width: 0;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .search-bar i {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .navbar {
@@ -1268,10 +1269,10 @@ footer {
   .action-link,
   .cart-trigger,
   .profile-trigger {
-    min-height: 44px;
+    min-height: 40px;
     width: auto;
     min-width: 0;
-    padding: 0 12px;
+    padding: 0 11px;
     font-size: 12px;
     justify-content: center;
     border-radius: 14px;
@@ -1421,19 +1422,19 @@ footer {
 
 @media (max-width: 420px) {
   .header-main {
-    padding: 12px;
+    padding: 11px;
   }
 
   .header-menu-toggle {
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     border-radius: 12px;
   }
 
   .action-link,
   .cart-trigger,
   .profile-trigger {
-    min-height: 42px;
+    min-height: 39px;
     padding: 0 6px;
     font-size: 11px;
   }
@@ -1469,8 +1470,8 @@ footer {
   }
 
   .search-btn {
-    min-width: 82px;
-    padding: 10px 12px;
+    min-width: 76px;
+    padding: 9px 11px;
   }
 
   .buyer-profile-menu {

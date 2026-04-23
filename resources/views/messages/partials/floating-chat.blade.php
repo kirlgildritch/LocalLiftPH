@@ -473,6 +473,21 @@
                 }
             };
 
+            const openConversation = async (conversationId) => {
+                if (!conversationId) {
+                    openWidget();
+                    return;
+                }
+
+                state.activeConversationId = Number(conversationId);
+                if (isMobileChatViewport()) {
+                    state.mobileView = 'thread';
+                }
+
+                openWidget();
+                await loadWidget(state.activeConversationId);
+            };
+
             fab.addEventListener('click', function () {
                 if (state.open && !state.minimized) {
                     state.minimized = true;
@@ -505,6 +520,54 @@
             }
 
             searchInput.addEventListener('input', renderConversations);
+
+            document.querySelectorAll('[data-chat-start-form]').forEach((startForm) => {
+                startForm.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+
+                    const action = startForm.getAttribute('action');
+                    if (!action) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: new FormData(startForm),
+                            credentials: 'same-origin',
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Unable to start conversation.');
+                        }
+
+                        const payload = await response.json();
+                        const widgetPayload = payload.widget || null;
+                        const conversationId = Number(payload.conversation_id || 0);
+
+                        if (widgetPayload) {
+                            state.conversations = widgetPayload.conversations || [];
+                            state.activeConversation = widgetPayload.active_conversation || null;
+                            state.activeConversationId = state.activeConversation?.id || conversationId || null;
+                            pendingScrollBehavior = 'force';
+                            resetSelectedFile();
+                            openWidget();
+                            renderAll();
+                            return;
+                        }
+
+                        await openConversation(conversationId);
+                    } catch (error) {
+                        console.error(error);
+                        startForm.submit();
+                    }
+                });
+            });
 
             if (attachBtn && imageInput) {
                 attachBtn.addEventListener('click', function () {

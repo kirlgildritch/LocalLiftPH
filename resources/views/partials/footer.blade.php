@@ -2,7 +2,7 @@
     <div class="container footer-top">
         <div class="footer-brand">
             <div class="footer-logo">
-                <div class="logo-icon"><i class="fa-solid fa-location-dot"></i></div>
+
                 <h3>LocalLift <span>PH</span></h3>
             </div>
 

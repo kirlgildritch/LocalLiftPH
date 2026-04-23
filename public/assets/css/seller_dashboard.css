@@ -959,11 +959,15 @@ a {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
+  align-items: stretch;
 }
 
 .product-card {
   overflow: hidden;
   padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card img {
@@ -975,8 +979,16 @@ a {
 
 .product-copy {
   display: grid;
+  flex: 1;
+  min-width: 0;
   gap: 10px;
   padding: 18px;
+}
+
+.product-copy h3 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .product-card-bottom {
@@ -984,6 +996,7 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: auto;
 }
 
 .mini-action {
