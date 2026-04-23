@@ -10,11 +10,18 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductBrowseController;
+use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SellerAuthenticatedSessionController;
+use App\Http\Controllers\Seller\SellerCenterEntryController;
+use App\Http\Controllers\Seller\SellerDashboardController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\SellerRegisteredUserController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\ProductApprovalController;
+use App\Http\Controllers\Admin\SellerReviewController;
 use App\Http\Controllers\SellerController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShopController;
@@ -66,24 +73,25 @@ Route::prefix('seller-center')->name('seller.')->group(function () {
     });
 });
 
-Route::get('/become-seller', function () {
-    return redirect()->route('seller.login');
-})->middleware('frontend')->name('seller.center');
+Route::get('/become-seller', SellerCenterEntryController::class)
+    ->middleware('frontend')
+    ->name('seller.center');
 
 Route::middleware('seller')->group(function () {
-    Route::get('/seller-dashboard', function () {
-        return view('seller.dashboard');
-    })->name('seller.dashboard');
+    Route::get('/seller-dashboard', [SellerDashboardController::class, 'show'])->name('seller.dashboard');
+    Route::post('/seller-dashboard/application', [SellerDashboardController::class, 'submitApplication'])->name('seller.dashboard.application.store');
 
     Route::get('/add-product', [ProductController::class, 'create'])->name('seller.products.create');
     Route::post('/add-product', [ProductController::class, 'store'])->name('seller.products.store');
     Route::get('/manage-products', [ProductController::class, 'index'])->name('seller.products.index');
 
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
+    Route::patch('/seller-orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus'])->name('seller.orders.shipping-status');
     Route::get('/seller-earnings', [EarningsController::class, 'index'])->name('seller.earnings');
     Route::get('/seller-messages', [MessageController::class, 'index'])->name('seller.messages');
     Route::get('/seller-messages/{conversation}', [MessageController::class, 'show'])->name('seller.messages.show');
     Route::post('/seller-messages/{conversation}', [MessageController::class, 'store'])->name('seller.messages.store');
+    Route::post('/seller-messages/{conversation}/typing', [MessageController::class, 'typing'])->name('seller.messages.typing');
     Route::get('/seller-chat/widget', [MessageController::class, 'widget'])->name('seller.chat.widget');
 
     Route::get('/seller-settings', [SettingsController::class, 'index'])->name('seller.settings');
@@ -111,10 +119,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
-    Route::view('/', 'admin.dashboard')->name('dashboard');
-    Route::view('/products', 'admin.products')->name('products');
-    Route::view('/sellers', 'admin.sellers')->name('sellers');
-    Route::view('/orders', 'admin.orders')->name('orders');
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/products', [ProductApprovalController::class, 'index'])->name('products');
+    Route::patch('/products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('products.approve');
+    Route::patch('/products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('products.reject');
+    Route::get('/sellers', [SellerReviewController::class, 'index'])->name('sellers');
+    Route::patch('/sellers/{seller}/status', [SellerReviewController::class, 'updateStatus'])->name('sellers.status');
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders');
     Route::view('/reports', 'admin.reports')->name('reports');
 });
 Route::middleware('buyer')->group(function () {
@@ -140,11 +151,14 @@ Route::middleware('buyer')->group(function () {
     Route::get('/my-orders/{order}', [OrderController::class, 'show'])->name('buyer.orders.show');
     Route::post('/my-orders/{order}/buy-again', [OrderController::class, 'buyAgain'])->name('buyer.orders.buyAgain');
     Route::patch('/my-orders/{order}/cancel', [OrderController::class, 'cancel'])->name('buyer.orders.cancel');
+    Route::patch('/my-orders/{order}/received', [OrderController::class, 'confirmReceived'])->name('buyer.orders.received');
+    Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');
     Route::post('/messages/start/{seller}', [MessageController::class, 'start'])->name('messages.start');
     Route::post('/messages/{conversation}', [MessageController::class, 'store'])->name('messages.store');
+    Route::post('/messages/{conversation}/typing', [MessageController::class, 'typing'])->name('messages.typing');
     Route::get('/chat/widget', [MessageController::class, 'widget'])->name('chat.widget');
 });
 

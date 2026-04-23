@@ -29,7 +29,7 @@ class CartController extends Controller
             ->get();
 
         $miniCartCount = Cart::where('user_id', Auth::id())->count();
-        $cartCount = Cart::where('user_id', Auth::id())->sum('quantity');
+        $cartCount = $miniCartCount;
         $extraCount = max($miniCartCount - $previewItems->count(), 0);
 
         return [

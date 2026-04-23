@@ -49,7 +49,7 @@
                 <div class="cart-list panel">
                     <div class="select-all-row">
                         <label>
-                            <input type="checkbox" id="select-all-cart-items" {{ $hasSelectedCartItem || $hasSelectedCartItems ? '' : 'checked' }}>
+                            <input type="checkbox" id="select-all-cart-items">
                             <span>Select All</span>
                         </label>
                     </div>
@@ -67,8 +67,7 @@
                             $subtotal = $item->product->price * $item->quantity;
                             $shipping = ($item->product->shipping_fee ?? 0) * $item->quantity;
                             $total += $subtotal;
-                            $isChecked = !$hasSelectedCartItem && !$hasSelectedCartItems
-                                || (int) $selectedCartItemId === (int) $item->id
+                            $isChecked = (int) $selectedCartItemId === (int) $item->id
                                 || $selectedCartItemIds->contains((int) $item->id);
                             if ($isChecked) {
                                 $selectedSubtotal += $subtotal;

@@ -45,7 +45,7 @@ class AuthenticatedSessionController extends Controller
                 ->route('login')
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'This account is not allowed in Buyer login. Use Seller Center or Admin login instead.',
+                    'email' => trans('auth.failed'),
                 ]);
         }
 

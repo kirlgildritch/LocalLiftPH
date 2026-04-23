@@ -52,7 +52,15 @@ class ProductController extends Controller
                 ->count(),
         ];
 
-        $productsQuery = Product::where('user_id', Auth::id());
+        $productsQuery = Product::with([
+            'category',
+            'reviews' => function ($query) {
+                $query->with('user')->latest();
+            },
+        ])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->where('user_id', Auth::id());
 
         switch ($currentTab) {
             case 'sold_out':

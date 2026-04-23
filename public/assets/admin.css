@@ -1210,6 +1210,10 @@ textarea {
     width: min(100%, 62rem);
 }
 
+.modal-card--document {
+    width: min(100%, 54rem);
+}
+
 .modal-card__header,
 .modal-card__footer {
     padding: 1rem 1.35rem;
@@ -1410,6 +1414,35 @@ textarea {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+}
+
+.document-preview-shell {
+    display: grid;
+    gap: 1rem;
+}
+
+.document-preview-stage {
+    min-height: 28rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fbfcff 0%, #f3f6fb 100%);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.document-preview-image {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    display: block;
+}
+
+.document-preview-frame {
+    width: 100%;
+    min-height: 70vh;
+    border: 0;
+    background: #fff;
 }
 
 .footer-actions {

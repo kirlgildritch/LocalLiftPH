@@ -365,6 +365,11 @@
   background: rgba(11, 21, 35, 0.94);
 }
 
+.product-card-link {
+  color: inherit;
+  text-decoration: none;
+}
+
 .product-image {
   aspect-ratio: 4 / 3;
   display: grid;

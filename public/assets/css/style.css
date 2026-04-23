@@ -163,16 +163,14 @@ footer {
   justify-self: start;
 }
 
-.logo-icon {
-  width: 46px;
-  height: 46px;
+.logo-icon img{
+  width: 60px;
+  height: 60px;
   border-radius: 14px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, var(--secondary), var(--primary));
-  color: var(--white);
   font-size: 22px;
-  box-shadow: 0 18px 36px rgba(21, 101, 192, 0.38);
+ 
 }
 
 .logo-text {
@@ -238,6 +236,10 @@ footer {
   color: var(--text);
   background: rgba(66, 165, 245, 0.12);
   transform: translateY(-1px);
+}
+
+.navbar-mobile-actions {
+  display: none;
 }
 
 .header-actions {
@@ -1124,6 +1126,21 @@ footer {
     background: rgba(255, 255, 255, 0.015);
   }
 
+  .navbar-mobile-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .navbar-mobile-actions .action-link {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    justify-content: center;
+    border-radius: 14px;
+  }
+
   .search-bar {
     min-height: 56px;
   }
@@ -1199,7 +1216,7 @@ footer {
   .header-actions {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: stretch;
     justify-content: stretch;
     gap: 8px;
@@ -1209,6 +1226,10 @@ footer {
   .header-actions > * {
     min-width: 0;
     width: 100%;
+  }
+
+  .action-link-desktop {
+    display: none;
   }
 
   .search-bar {
@@ -1248,12 +1269,20 @@ footer {
   .cart-trigger,
   .profile-trigger {
     min-height: 44px;
-    width: 100%;
+    width: auto;
     min-width: 0;
-    padding: 0 8px;
+    padding: 0 12px;
     font-size: 12px;
     justify-content: center;
     border-radius: 14px;
+  }
+
+  .action-link-primary {
+    justify-self: stretch;
+  }
+
+  .cart-dropdown {
+    width: auto;
   }
 
   .action-link i,
@@ -1410,13 +1439,21 @@ footer {
   }
 
   .header-actions {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     justify-content: stretch;
   }
 
   .message-trigger span:not(.cart-badge),
   .cart-trigger span:not(.cart-badge) {
     display: none;
+  }
+
+  .navbar-mobile-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .navbar-mobile-actions .action-link {
+    width: 100%;
   }
 
   .profile-trigger {

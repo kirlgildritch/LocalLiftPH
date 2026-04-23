@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -39,12 +41,17 @@ class User extends Authenticatable
         ];
     }
 
-    public function products()
+    public function products(): HasMany
     {
         return $this->hasMany(Product::class);
     }
 
-    public function addresses()
+    public function sellerProfile(): HasOne
+    {
+        return $this->hasOne(Seller::class);
+    }
+
+    public function addresses(): HasMany
     {
         return $this->hasMany(\App\Models\Address::class);
     }
@@ -64,28 +71,33 @@ class User extends Authenticatable
         return (bool) $this->is_admin || $this->role === 'admin';
     }
 
-    public function carts()
+    public function carts(): HasMany
     {
         return $this->hasMany(\App\Models\Cart::class);
     }
 
-    public function orders()
+    public function orders(): HasMany
     {
         return $this->hasMany(\App\Models\Order::class);
     }
 
-    public function buyerConversations()
+    public function buyerConversations(): HasMany
     {
         return $this->hasMany(\App\Models\Conversation::class, 'buyer_id');
     }
 
-    public function sellerConversations()
+    public function sellerConversations(): HasMany
     {
         return $this->hasMany(\App\Models\Conversation::class, 'seller_id');
     }
 
-    public function sentMessages()
+    public function sentMessages(): HasMany
     {
         return $this->hasMany(\App\Models\Message::class, 'sender_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(\App\Models\Review::class);
     }
 }

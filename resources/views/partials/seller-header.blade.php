@@ -7,7 +7,7 @@
 
             <a href="{{ route('seller.dashboard') }}" class="seller-brand">
                 <span class="seller-brand-icon">
-                    <i class="fa-solid fa-store"></i>
+                    <img src="{{ asset('assets/image/Logo.png') }}" alt="Logo">
                 </span>
                 <span class="seller-brand-copy">
                     <strong>LocalLift</strong>

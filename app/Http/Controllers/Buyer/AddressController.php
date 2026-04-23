@@ -6,9 +6,33 @@ use App\Http\Controllers\Controller;
 use App\Models\Address;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AddressController extends Controller
 {
+    protected function validatedAddress(Request $request): array
+    {
+        return $request->validate([
+            'full_name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'region' => 'nullable|string|max:255',
+            'province' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'barangay' => 'nullable|string|max:255',
+            'street_address' => 'required|string|max:255',
+            'postal_code' => 'nullable|string|max:20',
+            'label' => 'nullable|string|max:50',
+            'is_default' => 'nullable|boolean',
+        ]);
+    }
+
+    protected function ownedAddressOrFail(Address $address): Address
+    {
+        abort_unless((int) $address->user_id === (int) Auth::id(), 403);
+
+        return $address;
+    }
+
     public function index()
     {
         $addresses = Address::where('user_id', Auth::id())
@@ -26,98 +50,67 @@ class AddressController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'region' => 'nullable|string|max:255',
-            'province' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:255',
-            'street_address' => 'required|string|max:255',
-            'postal_code' => 'nullable|string|max:20',
-            'label' => 'nullable|string|max:50',
-            'is_default' => 'nullable|boolean',
-        ]);
+        $validated = $this->validatedAddress($request);
 
-        if ($request->boolean('is_default')) {
-            Address::where('user_id', Auth::id())->update(['is_default' => false]);
-        }
+        DB::transaction(function () use ($validated) {
+            if (($validated['is_default'] ?? false) || ! Address::where('user_id', Auth::id())->exists()) {
+                Address::where('user_id', Auth::id())->update(['is_default' => false]);
+                $validated['is_default'] = true;
+            }
 
-        Address::create([
-            'user_id' => Auth::id(),
-            'full_name' => $request->full_name,
-            'phone' => $request->phone,
-            'region' => $request->region,
-            'province' => $request->province,
-            'city' => $request->city,
-            'barangay' => $request->barangay,
-            'street_address' => $request->street_address,
-            'postal_code' => $request->postal_code,
-            'label' => $request->label,
-            'is_default' => $request->boolean('is_default'),
-        ]);
+            Address::create(array_merge($validated, [
+                'user_id' => Auth::id(),
+            ]));
+        });
 
         return back()->with('address_success', 'Address added successfully.');
     }
 
     public function update(Request $request, Address $address)
     {
-        if ($address->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $address = $this->ownedAddressOrFail($address);
+        $validated = $this->validatedAddress($request);
 
-        $request->validate([
-            'full_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'region' => 'nullable|string|max:255',
-            'province' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'barangay' => 'nullable|string|max:255',
-            'street_address' => 'required|string|max:255',
-            'postal_code' => 'nullable|string|max:20',
-            'label' => 'nullable|string|max:50',
-            'is_default' => 'nullable|boolean',
-        ]);
+        DB::transaction(function () use ($address, $validated) {
+            if (($validated['is_default'] ?? false) || $address->is_default) {
+                Address::where('user_id', Auth::id())->where('id', '!=', $address->id)->update(['is_default' => false]);
+            }
 
-        if ($request->boolean('is_default')) {
-            Address::where('user_id', Auth::id())->update(['is_default' => false]);
-        }
-
-        $address->update([
-            'full_name' => $request->full_name,
-            'phone' => $request->phone,
-            'region' => $request->region,
-            'province' => $request->province,
-            'city' => $request->city,
-            'barangay' => $request->barangay,
-            'street_address' => $request->street_address,
-            'postal_code' => $request->postal_code,
-            'label' => $request->label,
-            'is_default' => $request->boolean('is_default'),
-        ]);
+            $address->update($validated + [
+                'is_default' => (bool) ($validated['is_default'] ?? $address->is_default),
+            ]);
+        });
 
         return back()->with('address_success', 'Address updated successfully.');
     }
 
     public function destroy(Address $address)
     {
-        if ($address->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $address = $this->ownedAddressOrFail($address);
+        $wasDefault = $address->is_default;
 
-        $address->delete();
+        DB::transaction(function () use ($address, $wasDefault) {
+            $address->delete();
+
+            if ($wasDefault) {
+                Address::where('user_id', Auth::id())
+                    ->oldest('id')
+                    ->limit(1)
+                    ->update(['is_default' => true]);
+            }
+        });
 
         return back()->with('address_success', 'Address deleted successfully.');
     }
 
     public function setDefault(Address $address)
     {
-        if ($address->user_id !== Auth::id()) {
-            abort(403);
-        }
+        $address = $this->ownedAddressOrFail($address);
 
-        Address::where('user_id', Auth::id())->update(['is_default' => false]);
-        $address->update(['is_default' => true]);
+        DB::transaction(function () use ($address) {
+            Address::where('user_id', Auth::id())->update(['is_default' => false]);
+            $address->update(['is_default' => true]);
+        });
 
         return back()->with('address_success', 'Default address updated.');
     }

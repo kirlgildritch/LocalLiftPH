@@ -5,7 +5,10 @@ namespace App\Providers;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Conversation;
+use App\Models\Order;
+use App\Policies\OrderPolicy;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -18,6 +21,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::policy(Order::class, OrderPolicy::class);
+
         View::composer('*', function ($view) {
             $defaultAddress = null;
             $miniCartItems = collect();
@@ -42,7 +47,7 @@ class AppServiceProvider extends ServiceProvider
                     ->get();
 
                 $miniCartCount = Cart::where('user_id', $buyerId)->count();
-                $cartCount = (int) Cart::where('user_id', $buyerId)->sum('quantity');
+                $cartCount = $miniCartCount;
 
                 $messagePreviewConversations = Conversation::with(['buyer', 'seller', 'latestMessage.sender'])
                     ->where('buyer_id', $buyerId)

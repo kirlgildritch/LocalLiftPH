@@ -47,7 +47,7 @@ class AdminAuthenticatedSessionController extends Controller
                 ->route('admin.login')
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'This account does not have admin access.',
+                    'email' => trans('auth.failed'),
                 ]);
         }
 

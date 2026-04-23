@@ -4,34 +4,43 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class ProductApprovalController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        $products = Product::with(['user', 'category'])
+        $products = Product::with(['user.sellerProfile', 'category'])
             ->where('status', 'pending')
             ->latest()
             ->get();
 
-        return view('admin.products.pending', compact('products'));
+        return view('admin.products', compact('products'));
     }
 
-    public function approve(Product $product)
+    public function approve(Product $product): RedirectResponse
     {
+        if ($product->status !== Product::STATUS_PENDING) {
+            return back()->with('error', 'Only pending products can be approved.');
+        }
+
         $product->update([
-            'status' => 'approved',
+            'status' => Product::STATUS_APPROVED,
             'is_active' => 1,
         ]);
 
-        return back()->with('approved_product', $product->name);
+        return back()->with('success', $product->name . ' approved successfully.');
     }
 
-    public function reject(Product $product)
+    public function reject(Product $product): RedirectResponse
     {
+        if ($product->status !== Product::STATUS_PENDING) {
+            return back()->with('error', 'Only pending products can be rejected.');
+        }
+
         $product->update([
-            'status' => 'rejected',
+            'status' => Product::STATUS_REJECTED,
             'is_active' => 0,
         ]);
 

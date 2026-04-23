@@ -15,12 +15,12 @@ class OrderController extends Controller
         $currentStatus = trim((string) $request->get('status', 'all'));
         $allowedStatuses = [
             'all',
-            Order::STATUS_PENDING,
-            Order::STATUS_CONFIRMED,
-            Order::STATUS_PROCESSING,
-            Order::STATUS_SHIPPED,
-            Order::STATUS_DELIVERED,
-            Order::STATUS_CANCELLED,
+            Order::SHIPPING_PENDING,
+            Order::SHIPPING_TO_SHIP,
+            Order::SHIPPING_SHIPPED,
+            Order::SHIPPING_OUT_FOR_DELIVERY,
+            Order::SHIPPING_DELIVERED,
+            Order::SHIPPING_CANCELLED,
         ];
 
         if (!in_array($currentStatus, $allowedStatuses, true)) {
@@ -30,23 +30,23 @@ class OrderController extends Controller
         $orders = Order::with(['items.product.user', 'cancellation'])
             ->where('user_id', Auth::id())
             ->when($currentStatus !== 'all', function ($query) use ($currentStatus) {
-                $query->where('status', $currentStatus);
+                $query->where('shipping_status', $currentStatus);
             })
             ->latest()
             ->get();
 
         $statusCounts = Order::query()
-            ->selectRaw('status, COUNT(*) as count')
+            ->selectRaw('shipping_status, COUNT(*) as count')
             ->where('user_id', Auth::id())
-            ->groupBy('status')
-            ->pluck('count', 'status');
+            ->groupBy('shipping_status')
+            ->pluck('count', 'shipping_status');
 
         return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts'));
     }
 
     public function show(Order $order)
     {
-        abort_unless((int) $order->user_id === (int) Auth::id(), 403);
+        $this->authorize('view', $order);
 
         $order->load(['items.product.user', 'cancellation']);
 
@@ -55,7 +55,7 @@ class OrderController extends Controller
 
     public function buyAgain(Order $order)
     {
-        abort_unless((int) $order->user_id === (int) Auth::id(), 403);
+        $this->authorize('view', $order);
 
         $order->load(['items.product']);
 
@@ -82,7 +82,7 @@ class OrderController extends Controller
 
     public function cancel(Request $request, Order $order)
     {
-        abort_unless((int) $order->user_id === (int) Auth::id(), 403);
+        $this->authorize('view', $order);
 
         if (!$order->canBeCancelled()) {
             return redirect()
@@ -120,16 +120,36 @@ class OrderController extends Controller
                 'user_id' => Auth::id(),
                 'reasons' => $selectedReasons->all(),
                 'other_reason' => $otherReason,
-                'status_before_cancellation' => $order->status,
+                'status_before_cancellation' => $order->shippingStatus(),
             ]
         );
 
         $order->update([
             'status' => Order::STATUS_CANCELLED,
+            'shipping_status' => Order::SHIPPING_CANCELLED,
         ]);
 
         return redirect()
             ->route('buyer.orders.show', $order)
             ->with('success', 'Order cancelled successfully.');
+    }
+
+    public function confirmReceived(Order $order)
+    {
+        $this->authorize('view', $order);
+
+        if (!$order->canConfirmReceipt()) {
+            return redirect()
+                ->route('buyer.orders.show', $order)
+                ->with('error', 'This order is not ready for receipt confirmation.');
+        }
+
+        $order->update([
+            'status' => Order::STATUS_COMPLETED,
+        ]);
+
+        return redirect()
+            ->route('buyer.orders.show', $order)
+            ->with('success', 'Order marked as received successfully.');
     }
 }

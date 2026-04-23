@@ -64,3 +64,69 @@
   background: rgba(187, 222, 251, 0.12);
   color: #bbdefb;
 }
+
+.seller-product-name {
+  font-weight: 600;
+  color: #f5f9ff;
+}
+
+.seller-review-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.seller-rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 209, 102, 0.12);
+  color: #ffd166;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.seller-review-count,
+.empty-review-copy,
+.seller-review-card p {
+  color: #9eb2cc;
+}
+
+.seller-review-row td {
+  padding-top: 0;
+}
+
+.seller-review-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.seller-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.seller-review-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(187, 222, 251, 0.08);
+  border-radius: 16px;
+  background: rgba(7, 15, 27, 0.42);
+}
+
+.seller-review-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #dfeaff;
+  font-size: 13px;
+}

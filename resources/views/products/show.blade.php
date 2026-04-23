@@ -4,6 +4,7 @@
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/product_details.css') }}">
     @php($ownsProduct = auth()->check() && (int) $product->user_id === (int) auth()->id())
+    @php($averageRating = round((float) ($product->reviews_avg_rating ?? 0), 1))
 
     <section class="product-detail-page">
         <div class="container">
@@ -14,6 +15,18 @@
                 <span>&gt;</span>
                 <span>{{ $product->name }}</span>
             </div>
+
+            @if(session('success'))
+                <div class="product-feedback product-feedback-success panel">{{ session('success') }}</div>
+            @endif
+
+            @if(session('error'))
+                <div class="product-feedback product-feedback-error panel">{{ session('error') }}</div>
+            @endif
+
+            @if($errors->any())
+                <div class="product-feedback product-feedback-error panel">{{ $errors->first() }}</div>
+            @endif
 
             <div class="product-detail-layout">
                 <div class="product-main panel">
@@ -40,14 +53,12 @@
                             <span><i class="fa-solid fa-box-open"></i>
                                 {{ $product->stock > 0 ? 'Ready to ship' : 'Out of stock' }}</span>
                             <span><i class="fa-solid fa-cubes"></i> Stock: {{ $product->stock }}</span>
+                            <span><i class="fa-solid fa-star"></i> {{ $averageRating > 0 ? number_format($averageRating, 1) : 'New' }} | {{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
                         </div>
 
-                        <div class="product-price">₱{{ number_format($product->price, 2) }}</div>
+                        <div class="product-price">P{{ number_format($product->price, 2) }}</div>
 
-                        <p class="product-description">
-                            {{ $product->description ?: 'No description available for this product yet.' }}
-                        </p>
-
+                      
                         <div class="product-feature-grid">
                             <div class="feature-card">
                                 <strong>Category</strong>
@@ -56,6 +67,14 @@
                             <div class="feature-card">
                                 <strong>Availability</strong>
                                 <span>{{ $product->stock > 0 ? 'In stock' : 'Currently unavailable' }}</span>
+                            </div>
+                            <div class="feature-card">
+                                <strong>Average Rating</strong>
+                                <span>{{ $averageRating > 0 ? number_format($averageRating, 1) . ' out of 5' : 'No ratings yet' }}</span>
+                            </div>
+                            <div class="feature-card">
+                                <strong>Buyer Reviews</strong>
+                                <span>{{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
                             </div>
                         </div>
                     </div>
@@ -78,7 +97,7 @@
                         <div class="purchase-meta">
                             <div>
                                 <span>Price</span>
-                                <strong>₱{{ number_format($product->price, 2) }}</strong>
+                                <strong>P{{ number_format($product->price, 2) }}</strong>
                             </div>
                             <div>
                                 <span>Delivery</span>
@@ -142,12 +161,111 @@
                                 <p>Local marketplace seller</p>
                             </div>
                         </div>
-
                     </div>
                 </aside>
             </div>
-
             <div class="detail-sections">
+                <div class="panel detail-card">
+                    <div class="detail-header">
+                        <span class="section-kicker">
+                            Product Descriptions
+                        </span>
+
+                    </div>
+                    <p class="product-description">
+                        {!! $product->description ?: 'No description available for this product yet.' !!}
+                    </p>
+
+                </div>
+            </div>
+            <div class="detail-sections">
+                <section class="panel detail-card review-section" id="product-reviews">
+                    <div class="detail-header">
+                        <div>
+                            <span class="section-kicker">Ratings & Reviews</span>
+                            <h2>What buyers are saying</h2>
+                        </div>
+
+                        <div class="review-summary-chip">
+                            <strong>{{ $averageRating > 0 ? number_format($averageRating, 1) : '0.0' }}</strong>
+                            <span>{{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
+                        </div>
+                    </div>
+
+                    <div class="review-stars-display" aria-label="Average rating: {{ $averageRating }} out of 5">
+                        @for($star = 1; $star <= 5; $star++)
+                            <i class="fa-{{ $averageRating >= $star ? 'solid' : 'regular' }} fa-star"></i>
+                        @endfor
+                    </div>
+
+                    @auth
+                        @if(auth()->user()->isBuyer() && $reviewableOrderItems->isNotEmpty())
+                            <form action="{{ route('products.reviews.store', $product) }}" method="POST" class="review-form panel">
+                                @csrf
+                                <input type="hidden" name="order_item_id" value="{{ $reviewableOrderItems->first()->id }}">
+
+                                <div class="review-form-header">
+                                    <div>
+                                        <strong>Leave a review</strong>
+                                        <p>Only buyers with delivered purchases can rate this product.</p>
+                                    </div>
+
+                                    @if($reviewableOrderItems->count() > 1)
+                                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} delivered purchases eligible</span>
+                                    @endif
+                                </div>
+
+                                <div class="review-form-grid">
+                                    <div class="review-form-field">
+                                        <label for="rating">Your rating</label>
+                                        <select name="rating" id="rating" required>
+                                            <option value="">Select rating</option>
+                                            @for($rating = 5; $rating >= 1; $rating--)
+                                                <option value="{{ $rating }}" {{ (int) old('rating') === $rating ? 'selected' : '' }}>
+                                                    {{ $rating }} Star{{ $rating !== 1 ? 's' : '' }}
+                                                </option>
+                                            @endfor
+                                        </select>
+                                    </div>
+
+                                    <div class="review-form-field review-form-field-full">
+                                        <label for="comment">Your review</label>
+                                        <textarea name="comment" id="comment" rows="4" placeholder="Share what you liked about this product...">{{ old('comment') }}</textarea>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="action-btn primary-btn review-submit-btn">Submit Review</button>
+                            </form>
+                        @endif
+                    @endauth
+
+                    <div class="review-list">
+                        @forelse($product->reviews as $review)
+                            <article class="review-card">
+                                <div class="review-card-header">
+                                    <div>
+                                        <strong>{{ $review->user->name ?? 'LocalLift Buyer' }}</strong>
+                                        <div class="review-card-stars" aria-label="{{ $review->rating }} out of 5 stars">
+                                            @for($star = 1; $star <= 5; $star++)
+                                                <i class="fa-{{ $review->rating >= $star ? 'solid' : 'regular' }} fa-star"></i>
+                                            @endfor
+                                        </div>
+                                    </div>
+
+                                    <span>{{ $review->created_at->format('M d, Y') }}</span>
+                                </div>
+
+                                <p>{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
+                            </article>
+                        @empty
+                            <div class="review-empty-state">
+                                <h3>No reviews yet</h3>
+                                <p>This product has not received buyer feedback yet.</p>
+                            </div>
+                        @endforelse
+                    </div>
+                </section>
+
                 <section class="panel detail-card">
                     <div class="detail-header">
                         <div>
@@ -158,7 +276,7 @@
 
                     <div class="related-grid">
                         @forelse($relatedProducts as $relatedProduct)
-                            <article class="related-card">
+                            <a href="{{ route('products.show', $relatedProduct->id) }}" class="related-card related-card-link">
                                 <div class="related-image">
                                     <img src="{{ $relatedProduct->image ? asset('storage/' . $relatedProduct->image) : asset('assets/images/default-product.png') }}"
                                         alt="{{ $relatedProduct->name }}" style="width: 100%; height: 100%; object-fit: cover;">
@@ -168,31 +286,15 @@
                                     <span class="product-badge">{{ $relatedProduct->category?->name ?? 'Uncategorized' }}</span>
                                     <h3>{{ $relatedProduct->name }}</h3>
                                     <p>{{ $relatedProduct->user->name ?? 'LocalLift Seller' }}</p>
-                                    <div class="price">₱{{ number_format($relatedProduct->price, 2) }}</div>
+                                    <p class="related-rating">
+                                        <i class="fa-solid fa-star"></i>
+                                        {{ $relatedProduct->reviews_avg_rating ? number_format((float) $relatedProduct->reviews_avg_rating, 1) : 'New' }}
+                                        <span>| {{ $relatedProduct->reviews_count }} review{{ $relatedProduct->reviews_count !== 1 ? 's' : '' }}</span>
+                                    </p>
+                                    <div class="price">P{{ number_format($relatedProduct->price, 2) }}</div>
 
-                                    <div class="card-actions">
-                                        <a href="{{ route('products.show', $relatedProduct->id) }}"
-                                            class="action-btn secondary-btn">
-                                            View
-                                        </a>
-
-                                        @auth
-                                            @if((int) $relatedProduct->user_id === (int) auth()->id())
-                                                <span class="action-btn primary-btn" aria-disabled="true">Your Product</span>
-                                            @else
-                                                <form action="{{ route('cart.add', $relatedProduct->id) }}" method="POST"
-                                                    style="display:inline;" class="add-to-cart-form">
-                                                    @csrf
-                                                    <input type="hidden" name="quantity" value="1">
-                                                    <button type="submit" class="action-btn primary-btn">Add to Cart</button>
-                                                </form>
-                                            @endif
-                                        @else
-                                            <a href="{{ route('login') }}" class="action-btn primary-btn">Add to Cart</a>
-                                        @endauth
-                                    </div>
                                 </div>
-                            </article>
+                            </a>
                         @empty
                             <p>No related products available.</p>
                         @endforelse

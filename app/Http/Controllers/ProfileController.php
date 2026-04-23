@@ -1,16 +1,38 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    protected function storeProfileImage(Request $request, ?string $oldPath = null): ?string
+    {
+        if (! $request->hasFile('profile_image')) {
+            return $oldPath;
+        }
+
+        if (! $request->file('profile_image')->isValid()) {
+            return null;
+        }
+
+        $newPath = $request->file('profile_image')->store('profile_images', 'public');
+
+        if ($oldPath) {
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        return $newPath;
+    }
+
     /**
      * Display the user's profile form.
      */
@@ -29,6 +51,7 @@ class ProfileController extends Controller
     $user = $request->user();
 
     $validated = $request->validated();
+    $originalEmail = $user->email;
 
     // Check current password first before changing anything
     if ($request->filled('password')) {
@@ -52,14 +75,19 @@ class ProfileController extends Controller
 
     // Handle profile image
     if ($request->hasFile('profile_image')) {
-        if (! $request->file('profile_image')->isValid()) {
+        $imagePath = $this->storeProfileImage($request, $user->profile_image);
+
+        if (! $imagePath) {
             return back()->withErrors([
                 'profile_image' => 'The profile image failed to upload.'
             ])->withInput();
         }
 
-        $imagePath = $request->file('profile_image')->store('profile_images', 'public');
         $user->profile_image = $imagePath;
+    }
+
+    if ($originalEmail !== $validated['email']) {
+        $user->email_verified_at = null;
     }
 
     $user->save();
@@ -98,15 +126,17 @@ public function buyerUpdate(Request $request)
 {
     $user = $request->user();
 
-    $request->validate([
+    $validated = $request->validate([
         'name' => 'required|string|max:255',
-        'email' => 'required|email|max:255',
+        'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
         'phone' => 'nullable|string|max:20',
         'address' => 'nullable|string|max:255',
         'profile_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         'current_password' => 'nullable|required_with:password',
-        'password' => 'nullable|confirmed|min:6',
+        'password' => 'nullable|confirmed|min:8',
     ]);
+
+    $originalEmail = $user->email;
 
     if ($request->filled('password')) {
         if (!\Illuminate\Support\Facades\Hash::check($request->current_password, $user->password)) {
@@ -119,14 +149,25 @@ public function buyerUpdate(Request $request)
     }
 
     if ($request->hasFile('profile_image')) {
-        $path = $request->file('profile_image')->store('profile_images', 'public');
+        $path = $this->storeProfileImage($request, $user->profile_image);
+
+        if (! $path) {
+            return back()->withErrors([
+                'profile_image' => 'The profile image failed to upload.'
+            ])->withInput();
+        }
+
         $user->profile_image = $path;
     }
 
-    $user->name = $request->name;
-    $user->email = $request->email;
-    $user->phone = $request->phone;
-    $user->address = $request->address;
+    $user->name = $validated['name'];
+    $user->email = $validated['email'];
+    $user->phone = $validated['phone'] ?? null;
+    $user->address = $validated['address'] ?? null;
+
+    if ($originalEmail !== $validated['email']) {
+        $user->email_verified_at = null;
+    }
 
     $user->save();
 

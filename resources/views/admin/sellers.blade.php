@@ -3,31 +3,19 @@
 @section('title', 'Manage Sellers')
 @section('eyebrow', 'Verification')
 @section('page-title', 'Manage Sellers')
-@section('page-description', 'Seller management page rebuilt from the document, including seller details and uploaded document modals.')
+@section('page-description', 'View and manage all registered sellers.')
 
 @section('content')
     @php
-        $stats = [
-            ['label' => 'Total Sellers', 'value' => '342', 'tone' => 'green'],
-            ['label' => 'Pending Verification', 'value' => '8', 'tone' => 'orange'],
-            ['label' => 'Reported Sellers', 'value' => '5', 'tone' => 'red'],
-            ['label' => 'Banned Sellers', 'value' => '12', 'tone' => 'blue'],
-        ];
-
-        $sellers = [
-            ['id' => 'craftyjen', 'name' => 'CraftyJen', 'handle' => 'CraftyJen', 'category' => 'Jewelry', 'products' => 24, 'status' => 'Active', 'date' => '11/22/2023', 'avatar' => 'CJ', 'avatar_class' => 'gold'],
-            ['id' => 'bens', 'name' => "Ben's Workshop", 'handle' => "Ben's Workshop", 'category' => 'Home Decor', 'products' => 35, 'status' => 'Active', 'date' => '09/10/2023', 'avatar' => 'BW', 'avatar_class' => 'teal'],
-            ['id' => 'sarah', 'name' => "Sarah's Sculptures", 'handle' => "Sarah's Sculptures", 'category' => 'Handmade', 'products' => 21, 'status' => 'Active', 'date' => '07/26/2023', 'avatar' => 'SS', 'avatar_class' => 'rose'],
-            ['id' => 'anna', 'name' => "Anna's Art Studio", 'handle' => "Anna's Art Studio", 'category' => 'Art', 'products' => 0, 'status' => 'Pending', 'date' => '10/09/2023', 'avatar' => 'AA', 'avatar_class' => 'slate'],
-            ['id' => 'alex', 'name' => "Alex's Crafts", 'handle' => "Alex's Crafts", 'category' => 'Toys', 'products' => 42, 'status' => 'Active', 'date' => '06/19/2023', 'avatar' => 'AC', 'avatar_class' => 'olive'],
-            ['id' => 'willow', 'name' => 'WillowWeave', 'handle' => 'WillowWeave', 'category' => 'Accessories', 'products' => 16, 'status' => 'Active', 'date' => '05/10/2023', 'avatar' => 'WW', 'avatar_class' => 'teal'],
-            ['id' => 'mason', 'name' => "Mason's Handmade", 'handle' => "Home Decor", 'category' => 'Home Decor', 'products' => 0, 'status' => 'Pending', 'date' => '11/19/2023', 'avatar' => 'MH', 'avatar_class' => 'rose'],
-            ['id' => 'knit', 'name' => 'KnitByElla', 'handle' => 'KnitByElla', 'category' => 'Toys', 'products' => 32, 'status' => 'Active', 'date' => '03/15/2023', 'avatar' => 'KE', 'avatar_class' => 'gold'],
-        ];
+        $avatarClasses = ['gold', 'teal', 'rose', 'slate', 'olive'];
     @endphp
 
     <div class="page-stack">
         <p class="sub-line" style="font-size: 1.05rem; margin: 0;">View and manage all registered sellers.</p>
+
+        @if (session('success'))
+            <div class="alert-note">{{ session('success') }}</div>
+        @endif
 
         <section class="seller-stats-grid">
             @foreach ($stats as $stat)
@@ -39,7 +27,10 @@
         </section>
 
         <div class="filter-bar">
-            <div class="search-box search-box--grow"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search sellers..." /></div>
+            <div class="search-box search-box--grow">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Search sellers..." />
+            </div>
             <div class="inline-select"><i class="fa-solid fa-gear"></i> Filter <i class="fa-solid fa-chevron-down"></i></div>
             <div class="inline-select"><i class="fa-solid fa-magnifying-glass"></i></div>
         </div>
@@ -58,34 +49,78 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($sellers as $seller)
+                        @forelse ($sellers as $index => $seller)
+                            @php
+                                $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
+                                $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
+                                $category = optional($seller->user?->products->first()?->category)->name
+                                    ?? ($seller->seller_type === 'registered_business' ? 'Business' : 'Individual');
+                                $productsCount = $seller->user?->products->count() ?? 0;
+                                $statusLabel = match ($seller->application_status) {
+                                    'approved' => 'Active',
+                                    'rejected' => 'Rejected',
+                                    default => 'Pending',
+                                };
+                                $statusClass = match ($seller->application_status) {
+                                    'approved' => 'status-pill--success',
+                                    'rejected' => 'status-pill--danger',
+                                    default => 'status-pill--pending',
+                                };
+                                $avatarClass = $avatarClasses[$index % count($avatarClasses)];
+                            @endphp
                             <tr>
                                 <td>
                                     <div class="seller-cell">
-                                        <div class="avatar-photo avatar-photo--{{ $seller['avatar_class'] }}">{{ $seller['avatar'] }}</div>
+                                        <div class="avatar-photo avatar-photo--{{ $avatarClass }}">
+                                            {{ strtoupper(substr($displayName, 0, 2)) }}
+                                        </div>
                                         <div class="seller-cell__text">
-                                            <div class="seller-name">{{ $seller['name'] }}</div>
-                                            <div class="sub-line">{{ $seller['handle'] }}</div>
+                                            <div class="seller-name">{{ $displayName }}</div>
+                                            <div class="sub-line">{{ $handle }}</div>
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $seller['category'] }}</td>
-                                <td>{{ $seller['products'] }}</td>
+                                <td>{{ $category }}</td>
+                                <td>{{ $productsCount }}</td>
                                 <td>
-                                    <span class="status-pill {{ $seller['status'] === 'Active' ? 'status-pill--success' : 'status-pill--pending' }}">
-                                        {{ $seller['status'] }}
+                                    <span class="status-pill {{ $statusClass }}">
+                                        {{ $statusLabel }}
                                     </span>
                                 </td>
-                                <td>{{ $seller['date'] }}</td>
+                                <td>{{ optional($seller->submitted_at ?? $seller->created_at)->format('m/d/Y') }}</td>
                                 <td>
                                     <div class="table-actions__primary">
-                                        <button class="action-button action-button--primary" type="button" data-seller-view="{{ $seller['id'] }}"><i class="fa-solid fa-magnifying-glass"></i> View</button>
-                                        <button class="action-button action-button--warning" type="button">Suspend</button>
-                                        <button class="action-button action-button--danger" type="button">Ban</button>
+                                        <button
+                                            class="action-button action-button--primary"
+                                            type="button"
+                                            data-seller-view="{{ $seller->id }}"
+                                        >
+                                            <i class="fa-solid fa-magnifying-glass"></i> View
+                                        </button>
+                                        @if ($seller->application_status !== 'approved')
+                                            <form method="POST" action="{{ route('admin.sellers.status', $seller) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="application_status" value="approved">
+                                                <button class="action-button action-button--warning" type="submit">Approve</button>
+                                            </form>
+                                        @endif
+                                        @if ($seller->application_status !== 'rejected')
+                                            <form method="POST" action="{{ route('admin.sellers.status', $seller) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <input type="hidden" name="application_status" value="rejected">
+                                                <button class="action-button action-button--danger" type="submit">Reject</button>
+                                            </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="6" class="sub-line">No seller applications found.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -93,8 +128,6 @@
             <div class="pagination-bar">
                 <button class="pagination-button"><i class="fa-solid fa-chevron-left"></i></button>
                 <button class="pagination-button is-active">1</button>
-                <button class="pagination-button">2</button>
-                <button class="pagination-button">3</button>
                 <button class="pagination-button"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
         </article>
@@ -108,9 +141,10 @@
                 <h3 class="modal-title">Seller Details</h3>
                 <button class="modal-close" type="button" data-close-modal="seller-detail-modal">&times;</button>
             </div>
+
             <div class="modal-card__body">
                 <div class="seller-box__profile">
-                    <div class="avatar-photo" id="seller-detail-avatar"></div>
+                    <div class="avatar-photo avatar-photo--teal" id="seller-detail-avatar"></div>
                     <div>
                         <div class="seller-name" id="seller-detail-name"></div>
                         <div class="sub-line" id="seller-detail-handle"></div>
@@ -118,9 +152,9 @@
                 </div>
 
                 <div class="modal-meta-bar spacer-top">
-                    <strong>342 Sales</strong>
+                    <strong id="seller-detail-products"></strong>
                     <span>Joined <span id="seller-detail-date"></span></span>
-                    <span>Email craftyjen@email.com</span>
+                    <span>Email <span id="seller-detail-email"></span></span>
                 </div>
 
                 <div class="spacer-top">
@@ -129,17 +163,18 @@
                         <div class="doc-card">
                             <div class="doc-thumb doc-thumb--id"></div>
                             <div class="doc-card__content">
-                                <div class="seller-name">ID / Passport</div>
-                                <div class="doc-card__status">Uploaded</div>
-                                <button class="button" type="button" data-open-document="ID / Passport">View</button>
+                                <div class="seller-name" id="seller-id-label">ID / Passport</div>
+                                <div class="doc-card__status" id="seller-id-status">Uploaded</div>
+                                <button class="button" type="button" id="seller-id-link">View</button>
                             </div>
                         </div>
+
                         <div class="doc-card">
                             <div class="doc-thumb doc-thumb--license"></div>
                             <div class="doc-card__content">
                                 <div class="seller-name">Business License</div>
-                                <div class="doc-card__status">Uploaded</div>
-                                <button class="button" type="button" data-open-document="Business License">View</button>
+                                <div class="doc-card__status" id="seller-permit-status">Optional / Not uploaded</div>
+                                <button class="button" type="button" id="seller-permit-link">View</button>
                             </div>
                         </div>
                     </div>
@@ -147,41 +182,63 @@
 
                 <div class="spacer-top">
                     <h4 class="section-title">Request More Documents</h4>
-                    <div class="form-row spacer-top">
-                        <select class="field-select">
-                            <option>Select Reason</option>
-                            <option>Proof of Address</option>
-                            <option>Tax Identification Number</option>
-                            <option>Bank Statement</option>
-                        </select>
-                        <button class="action-button action-button--warning" type="button">Request Documents</button>
-                    </div>
-                    <div class="alert-note">Additional document requests will notify the seller by email.</div>
+                    <form method="POST" id="seller-review-form" class="page-stack spacer-top">
+                        @csrf
+                        @method('PATCH')
+                        <input type="hidden" name="application_status" value="pending" id="seller-review-status">
+
+                        <div class="form-row spacer-top">
+                            <select class="field-select" id="seller-review-reason">
+                                <option value="">Select Reason</option>
+                                <option value="Please upload proof of address for verification.">Proof of Address</option>
+                                <option value="Please upload your tax identification number document.">Tax Identification Number</option>
+                                <option value="Please upload a recent bank statement.">Bank Statement</option>
+                            </select>
+                            <button class="action-button action-button--warning" type="button" id="request-documents-button">Request Documents</button>
+                        </div>
+
+                        <textarea
+                            class="field-textarea"
+                            name="review_notes"
+                            id="seller-review-notes"
+                            rows="4"
+                            placeholder="Add admin review notes or required document instructions..."
+                        ></textarea>
+
+                        <div class="alert-note">Additional document requests will notify the seller through the dashboard review state.</div>
+                    </form>
                 </div>
             </div>
+
             <div class="modal-card__footer">
                 <div class="footer-actions">
-                    <button class="action-button action-button--success" type="button">Verify Seller</button>
-                    <button class="action-button action-button--danger" type="button">Reject Seller</button>
-                    <button class="button" type="button">Save as Pending</button>
+                    <button class="action-button action-button--success" type="button" data-status-submit="approved">Verify Seller</button>
+                    <button class="action-button action-button--danger" type="button" data-status-submit="rejected">Reject Seller</button>
+                    <button class="button" type="button" data-status-submit="pending">Save as Pending</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal-shell" id="seller-document-modal" hidden>
-        <div class="modal-card">
+        <div class="modal-card modal-card--document">
             <div class="modal-card__header">
-                <h3 class="modal-title">Uploaded Document</h3>
+                <h3 class="modal-title" id="seller-document-modal-title">Uploaded Document</h3>
                 <button class="modal-close" type="button" data-close-modal="seller-document-modal">&times;</button>
             </div>
+
             <div class="modal-card__body">
-                <h4 class="section-title" id="seller-document-title"></h4>
-                <div class="doc-thumb doc-thumb--license" id="seller-document-preview" style="width: 22rem; height: 30rem; margin: 1.5rem auto 0;"></div>
+                <div class="document-preview-shell">
+                    <div class="seller-name" id="seller-document-modal-label">Business License</div>
+                    <div class="document-preview-stage" id="seller-document-preview-stage"></div>
+                </div>
             </div>
+
             <div class="modal-card__footer">
                 <div class="footer-actions">
-                    <button class="action-button action-button--success" type="button">Cover</button>
+                    <a class="action-button action-button--success" href="#" target="_blank" id="seller-document-open-link">
+                        <i class="fa-solid fa-up-right-from-square"></i> Open File
+                    </a>
                     <button class="button" type="button" data-close-modal="seller-document-modal">Close</button>
                 </div>
             </div>
@@ -190,26 +247,81 @@
 @endpush
 
 @push('scripts')
+    @php
+        $sellerModalData = $sellers->map(function ($seller, $index) use ($avatarClasses) {
+            $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
+            $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
+            $productsCount = $seller->user?->products->count() ?? 0;
+
+            return [
+                'id' => $seller->id,
+                'name' => $displayName,
+                'handle' => $handle,
+                'email' => $seller->email ?? $seller->user?->email,
+                'date' => optional($seller->submitted_at ?? $seller->created_at)->format('m/d/Y'),
+                'products' => $productsCount . ' product' . ($productsCount === 1 ? '' : 's'),
+                'valid_id_type' => $seller->valid_id_type ?: 'ID / Passport',
+                'valid_id_url' => $seller->valid_id_path ? asset('storage/' . $seller->valid_id_path) : null,
+                'business_permit_url' => $seller->business_permit_path ? asset('storage/' . $seller->business_permit_path) : null,
+                'review_notes' => $seller->review_notes,
+                'status' => $seller->application_status,
+                'update_url' => route('admin.sellers.status', $seller),
+                'avatar' => strtoupper(substr($displayName, 0, 2)),
+                'avatar_class' => $avatarClasses[$index % count($avatarClasses)],
+            ];
+        })->values();
+    @endphp
+
     <script>
         (() => {
-            const sellers = @json($sellers);
-            const sellerMap = Object.fromEntries(sellers.map((seller) => [seller.id, seller]));
+            const sellers = @json($sellerModalData);
 
-            function openModal(id) {
+            const sellerMap = Object.fromEntries(sellers.map((seller) => [String(seller.id), seller]));
+            const documentModalTitle = document.getElementById('seller-document-modal-title');
+            const documentModalLabel = document.getElementById('seller-document-modal-label');
+            const documentPreviewStage = document.getElementById('seller-document-preview-stage');
+            const documentOpenLink = document.getElementById('seller-document-open-link');
+
+            const openModal = (id) => {
                 const modal = document.getElementById(id);
                 if (!modal) return;
                 modal.hidden = false;
                 document.body.classList.add('is-modal-open');
-            }
+            };
 
-            function closeModal(id) {
+            const closeModal = (id) => {
                 const modal = document.getElementById(id);
                 if (!modal) return;
                 modal.hidden = true;
                 if (![...document.querySelectorAll('.modal-shell')].some((item) => !item.hidden)) {
                     document.body.classList.remove('is-modal-open');
                 }
-            }
+            };
+
+            const fileExtension = (url) => {
+                try {
+                    return new URL(url, window.location.origin).pathname.split('.').pop().toLowerCase();
+                } catch (error) {
+                    return '';
+                }
+            };
+
+            const openDocumentModal = (title, label, url) => {
+                if (!url || !documentPreviewStage || !documentOpenLink) return;
+
+                documentModalTitle.textContent = title;
+                documentModalLabel.textContent = label;
+                documentOpenLink.href = url;
+
+                const extension = fileExtension(url);
+                const isPdf = extension === 'pdf';
+
+                documentPreviewStage.innerHTML = isPdf
+                    ? `<iframe src="${url}" class="document-preview-frame" title="${label}"></iframe>`
+                    : `<img src="${url}" alt="${label}" class="document-preview-image">`;
+
+                openModal('seller-document-modal');
+            };
 
             document.querySelectorAll('[data-close-modal]').forEach((button) => {
                 button.addEventListener('click', () => closeModal(button.dataset.closeModal));
@@ -225,24 +337,76 @@
                 button.addEventListener('click', () => {
                     const seller = sellerMap[button.dataset.sellerView];
                     if (!seller) return;
+
                     const avatar = document.getElementById('seller-detail-avatar');
                     avatar.className = `avatar-photo avatar-photo--${seller.avatar_class}`;
                     avatar.textContent = seller.avatar;
+
                     document.getElementById('seller-detail-name').textContent = seller.name;
                     document.getElementById('seller-detail-handle').textContent = seller.handle;
-                    document.getElementById('seller-detail-date').textContent = seller.date;
+                    document.getElementById('seller-detail-products').textContent = seller.products;
+                    document.getElementById('seller-detail-date').textContent = seller.date || 'N/A';
+                    document.getElementById('seller-detail-email').textContent = seller.email || 'N/A';
+                    document.getElementById('seller-id-label').textContent = seller.valid_id_type || 'ID / Passport';
+
+                    const idLink = document.getElementById('seller-id-link');
+                    const permitLink = document.getElementById('seller-permit-link');
+                    const idStatus = document.getElementById('seller-id-status');
+                    const permitStatus = document.getElementById('seller-permit-status');
+                    const form = document.getElementById('seller-review-form');
+                    const notes = document.getElementById('seller-review-notes');
+                    const statusInput = document.getElementById('seller-review-status');
+
+                    form.action = seller.update_url;
+                    notes.value = seller.review_notes || '';
+                    statusInput.value = seller.status || 'pending';
+                    idLink.onclick = null;
+                    permitLink.onclick = null;
+                    idLink.disabled = !seller.valid_id_url;
+                    permitLink.disabled = !seller.business_permit_url;
+
+                    if (seller.valid_id_url) {
+                        idStatus.textContent = 'Uploaded';
+                        idLink.addEventListener('click', function handleIdClick() {
+                            openDocumentModal('Uploaded Document', seller.valid_id_type || 'ID / Passport', seller.valid_id_url);
+                        }, { once: true });
+                    } else {
+                        idStatus.textContent = 'Not uploaded';
+                    }
+
+                    if (seller.business_permit_url) {
+                        permitStatus.textContent = 'Uploaded';
+                        permitLink.addEventListener('click', function handlePermitClick() {
+                            openDocumentModal('Uploaded Document', 'Business License', seller.business_permit_url);
+                        }, { once: true });
+                    } else {
+                        permitStatus.textContent = 'Optional / Not uploaded';
+                    }
+
                     openModal('seller-detail-modal');
                 });
             });
 
-            document.querySelectorAll('[data-open-document]').forEach((button) => {
+            const requestDocumentsButton = document.getElementById('request-documents-button');
+            const sellerReviewReason = document.getElementById('seller-review-reason');
+            const sellerReviewNotes = document.getElementById('seller-review-notes');
+            const sellerReviewStatus = document.getElementById('seller-review-status');
+            const sellerReviewForm = document.getElementById('seller-review-form');
+
+            if (requestDocumentsButton && sellerReviewReason && sellerReviewNotes) {
+                requestDocumentsButton.addEventListener('click', () => {
+                    if (sellerReviewReason.value) {
+                        sellerReviewNotes.value = sellerReviewReason.value;
+                    }
+                    sellerReviewStatus.value = 'pending';
+                    sellerReviewForm.submit();
+                });
+            }
+
+            document.querySelectorAll('[data-status-submit]').forEach((button) => {
                 button.addEventListener('click', () => {
-                    document.getElementById('seller-document-title').textContent = button.dataset.openDocument;
-                    document.getElementById('seller-document-preview').className = button.dataset.openDocument === 'ID / Passport'
-                        ? 'doc-thumb doc-thumb--id'
-                        : 'doc-thumb doc-thumb--license';
-                    closeModal('seller-detail-modal');
-                    openModal('seller-document-modal');
+                    sellerReviewStatus.value = button.dataset.statusSubmit;
+                    sellerReviewForm.submit();
                 });
             });
         })();

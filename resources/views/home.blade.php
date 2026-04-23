@@ -38,12 +38,12 @@
             </a>
 
             @auth
-              <a href="{{ route('seller.login') }}" class="btn btn-outline">
+              <a href="{{ route('seller.center') }}" class="btn btn-outline">
                 <i class="fa-solid fa-store"></i>
                 Become a Seller
               </a>
             @else
-              <a href="{{ route('seller.login') }}" class="btn btn-outline">
+              <a href="{{ route('seller.center') }}" class="btn btn-outline">
                 <i class="fa-solid fa-store"></i>
                 Become a Seller
               </a>
@@ -95,7 +95,7 @@
 
       <div class="products">
         @forelse($featuredProducts ?? collect() as $product)
-          <div class="product-card">
+          <a href="{{ route('products.show', $product->id) }}" class="product-card product-card-link">
             <div class="product-image">
               <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/image/heroBanner.png') }}"
                 alt="{{ $product->name }}">
@@ -105,30 +105,8 @@
               <h4>{{ $product->name }}</h4>
               <div class="sub">{{ $product->user->name ?? 'LocalLift Seller' }}</div>
               <div class="price"><small>P</small>{{ number_format($product->price, 2) }}</div>
-              <div class="product-actions">
-                <a href="{{ route('products.show', $product->id) }}" class="details-btn">View Details</a>
-
-                @auth
-                  @if((int) $product->user_id === (int) auth()->id())
-                    <span class="mini-cart-btn" aria-disabled="true">
-                      <i class="fa-solid fa-store"></i> Your Product
-                    </span>
-                  @else
-                    <form action="{{ route('cart.add', $product->id) }}" method="POST" class="add-to-cart-form">
-                      @csrf
-                      <input type="hidden" name="quantity" value="1">
-                      <button type="submit" class="mini-cart-btn">
-                        <i class="fa-solid fa-cart-shopping"></i> Add to Cart
-                      </button>
-                    </form>
-                  @endif
-                @else
-                  <a href="{{ route('login') }}" class="mini-cart-btn"><i class="fa-solid fa-cart-shopping"></i> Add to
-                    Cart</a>
-                @endauth
-              </div>
             </div>
-          </div>
+          </a>
         @empty
           <div class="product-card">
             <div class="product-info">

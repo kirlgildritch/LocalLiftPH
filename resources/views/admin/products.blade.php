@@ -7,71 +7,48 @@
 
 @section('content')
     @php
-        $products = [
-            [
-                'id' => 'earrings',
-                'name' => 'Handcrafted Clay Earrings',
-                'seller' => 'crafty_jenny',
-                'seller_name' => 'Jenny M.',
-                'category' => 'Jewelry',
-                'price' => '$15.00',
-                'materials' => 'Polymer clay, gold-plated brass hooks, jump rings',
-                'dimensions' => '1.5" length, 0.6" width',
-                'weight' => '8 grams',
+        $productModalData = $products->map(function ($product) {
+            $seller = $product->user;
+            $sellerProfile = $seller?->sellerProfile;
+            $imageUrl = $product->image ? asset('storage/' . $product->image) : null;
+            $sellerDisplay = $seller?->name ?? 'Seller';
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'seller' => '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_'),
+                'seller_name' => $sellerDisplay,
+                'category' => $product->category->name ?? 'Uncategorized',
+                'price' => 'PHP ' . number_format((float) $product->price, 2),
+                'materials' => $product->description ?: 'No materials/details provided.',
+                'dimensions' => trim(collect([
+                    $product->length_cm ? $product->length_cm . ' cm L' : null,
+                    $product->width_cm ? $product->width_cm . ' cm W' : null,
+                    $product->height_cm ? $product->height_cm . ' cm H' : null,
+                ])->filter()->implode(', ')) ?: 'No dimensions provided',
+                'weight' => $product->weight ? $product->weight . ' kg' : 'No weight provided',
                 'thumb' => 'earrings',
-                'avatar' => 'CJ',
-                'seller_status' => 'Pending',
-            ],
-            [
-                'id' => 'bear',
-                'name' => 'Knitted Mini Plush Bear',
-                'seller' => 'artisan_alex',
-                'seller_name' => 'Alex R.',
-                'category' => 'Toys',
-                'price' => '$20.00',
-                'materials' => 'Merino wool, polyfill stuffing, safety eyes',
-                'dimensions' => '5" height, 3" width',
-                'weight' => '120 grams',
-                'thumb' => 'bear',
-                'avatar' => 'AA',
-                'seller_status' => 'Pending',
-            ],
-            [
-                'id' => 'macrame',
-                'name' => 'Boho Macrame Wall Hanging',
-                'seller' => 'macrame_mia',
-                'seller_name' => 'Mia L.',
-                'category' => 'Home Decor',
-                'price' => '$30.00',
-                'materials' => 'Natural cotton rope, driftwood dowel',
-                'dimensions' => '18" width, 36" length',
-                'weight' => '350 grams',
-                'thumb' => 'macrame',
-                'avatar' => 'MM',
-                'seller_status' => 'Pending',
-            ],
-            [
-                'id' => 'mug',
-                'name' => 'Hand-Painted Pottery Mug',
-                'seller' => 'clayandcolor',
-                'seller_name' => 'Dana K.',
-                'category' => 'Home Decor',
-                'price' => '$25.00',
-                'materials' => 'Stoneware clay, food-safe glazes, lead-free paint',
-                'dimensions' => '3.5" height, 3" diameter',
-                'weight' => '310 grams',
-                'thumb' => 'mug',
-                'avatar' => 'CC',
-                'seller_status' => 'Pending',
-            ],
-        ];
+                'thumb_url' => $imageUrl,
+                'avatar' => strtoupper(substr($sellerDisplay, 0, 2)),
+                'seller_status' => ucfirst($sellerProfile?->application_status ?? 'pending'),
+                'approve_url' => route('admin.products.approve', $product),
+                'reject_url' => route('admin.products.reject', $product),
+                'seller_id_type' => $sellerProfile?->valid_id_type ?: 'Government Issued ID',
+                'seller_id_url' => $sellerProfile?->valid_id_path ? asset('storage/' . $sellerProfile->valid_id_path) : null,
+                'seller_permit_url' => $sellerProfile?->business_permit_path ? asset('storage/' . $sellerProfile->business_permit_path) : null,
+            ];
+        })->values();
     @endphp
 
     <div class="page-stack">
+        @if (session('success'))
+            <div class="alert-note">{{ session('success') }}</div>
+        @endif
+
         <div class="table-card__header" style="padding: 0; border: 0;">
             <div>
                 <h3 class="section-title">Pending Products</h3>
-                <p class="sub-line">12 Pending Products</p>
+                <p class="sub-line">{{ $products->count() }} Pending Products</p>
             </div>
             <div class="toolbar-row">
                 <div class="chip is-active">All</div>
@@ -94,42 +71,57 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($products as $product)
+                        @forelse ($products as $product)
+                            @php
+                                $sellerDisplay = $product->user?->name ?? 'Seller';
+                            @endphp
                             <tr>
                                 <td class="checkbox-cell"><span class="checkbox"></span></td>
                                 <td>
                                     <div class="product-cell">
-                                        <div class="mini-thumb mini-thumb--{{ $product['thumb'] }}"></div>
+                                        <div class="mini-thumb mini-thumb--earrings"></div>
                                         <div class="product-cell__text">
-                                            <div class="product-title">{{ $product['name'] }}</div>
-                                            <div class="sub-line"><i class="fa-solid fa-user"></i> {{ $product['seller'] }}</div>
-                                            <div class="sub-line">Category: {{ $product['category'] }}</div>
+                                            <div class="product-title">{{ $product->name }}</div>
+                                            <div class="sub-line"><i class="fa-solid fa-user"></i> {{ '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_') }}</div>
+                                            <div class="sub-line">Category: {{ $product->category->name ?? 'Uncategorized' }}</div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="product-cell__text">
-                                        <div>{{ $product['seller'] }}</div>
-                                        <div class="product-title">{{ $product['price'] }}</div>
+                                        <div>{{ '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_') }}</div>
+                                        <div class="product-title">PHP {{ number_format((float) $product->price, 2) }}</div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="table-actions">
                                         <div class="table-actions__primary">
-                                            <button class="action-button action-button--success" type="button">Approve</button>
-                                            <button class="action-button action-button--danger" type="button">Reject</button>
-                                            <button class="action-button action-button--primary" type="button" data-product-view="{{ $product['id'] }}">
+                                            <form method="POST" action="{{ route('admin.products.approve', $product) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button class="action-button action-button--success" type="submit">Approve</button>
+                                            </form>
+                                            <form method="POST" action="{{ route('admin.products.reject', $product) }}">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button class="action-button action-button--danger" type="submit">Reject</button>
+                                            </form>
+                                            <button class="action-button action-button--primary" type="button" data-product-view="{{ $product->id }}">
                                                 <i class="fa-solid fa-magnifying-glass"></i> View Details
                                             </button>
                                         </div>
                                         <div class="table-actions__secondary">
                                             <button type="button"><i class="fa-solid fa-rotate-left"></i> Undo</button>
-                                            <button type="button" data-product-view="{{ $product['id'] }}"><i class="fa-regular fa-file-lines"></i> View Details</button>
+                                            <button type="button" data-product-view="{{ $product->id }}"><i class="fa-regular fa-file-lines"></i> View Details</button>
                                         </div>
                                     </div>
                                 </td>
                             </tr>
-                        @endforeach
+                        @empty
+                            <tr>
+                                <td colspan="4" class="sub-line">No pending products for approval.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -193,8 +185,16 @@
             <div class="modal-card__footer">
                 <button class="button" type="button" data-close-modal="product-approval-modal">Close</button>
                 <div class="footer-actions">
-                    <button class="action-button action-button--danger" type="button">Reject</button>
-                    <button class="action-button action-button--success" type="button">Approve</button>
+                    <form method="POST" id="product-modal-reject-form">
+                        @csrf
+                        @method('PATCH')
+                        <button class="action-button action-button--danger" type="submit">Reject</button>
+                    </form>
+                    <form method="POST" id="product-modal-approve-form">
+                        @csrf
+                        @method('PATCH')
+                        <button class="action-button action-button--success" type="submit">Approve</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -225,31 +225,31 @@
                 <div class="document-row">
                     <h4 class="section-title">Verification Documents</h4>
                     <div class="sub-line">These documents have been submitted by the seller for verification.</div>
-                    <div><span class="status-pill status-pill--pending"><i class="fa-regular fa-clock"></i> Verification Status: Pending</span></div>
+                    <div><span class="status-pill status-pill--pending"><i class="fa-regular fa-clock"></i> Verification Status: <span id="product-seller-review-status"></span></span></div>
 
                     <div class="document-row__item">
                         <div class="doc-thumb doc-thumb--id"></div>
                         <div>
-                            <div class="seller-name">Government Issued ID</div>
-                            <div class="sub-line">Uploaded Apr 22, 2024</div>
+                            <div class="seller-name" id="product-seller-id-label">Government Issued ID</div>
+                            <div class="sub-line">Uploaded seller verification document</div>
                         </div>
-                        <div><span class="status-pill status-pill--success"><i class="fa-solid fa-check"></i> Uploaded</span></div>
+                        <div><a class="action-button action-button--primary" href="#" target="_blank" id="product-seller-id-link">View</a></div>
                     </div>
                     <div class="document-row__item">
                         <div class="doc-thumb doc-thumb--license"></div>
                         <div>
                             <div class="seller-name">Business License / Permit</div>
-                            <div class="sub-line">Uploaded Apr 22, 2024</div>
+                            <div class="sub-line">Uploaded only when applicable</div>
                         </div>
-                        <div><span class="status-pill status-pill--success"><i class="fa-solid fa-check"></i> Uploaded</span></div>
+                        <div><a class="action-button action-button--primary" href="#" target="_blank" id="product-seller-permit-link">View</a></div>
                     </div>
                     <div class="document-row__item">
                         <div class="doc-thumb doc-thumb--address"></div>
                         <div>
                             <div class="seller-name">Proof of Address</div>
-                            <div class="sub-line">Uploaded Apr 22, 2024</div>
+                            <div class="sub-line">Use seller review page for more document requests</div>
                         </div>
-                        <div><span class="status-pill status-pill--success"><i class="fa-solid fa-check"></i> Uploaded</span></div>
+                        <div><span class="status-pill status-pill--pending">Check Seller Reviews</span></div>
                     </div>
                 </div>
             </div>
@@ -263,8 +263,8 @@
 @push('scripts')
     <script>
         (() => {
-            const products = @json($products);
-            const byId = Object.fromEntries(products.map((product) => [product.id, product]));
+            const products = @json($productModalData);
+            const byId = Object.fromEntries(products.map((product) => [String(product.id), product]));
             let activeProduct = null;
 
             function openModal(id) {
@@ -298,6 +298,7 @@
                     const product = byId[button.dataset.productView];
                     if (!product) return;
                     activeProduct = product;
+
                     document.getElementById('product-modal-title').textContent = product.name;
                     document.getElementById('product-modal-category-left').textContent = product.category;
                     document.getElementById('product-modal-materials-left').textContent = product.materials;
@@ -311,13 +312,30 @@
                     document.getElementById('product-modal-seller-avatar').textContent = product.avatar;
                     document.getElementById('product-modal-seller-handle').textContent = product.seller;
                     document.getElementById('product-modal-seller-name').textContent = product.seller_name;
-                    document.getElementById('product-modal-hero').className = `hero-thumb hero-thumb--${product.thumb}`;
+
+                    const hero = document.getElementById('product-modal-hero');
+                    hero.className = `hero-thumb hero-thumb--${product.thumb}`;
+                    if (product.thumb_url) {
+                        hero.style.backgroundImage = `url('${product.thumb_url}')`;
+                        hero.style.backgroundSize = 'cover';
+                        hero.style.backgroundPosition = 'center';
+                    } else {
+                        hero.style.backgroundImage = '';
+                    }
+
+                    document.getElementById('product-modal-approve-form').action = product.approve_url;
+                    document.getElementById('product-modal-reject-form').action = product.reject_url;
 
                     const thumbs = document.getElementById('product-modal-thumbs');
                     thumbs.innerHTML = '';
                     for (let i = 0; i < 3; i += 1) {
                         const element = document.createElement('div');
                         element.className = `mini-thumb mini-thumb--${product.thumb}`;
+                        if (product.thumb_url) {
+                            element.style.backgroundImage = `url('${product.thumb_url}')`;
+                            element.style.backgroundSize = 'cover';
+                            element.style.backgroundPosition = 'center';
+                        }
                         thumbs.appendChild(element);
                     }
 
@@ -329,11 +347,34 @@
             if (sellerTrigger) {
                 sellerTrigger.addEventListener('click', () => {
                     if (!activeProduct) return;
+
                     document.getElementById('product-seller-modal-handle').textContent = activeProduct.seller;
                     document.getElementById('product-seller-modal-avatar').textContent = activeProduct.avatar;
                     document.getElementById('product-seller-modal-username').textContent = activeProduct.seller;
                     document.getElementById('product-seller-modal-fullname').textContent = activeProduct.seller_name;
                     document.getElementById('product-seller-modal-status').textContent = activeProduct.seller_status;
+                    document.getElementById('product-seller-review-status').textContent = activeProduct.seller_status;
+                    document.getElementById('product-seller-id-label').textContent = activeProduct.seller_id_type;
+
+                    const idLink = document.getElementById('product-seller-id-link');
+                    const permitLink = document.getElementById('product-seller-permit-link');
+
+                    if (activeProduct.seller_id_url) {
+                        idLink.href = activeProduct.seller_id_url;
+                        idLink.style.pointerEvents = 'auto';
+                    } else {
+                        idLink.href = '#';
+                        idLink.style.pointerEvents = 'none';
+                    }
+
+                    if (activeProduct.seller_permit_url) {
+                        permitLink.href = activeProduct.seller_permit_url;
+                        permitLink.style.pointerEvents = 'auto';
+                    } else {
+                        permitLink.href = '#';
+                        permitLink.style.pointerEvents = 'none';
+                    }
+
                     closeModal('product-approval-modal');
                     openModal('product-seller-modal');
                 });

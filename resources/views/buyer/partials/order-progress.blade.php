@@ -3,9 +3,9 @@
     $stepKeys = array_keys($steps);
     $statusIndex = array_flip($stepKeys);
 
-    $currentStatus = $order->status;
+    $currentStatus = $order->shippingStatus();
     $progressStatus = $order->isCancelled()
-        ? ($order->cancellation?->status_before_cancellation ?: \App\Models\Order::STATUS_PENDING)
+        ? ($order->cancellation?->status_before_cancellation ?: \App\Models\Order::SHIPPING_TO_SHIP)
         : $currentStatus;
 
     $currentStepIndex = $statusIndex[$progressStatus] ?? 0;
@@ -14,17 +14,17 @@
 <div class="order-progress-shell panel">
     <div class="order-progress-header">
         <div>
-            <span class="toolbar-label">Order Status</span>
-            <h3>{{ $order->isCancelled() ? 'Order Cancelled' : $order->statusLabel() }}</h3>
+            <span class="toolbar-label">Shipping Status</span>
+            <h3>{{ $order->isCancelled() ? 'Order Cancelled' : $order->shippingStatusLabel() }}</h3>
         </div>
 
-        <div class="order-status-chip {{ \Illuminate\Support\Str::slug($order->status) }}">
+        <div class="order-status-chip {{ $order->shippingToneClass() }}">
             @if($order->isCancelled())
                 <i class="fa-solid fa-ban"></i>
             @else
                 <i class="fa-solid fa-sparkles"></i>
             @endif
-            <span>{{ $order->statusLabel() }}</span>
+            <span>{{ $order->shippingStatusLabel() }}</span>
         </div>
     </div>
 

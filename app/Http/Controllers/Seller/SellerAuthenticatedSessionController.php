@@ -21,6 +21,12 @@ class SellerAuthenticatedSessionController extends Controller
             return redirect()->route('seller.dashboard');
         }
 
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
+
         return view('seller.auth.login');
     }
 
@@ -52,15 +58,11 @@ class SellerAuthenticatedSessionController extends Controller
                 ->route('seller.login')
                 ->withInput($request->only('email'))
                 ->withErrors([
-                    'email' => 'This account does not have Seller Center access.',
+                    'email' => trans('auth.failed'),
                 ]);
         }
 
         Auth::shouldUse('seller');
-
-        if (! SellerProfile::where('user_id', $user->id)->exists()) {
-            return redirect()->route('seller.setup');
-        }
 
         return redirect()->route('seller.dashboard');
     }

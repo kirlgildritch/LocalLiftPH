@@ -15,21 +15,24 @@ class ShopController extends Controller
 
         $categories = Category::withCount([
             'products' => function ($query) {
-                $query->where('is_active', 1);
+                $query->visibleToBuyers();
             },
         ])
             ->whereHas('products', function ($query) {
-                $query->where('is_active', 1);
+                $query->visibleToBuyers();
             })
             ->orderBy('name')
             ->get();
 
         $shopsQuery = User::withCount(['products' => function ($query) {
-                $query->where('is_active', 1);
+                $query->visibleToBuyers();
             }])
             ->where('is_seller', 1)
+            ->whereHas('sellerProfile', function ($query) {
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+            })
             ->whereHas('products', function ($query) use ($categorySlug) {
-                $query->where('is_active', 1)
+                $query->visibleToBuyers()
                     ->when($categorySlug, function ($categoryQuery) use ($categorySlug) {
                         $categoryQuery->whereHas('category', function ($nestedCategoryQuery) use ($categorySlug) {
                             $nestedCategoryQuery->where('slug', $categorySlug);
@@ -49,13 +52,13 @@ class ShopController extends Controller
 
     public function show(User $user)
     {
-        if (! $user->isSeller()) {
+        if (! $user->isSeller() || $user->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED) {
             abort(404);
         }
 
         $products = $user->products()
             ->with('category')
-            ->where('is_active', 1)
+            ->visibleToBuyers()
             ->latest()
             ->get();
 

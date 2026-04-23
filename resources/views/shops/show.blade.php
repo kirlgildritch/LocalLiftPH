@@ -4,6 +4,7 @@
 @section('content')
         <link rel="stylesheet" href="{{ asset('assets/css/shop_details.css') }}">
         @php($ownsShop = auth()->check() && (int) $user->id === (int) auth()->id())
+        @php($shopCategories = $products->groupBy(fn ($product) => $product->category?->name ?? 'Uncategorized'))
 
         <section class="shop-detail-page">
             <div class="container">
@@ -93,11 +94,7 @@
                                     <span class="count">{{ $products->count() }}</span>
                                 </div>
 
-                                @php
-    $categories = $products->groupBy(fn($product) => $product->category?->name ?? 'Uncategorized');
-                                @endphp
-
-                                @foreach($categories as $category => $categoryProducts)
+                                @foreach($shopCategories as $category => $categoryProducts)
                                     <div class="filter-item">
                                         <div class="filter-label">
                                             <span class="dot"></span> {{ $category }}
@@ -136,7 +133,7 @@
 
                             <div class="product-grid">
                                 @forelse($products as $product)
-                                    <article class="product-card">
+                                    <a href="{{ route('products.show', $product->id) }}" class="product-card product-card-link">
                                         <div class="product-image">
                                             <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/images/default-product.png') }}"
                                                 alt="{{ $product->name }}" style="width: 100%; height: 220px; object-fit: cover;">
@@ -148,29 +145,8 @@
                                             <p>{{ $product->description ?: 'No description available.' }}</p>
                                             <div class="price">₱{{ number_format($product->price, 2) }}</div>
 
-                                            <div class="product-actions">
-                                                <a href="{{ route('products.show', $product->id) }}"
-                                                    class="action-btn secondary-btn">
-                                                    View
-                                                </a>
-
-                                                @auth
-                                                    @if((int) $product->user_id === (int) auth()->id())
-                                                        <span class="action-btn primary-btn" aria-disabled="true">Your Product</span>
-                                                    @else
-                                                        <form action="{{ route('cart.add', $product->id) }}" method="POST"
-                                                            style="display:inline;" class="add-to-cart-form">
-                                                            @csrf
-                                                            <input type="hidden" name="quantity" value="1">
-                                                            <button type="submit" class="action-btn primary-btn">Add to Cart</button>
-                                                        </form>
-                                                    @endif
-                                                @else
-                                                    <a href="{{ route('login') }}" class="action-btn primary-btn">Add to Cart</a>
-                                                @endauth
-                                            </div>
                                         </div>
-                                    </article>
+                                    </a>
                                 @empty
                                     <p>This shop has no products yet.</p>
                                 @endforelse

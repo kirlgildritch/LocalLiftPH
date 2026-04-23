@@ -10,18 +10,18 @@ class HomeController extends Controller
     public function index()
     {
         $featuredProducts = Product::with(['user', 'category'])
-            ->where('is_active', 1)
+            ->visibleToBuyers()
             ->latest()
             ->take(4)
             ->get();
 
         $featuredCategories = Category::withCount([
             'products' => function ($query) {
-                $query->where('is_active', 1);
+                $query->visibleToBuyers();
             },
         ])
             ->whereHas('products', function ($query) {
-                $query->where('is_active', 1);
+                $query->visibleToBuyers();
             })
             ->orderByDesc('products_count')
             ->take(5)

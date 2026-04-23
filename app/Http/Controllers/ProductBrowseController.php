@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\User;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ProductBrowseController extends Controller
 {
@@ -18,8 +21,7 @@ class ProductBrowseController extends Controller
         $sort = $request->get('sort', 'newest');
 
         $productsQuery = Product::with(['user', 'category'])
-            ->where('is_active', 1)
-            ->where('status', 'approved'); // only approved products visible
+            ->visibleToBuyers();
 
         if ($search) {
             $productsQuery->where(function ($q) use ($search) {
@@ -57,16 +59,19 @@ class ProductBrowseController extends Controller
 
         $categories = Category::withCount([
             'products' => function ($query) {
-                $query->where('is_active', 1)->where('status', 'approved');
+                $query->visibleToBuyers();
             }
         ])->orderBy('name')->get();
 
         $shops = User::withCount([
             'products' => function ($query) {
-                $query->where('is_active', 1)->where('status', 'approved');
+                $query->visibleToBuyers();
             }
         ])
             ->where('is_seller', 1)
+            ->whereHas('sellerProfile', function ($query) {
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+            })
             ->when($search, function ($query) use ($search) {
                 $query->where('name', 'like', '%' . $search . '%');
             })
@@ -88,19 +93,46 @@ class ProductBrowseController extends Controller
 
     public function show(Product $product)
     {
-        abort_if($product->status !== 'approved', 404);
+        abort_if(
+            $product->status !== Product::STATUS_APPROVED
+            || ! $product->is_active
+            || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED,
+            404
+        );
 
-        $product->load(['user', 'category']);
+        $product->load([
+            'user',
+            'category',
+            'reviews' => function ($query) {
+                $query->with('user')->latest();
+            },
+        ])->loadAvg('reviews', 'rating')
+            ->loadCount('reviews');
+
+        $reviewableOrderItems = collect();
+
+        if (Auth::guard('web')->check()) {
+            $reviewableOrderItems = OrderItem::with('order')
+                ->where('product_id', $product->id)
+                ->whereDoesntHave('review')
+                ->whereHas('order', function ($query) {
+                    $query->where('user_id', Auth::id())
+                        ->where('shipping_status', Order::SHIPPING_DELIVERED);
+                })
+                ->latest()
+                ->get();
+        }
 
         $relatedProducts = Product::with(['user', 'category'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->where('id', '!=', $product->id)
             ->where('category_id', $product->category_id)
-            ->where('is_active', 1)
-            ->where('status', 'approved')
+            ->visibleToBuyers()
             ->latest()
             ->take(3)
             ->get();
 
-        return view('products.show', compact('product', 'relatedProducts'));
+        return view('products.show', compact('product', 'relatedProducts', 'reviewableOrderItems'));
     }
 }

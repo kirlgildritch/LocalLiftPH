@@ -125,7 +125,7 @@
                     @endif
                     <div class="product-grid">
                         @forelse($products as $product)
-                            <article class="product-card panel">
+                            <a href="{{ route('products.show', $product->id) }}" class="product-card panel product-card-link">
                                 <div class="product-image">
                                     <img src="{{ $product->image ? asset('storage/' . $product->image) : asset('assets/images/default-product.png') }}"
                                         alt="{{ $product->name }}">
@@ -137,28 +137,8 @@
                                     <p>{{ $product->user->name ?? 'LocalLift Seller' }}</p>
                                     <div class="price">₱{{ number_format($product->price, 2) }}</div>
 
-                                    <div class="product-actions">
-                                        <a href="{{ route('products.show', $product->id) }}" class="action-btn secondary-btn">
-                                            View
-                                        </a>
-
-                                        @auth
-                                            @if((int) $product->user_id === (int) auth()->id())
-                                                <span class="action-btn primary-btn" aria-disabled="true">Your Product</span>
-                                            @else
-                                                <form action="{{ route('cart.add', $product->id) }}" method="POST"
-                                                    style="display: inline;" class="add-to-cart-form">
-                                                    @csrf
-                                                    <input type="hidden" name="quantity" value="1">
-                                                    <button type="submit" class="action-btn primary-btn">Add to Cart</button>
-                                                </form>
-                                            @endif
-                                        @else
-                                            <a href="{{ route('login') }}" class="action-btn primary-btn">Add to Cart</a>
-                                        @endauth
-                                    </div>
                                 </div>
-                            </article>
+                            </a>
                         @empty
                             <div class="panel" style="padding: 20px;">
                                 <p>

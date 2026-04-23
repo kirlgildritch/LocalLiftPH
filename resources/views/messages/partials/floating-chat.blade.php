@@ -58,9 +58,15 @@
 
                 <div class="chat-widget-messages" data-chat-messages></div>
 
-                <form class="chat-widget-form" data-chat-form>
+                <form class="chat-widget-form" data-chat-form enctype="multipart/form-data">
                     @csrf
+                    <input type="file" name="image" accept="image/*" data-chat-image-input hidden>
+                    <button type="button" class="chat-widget-attach" data-chat-attach aria-label="Attach image">
+                        <i class="fa-regular fa-image"></i>
+                    </button>
                     <input type="text" name="message" placeholder="Type a message..." data-chat-input>
+                    <span class="chat-widget-file-name" data-chat-file-name></span>
+                    <div class="chat-widget-preview" data-chat-preview hidden></div>
                     <button type="submit" class="chat-widget-send">Send</button>
                 </form>
             </div>
@@ -87,7 +93,16 @@
             const messagesEl = widget.querySelector('[data-chat-messages]');
             const form = widget.querySelector('[data-chat-form]');
             const input = widget.querySelector('[data-chat-input]');
+            const imageInput = widget.querySelector('[data-chat-image-input]');
+            const attachBtn = widget.querySelector('[data-chat-attach]');
+            const fileNameEl = widget.querySelector('[data-chat-file-name]');
+            const previewEl = widget.querySelector('[data-chat-preview]');
             const backBtn = widget.querySelector('[data-chat-back]');
+            let pollTimer = null;
+            let typingTimer = null;
+            let typingResetTimer = null;
+            let imagePreviewUrl = null;
+            let pendingScrollBehavior = 'auto';
 
             const state = {
                 open: autoOpen,
@@ -100,6 +115,16 @@
             };
 
             const isMobileChatViewport = () => window.matchMedia('(max-width: 640px)').matches;
+            const openForLiveUpdates = () => state.open && !state.minimized;
+            const isNearMessagesBottom = () => {
+                if (!messagesEl) {
+                    return true;
+                }
+
+                const distanceFromBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+
+                return distanceFromBottom <= 48;
+            };
 
             const escapeHtml = (value) => String(value ?? '')
                 .replace(/&/g, '&amp;')
@@ -116,6 +141,122 @@
                     'show-thread',
                     isMobileChatViewport() && state.mobileView === 'thread' && !!state.activeConversation
                 );
+            };
+
+            const resetSelectedFile = () => {
+                if (imageInput) {
+                    imageInput.value = '';
+                }
+
+                if (fileNameEl) {
+                    fileNameEl.textContent = '';
+                    fileNameEl.classList.remove('is-visible');
+                }
+
+                if (imagePreviewUrl) {
+                    URL.revokeObjectURL(imagePreviewUrl);
+                    imagePreviewUrl = null;
+                }
+
+                if (previewEl) {
+                    previewEl.innerHTML = '';
+                    previewEl.hidden = true;
+                }
+            };
+
+            const renderSelectedFilePreview = (file) => {
+                if (!file || !previewEl) {
+                    resetSelectedFile();
+                    return;
+                }
+
+                if (fileNameEl) {
+                    fileNameEl.textContent = file.name;
+                    fileNameEl.classList.add('is-visible');
+                }
+
+                if (imagePreviewUrl) {
+                    URL.revokeObjectURL(imagePreviewUrl);
+                }
+
+                imagePreviewUrl = URL.createObjectURL(file);
+                previewEl.hidden = false;
+                previewEl.innerHTML = `
+                    <div class="chat-widget-preview-card">
+                        <img src="${escapeHtml(imagePreviewUrl)}" alt="Selected preview" class="chat-widget-preview-image">
+                        <div class="chat-widget-preview-copy">
+                            <strong>${escapeHtml(file.name)}</strong>
+                            <span>Ready to send</span>
+                        </div>
+                        <button type="button" class="chat-widget-preview-remove" data-chat-preview-remove aria-label="Remove image">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+
+                previewEl.querySelector('[data-chat-preview-remove]')?.addEventListener('click', function () {
+                    resetSelectedFile();
+                });
+            };
+
+            const syncTyping = async (typing) => {
+                const typingUrl = state.activeConversation?.typing_url;
+                if (!typingUrl) {
+                    return;
+                }
+
+                try {
+                    await fetch(typingUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: new URLSearchParams({ typing: typing ? '1' : '0' }),
+                        credentials: 'same-origin',
+                    });
+                } catch (error) {
+                    console.error(error);
+                }
+            };
+
+            const queueTypingSync = () => {
+                if (!state.activeConversation || input.disabled) {
+                    return;
+                }
+
+                window.clearTimeout(typingTimer);
+                window.clearTimeout(typingResetTimer);
+
+                typingTimer = window.setTimeout(() => {
+                    syncTyping(true);
+                }, 120);
+
+                typingResetTimer = window.setTimeout(() => {
+                    syncTyping(false);
+                }, 1800);
+            };
+
+            const startPolling = () => {
+                if (pollTimer) {
+                    return;
+                }
+
+                pollTimer = window.setInterval(() => {
+                    if (!state.loading) {
+                        loadWidget(state.activeConversationId);
+                    }
+                }, openForLiveUpdates() ? 1500 : 4000);
+            };
+
+            const restartPolling = () => {
+                if (pollTimer) {
+                    window.clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+
+                startPolling();
             };
 
             const renderConversations = () => {
@@ -148,7 +289,10 @@
                             ? `<img src="${escapeHtml(conversation.avatar_url)}" alt="${escapeHtml(conversation.name)}">`
                             : `<span class="chat-widget-avatar">${escapeHtml(conversation.avatar_initials)}</span>`}
                         <span class="chat-widget-conversation-copy">
-                            <strong>${escapeHtml(conversation.name)}</strong>
+                            <span class="chat-widget-conversation-topline">
+                                <strong>${escapeHtml(conversation.name)}</strong>
+                                ${conversation.unread_count > 0 ? `<span class="chat-widget-unread-badge">${conversation.unread_count}</span>` : ''}
+                            </span>
                             <p>${escapeHtml(conversation.preview)}</p>
                             <small>${escapeHtml(conversation.updated_at)}</small>
                         </span>
@@ -173,8 +317,10 @@
 
             const renderMessages = () => {
                 const active = state.activeConversation;
+                const shouldStickToBottom = pendingScrollBehavior === 'force' || isNearMessagesBottom();
 
                 if (!active) {
+                    resetSelectedFile();
                     headerEl.innerHTML = `
                         <div class="chat-widget-empty-inline">
                             <h4>No active chat</h4>
@@ -189,15 +335,28 @@
                     `;
                     form.classList.add('is-disabled');
                     input.disabled = true;
+                    if (attachBtn) {
+                        attachBtn.disabled = true;
+                    }
                     updateShellState();
                     return;
                 }
 
                 headerEl.innerHTML = `
-                    <div class="chat-widget-active-copy">
-                        <h4>${escapeHtml(active.name)}</h4>
-                        <span>${escapeHtml(active.role_label)}</span>
-                    </div>
+                    ${active.shop_url
+                        ? `<a href="${escapeHtml(active.shop_url)}" class="chat-widget-profile-link">
+                                ${active.avatar_url
+                                    ? `<img src="${escapeHtml(active.avatar_url)}" alt="${escapeHtml(active.name)}" class="chat-widget-profile-image">`
+                                    : `<span class="chat-widget-profile-avatar">${escapeHtml(active.avatar_initials)}</span>`}
+                                <span class="chat-widget-active-copy">
+                                    <h4>${escapeHtml(active.name)}</h4>
+                                    <span>${escapeHtml(active.role_label)}</span>
+                                </span>
+                           </a>`
+                        : `<div class="chat-widget-active-copy">
+                                <h4>${escapeHtml(active.name)}</h4>
+                                <span>${escapeHtml(active.role_label)}</span>
+                           </div>`}
                 `;
 
                 messagesEl.innerHTML = active.messages.length
@@ -205,9 +364,13 @@
                         <div class="chat-widget-row ${message.is_current_user ? 'is-right' : 'is-left'}">
                             <div class="chat-widget-bubble">
                                 <strong>${escapeHtml(message.sender_label)}</strong>
-                                <p>${escapeHtml(message.message)}</p>
+                                ${message.has_text ? `<p>${escapeHtml(message.message)}</p>` : ''}
+                                ${message.has_image ? `<img src="${escapeHtml(message.image_url)}" alt="Shared image" class="chat-widget-image">` : ''}
                             </div>
-                            <span class="chat-widget-time">${escapeHtml(message.time)}</span>
+                            <span class="chat-widget-time">
+                                ${escapeHtml(message.time)}
+                                ${message.status_label ? `<em class="chat-widget-status">${escapeHtml(message.status_label)}</em>` : ''}
+                            </span>
                         </div>
                     `).join('')
                     : `
@@ -217,10 +380,29 @@
                         </div>
                     `;
 
+                if (active.typing_text) {
+                    messagesEl.insertAdjacentHTML('beforeend', `
+                        <div class="chat-widget-row is-left chat-widget-typing-row">
+                            <div class="chat-widget-bubble chat-widget-typing-bubble">
+                                <strong>${escapeHtml(active.name)}</strong>
+                                <p>${escapeHtml(active.typing_text)}</p>
+                            </div>
+                        </div>
+                    `);
+                }
+
                 form.classList.remove('is-disabled');
                 input.disabled = false;
+                if (attachBtn) {
+                    attachBtn.disabled = false;
+                }
                 form.dataset.sendUrl = active.send_url;
-                messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                if (shouldStickToBottom) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+
+                pendingScrollBehavior = 'auto';
                 updateShellState();
             };
 
@@ -235,6 +417,9 @@
                 }
 
                 state.loading = true;
+                const requestedConversationId = conversationId || null;
+                const previousConversationId = state.activeConversationId || null;
+                const preserveBottom = isNearMessagesBottom();
 
                 const url = new URL(fetchUrl, window.location.origin);
                 if (conversationId) {
@@ -258,12 +443,16 @@
                     state.conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
                     state.activeConversation = payload.active_conversation || null;
                     state.activeConversationId = state.activeConversation?.id || (state.conversations[0]?.id ?? null);
+                    pendingScrollBehavior = requestedConversationId !== previousConversationId
+                        ? 'force'
+                        : (preserveBottom ? 'force' : 'preserve');
 
                     if (isMobileChatViewport()) {
                         state.mobileView = state.activeConversation ? 'thread' : 'list';
                     }
 
                     renderAll();
+                    restartPolling();
                 } catch (error) {
                     console.error(error);
                 } finally {
@@ -275,6 +464,7 @@
                 state.open = true;
                 state.minimized = false;
                 updateShellState();
+                restartPolling();
 
                 if (!state.conversations.length) {
                     loadWidget();
@@ -287,6 +477,7 @@
                 if (state.open && !state.minimized) {
                     state.minimized = true;
                     updateShellState();
+                    restartPolling();
                     return;
                 }
 
@@ -296,12 +487,14 @@
             minimizeBtn.addEventListener('click', function () {
                 state.minimized = true;
                 updateShellState();
+                restartPolling();
             });
 
             closeBtn.addEventListener('click', function () {
                 state.open = false;
                 state.minimized = false;
                 updateShellState();
+                restartPolling();
             });
 
             if (backBtn) {
@@ -313,6 +506,62 @@
 
             searchInput.addEventListener('input', renderConversations);
 
+            if (attachBtn && imageInput) {
+                attachBtn.addEventListener('click', function () {
+                    imageInput.click();
+                });
+
+                imageInput.addEventListener('change', function () {
+                    const file = imageInput.files?.[0];
+                    if (!file) {
+                        resetSelectedFile();
+                        return;
+                    }
+
+                    renderSelectedFilePreview(file);
+                });
+            }
+
+            [messagesEl, form].forEach((dropTarget) => {
+                if (!dropTarget) {
+                    return;
+                }
+
+                ['dragenter', 'dragover'].forEach((eventName) => {
+                    dropTarget.addEventListener(eventName, function (event) {
+                        event.preventDefault();
+                        if (!state.activeConversation || input.disabled) {
+                            return;
+                        }
+
+                        widget.classList.add('is-dragging-file');
+                    });
+                });
+
+                ['dragleave', 'dragend', 'drop'].forEach((eventName) => {
+                    dropTarget.addEventListener(eventName, function (event) {
+                        event.preventDefault();
+                        if (eventName !== 'dragleave' || dropTarget.contains(event.relatedTarget) === false) {
+                            widget.classList.remove('is-dragging-file');
+                        }
+                    });
+                });
+
+                dropTarget.addEventListener('drop', function (event) {
+                    const file = event.dataTransfer?.files?.[0];
+                    if (!file || !file.type.startsWith('image/')) {
+                        return;
+                    }
+
+                    const transfer = new DataTransfer();
+                    transfer.items.add(file);
+                    imageInput.files = transfer.files;
+                    renderSelectedFilePreview(file);
+                });
+            });
+
+            input.addEventListener('input', queueTypingSync);
+
             form.addEventListener('submit', async function (event) {
                 event.preventDefault();
 
@@ -322,7 +571,8 @@
                 }
 
                 const message = input.value.trim();
-                if (!message) {
+                const selectedImage = imageInput?.files?.[0] || null;
+                if (!message && !selectedImage) {
                     return;
                 }
 
@@ -352,11 +602,16 @@
                         state.conversations = widgetPayload.conversations || [];
                         state.activeConversation = widgetPayload.active_conversation || null;
                         state.activeConversationId = state.activeConversation?.id || state.activeConversationId;
+                        pendingScrollBehavior = 'force';
                         input.value = '';
+                        window.clearTimeout(typingResetTimer);
+                        syncTyping(false);
+                        resetSelectedFile();
                         renderAll();
                     } else {
                         await loadWidget(state.activeConversationId);
                         input.value = '';
+                        resetSelectedFile();
                     }
                 } catch (error) {
                     console.error(error);
@@ -373,6 +628,7 @@
                 }
 
                 updateShellState();
+                restartPolling();
             });
 
             if (autoOpen) {
@@ -380,6 +636,8 @@
             } else {
                 loadWidget();
             }
+
+            startPolling();
         });
     });
 </script>

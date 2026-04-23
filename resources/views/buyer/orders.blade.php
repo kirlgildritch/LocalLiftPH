@@ -11,13 +11,6 @@
                 <span>My Orders</span>
             </div>
 
-            @if(session('success'))
-                <div class="feedback-banner success-banner panel">{{ session('success') }}</div>
-            @endif
-
-            @if(session('error'))
-                <div class="feedback-banner error-banner panel">{{ session('error') }}</div>
-            @endif
 
             <div class="orders-toolbar panel">
                 <div class="toolbar-copy">
@@ -29,23 +22,29 @@
                     <a href="{{ route('buyer.orders') }}" class="tab-btn {{ $currentStatus === 'all' ? 'active' : '' }}">
                         All ({{ $statusCounts->sum() }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::STATUS_PENDING]) }}" class="tab-btn {{ $currentStatus === \App\Models\Order::STATUS_PENDING ? 'active' : '' }}">
-                        Pending ({{ $statusCounts->get(\App\Models\Order::STATUS_PENDING, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_PENDING]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_PENDING ? 'active' : '' }}">
+                        Pending ({{ $statusCounts->get(\App\Models\Order::SHIPPING_PENDING, 0) }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::STATUS_CONFIRMED]) }}" class="tab-btn {{ $currentStatus === \App\Models\Order::STATUS_CONFIRMED ? 'active' : '' }}">
-                        Confirmed ({{ $statusCounts->get(\App\Models\Order::STATUS_CONFIRMED, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_TO_SHIP]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_TO_SHIP ? 'active' : '' }}">
+                        To Ship ({{ $statusCounts->get(\App\Models\Order::SHIPPING_TO_SHIP, 0) }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::STATUS_PROCESSING]) }}" class="tab-btn {{ $currentStatus === \App\Models\Order::STATUS_PROCESSING ? 'active' : '' }}">
-                        Processing ({{ $statusCounts->get(\App\Models\Order::STATUS_PROCESSING, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_SHIPPED]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_SHIPPED ? 'active' : '' }}">
+                        Shipped ({{ $statusCounts->get(\App\Models\Order::SHIPPING_SHIPPED, 0) }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::STATUS_SHIPPED]) }}" class="tab-btn {{ $currentStatus === \App\Models\Order::STATUS_SHIPPED ? 'active' : '' }}">
-                        Shipped ({{ $statusCounts->get(\App\Models\Order::STATUS_SHIPPED, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_OUT_FOR_DELIVERY]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_OUT_FOR_DELIVERY ? 'active' : '' }}">
+                        Out for Delivery ({{ $statusCounts->get(\App\Models\Order::SHIPPING_OUT_FOR_DELIVERY, 0) }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::STATUS_DELIVERED]) }}" class="tab-btn {{ $currentStatus === \App\Models\Order::STATUS_DELIVERED ? 'active' : '' }}">
-                        Delivered ({{ $statusCounts->get(\App\Models\Order::STATUS_DELIVERED, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_DELIVERED]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_DELIVERED ? 'active' : '' }}">
+                        Delivered ({{ $statusCounts->get(\App\Models\Order::SHIPPING_DELIVERED, 0) }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::STATUS_CANCELLED]) }}" class="tab-btn {{ $currentStatus === \App\Models\Order::STATUS_CANCELLED ? 'active' : '' }}">
-                        Cancelled ({{ $statusCounts->get(\App\Models\Order::STATUS_CANCELLED, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_CANCELLED]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_CANCELLED ? 'active' : '' }}">
+                        Cancelled ({{ $statusCounts->get(\App\Models\Order::SHIPPING_CANCELLED, 0) }})
                     </a>
                 </div>
             </div>
@@ -62,19 +61,16 @@
                                 </div>
                             </div>
 
-                            <div class="order-status {{ \Illuminate\Support\Str::slug($order->status) }}">
-                                {{ $order->statusLabel() }}
+                            <div class="order-status {{ $order->shippingToneClass() }}">
+                                {{ $order->shippingStatusLabel() }}
                             </div>
                         </div>
 
                         <div class="order-items">
                             @foreach($order->items as $item)
                                 <div class="order-card-body">
-                                    <img
-                                        src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
-                                        alt="{{ $item->product->name ?? 'Product' }}"
-                                        class="order-product-img"
-                                    >
+                                    <img src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
+                                        alt="{{ $item->product->name ?? 'Product' }}" class="order-product-img">
 
                                     <div class="order-product-info">
                                         <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
@@ -97,22 +93,28 @@
                             </div>
 
                             <div class="order-actions">
-                                <a href="{{ route('buyer.orders.show', $order) }}" class="order-btn secondary-btn">View Order</a>
+                                <a href="{{ route('buyer.orders.show', $order) }}" class="order-btn secondary-btn">View
+                                    Order</a>
 
                                 @if($order->canBeCancelled())
-                                    <button
-                                        type="button"
-                                        class="order-btn secondary-btn open-cancel-order"
+                                    <button type="button" class="order-btn secondary-btn open-cancel-order"
                                         data-order-id="{{ $order->id }}"
-                                        data-order-action="{{ route('buyer.orders.cancel', $order) }}"
-                                    >
+                                        data-order-action="{{ route('buyer.orders.cancel', $order) }}">
                                         Cancel Order
                                     </button>
-                                @elseif(in_array($order->status, [\App\Models\Order::STATUS_DELIVERED, \App\Models\Order::STATUS_CANCELLED], true))
-                                    <form action="{{ route('buyer.orders.buyAgain', $order) }}" method="POST" style="display: inline;">
+                                @elseif($order->canConfirmReceipt())
+                                    <form action="{{ route('buyer.orders.received', $order) }}" method="POST"
+                                        style="display: inline;">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="order-btn primary-btn">Order Received</button>
+                                    </form>
+                                @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_DELIVERED, \App\Models\Order::SHIPPING_CANCELLED], true))
+                                    <form action="{{ route('buyer.orders.buyAgain', $order) }}" method="POST"
+                                        style="display: inline;">
                                         @csrf
                                         <button type="submit" class="order-btn primary-btn">
-                                            {{ $order->status === \App\Models\Order::STATUS_CANCELLED ? 'Reorder' : 'Buy Again' }}
+                                            {{ $order->shippingStatus() === \App\Models\Order::SHIPPING_CANCELLED ? 'Reorder' : 'Buy Again' }}
                                         </button>
                                     </form>
                                 @endif

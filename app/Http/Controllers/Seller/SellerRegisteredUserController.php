@@ -24,6 +24,12 @@ class SellerRegisteredUserController extends Controller
             return redirect()->route('seller.dashboard');
         }
 
+        if (Auth::guard('web')->check()) {
+            Auth::guard('web')->logout();
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
+
         return view('seller.auth.register');
     }
 
@@ -49,6 +55,6 @@ class SellerRegisteredUserController extends Controller
         Auth::guard('seller')->login($user);
         Auth::shouldUse('seller');
 
-        return redirect()->route('seller.setup');
+        return redirect()->route('seller.dashboard');
     }
 }

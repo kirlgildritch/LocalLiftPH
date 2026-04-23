@@ -33,8 +33,8 @@
                     <h2>Order #{{ $order->id }}</h2>
                 </div>
 
-                <div class="order-status {{ \Illuminate\Support\Str::slug($order->status) }}">
-                    {{ $order->statusLabel() }}
+                <div class="order-status {{ $order->shippingToneClass() }}">
+                    {{ $order->shippingStatusLabel() }}
                 </div>
             </div>
 
@@ -52,8 +52,8 @@
                             <p>{{ $order->created_at->format('M d, Y h:i A') }}</p>
                         </div>
                         <div>
-                            <span class="toolbar-label">Status</span>
-                            <p>{{ $order->statusLabel() }}</p>
+                            <span class="toolbar-label">Shipping Status</span>
+                            <p>{{ $order->shippingStatusLabel() }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Items</span>
@@ -138,11 +138,19 @@
                                 >
                                     Cancel Order
                                 </button>
-                            @elseif(in_array($order->status, [\App\Models\Order::STATUS_DELIVERED, \App\Models\Order::STATUS_CANCELLED], true))
+                            @elseif($order->canConfirmReceipt())
+                                <form action="{{ route('buyer.orders.received', $order) }}" method="POST" style="display: inline;">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="order-btn primary-btn">
+                                        Order Received
+                                    </button>
+                                </form>
+                            @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_DELIVERED, \App\Models\Order::SHIPPING_CANCELLED], true))
                                 <form action="{{ route('buyer.orders.buyAgain', $order) }}" method="POST" style="display: inline;">
                                     @csrf
                                     <button type="submit" class="order-btn primary-btn">
-                                        {{ $order->status === \App\Models\Order::STATUS_CANCELLED ? 'Reorder' : 'Buy Again' }}
+                                        {{ $order->shippingStatus() === \App\Models\Order::SHIPPING_CANCELLED ? 'Reorder' : 'Buy Again' }}
                                     </button>
                                 </form>
                             @endif
