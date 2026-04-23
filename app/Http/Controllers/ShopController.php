@@ -24,9 +24,12 @@ class ShopController extends Controller
             ->orderBy('name')
             ->get();
 
-        $shopsQuery = User::withCount(['products' => function ($query) {
-                $query->visibleToBuyers();
-            }])
+        $shopsQuery = User::with(['sellerProfile'])
+            ->withCount([
+                'products' => function ($query) {
+                    $query->visibleToBuyers();
+                }
+            ])
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
                 $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);

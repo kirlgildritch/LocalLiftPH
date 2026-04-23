@@ -66,6 +66,7 @@
       </div>
 
       <div class="categories">
+
         @forelse($featuredCategories ?? collect() as $category)
           <a href="{{ route('products.index', ['category' => $category->slug]) }}" class="category-card">
             <div class="cat-icon"><i class="fa-solid {{ $category->icon }}"></i></div>
@@ -92,10 +93,12 @@
         </div>
         <div class="featured-products-header-actions">
           <div class="featured-products-nav" aria-label="Featured products navigation">
-            <button type="button" class="featured-products-arrow" data-featured-products-prev aria-label="Scroll featured products left">
+            <button type="button" class="featured-products-arrow" data-featured-products-prev
+              aria-label="Scroll featured products left">
               <i class="fa-solid fa-chevron-left"></i>
             </button>
-            <button type="button" class="featured-products-arrow" data-featured-products-next aria-label="Scroll featured products right">
+            <button type="button" class="featured-products-arrow" data-featured-products-next
+              aria-label="Scroll featured products right">
               <i class="fa-solid fa-chevron-right"></i>
             </button>
           </div>
@@ -107,13 +110,15 @@
         <div class="products-carousel" data-featured-products-track>
           <div class="products product-card-grid">
             @forelse($featuredProducts ?? collect() as $product)
-              <x-product-card :product="$product" :fallback-image="asset('assets/image/heroBanner.png')" card-class="featured-product-card" />
+              <x-product-card :product="$product" :fallback-image="asset('assets/image/heroBanner.png')"
+                card-class="featured-product-card" />
             @empty
               <div class="market-product-card market-product-card--empty featured-product-card">
                 <div class="market-product-card__body">
                   <span class="market-product-card__badge">No products yet</span>
                   <h4 class="market-product-card__title">Featured products will appear here</h4>
-                  <p class="market-product-card__subtitle">Active seller listings will automatically populate this section.</p>
+                  <p class="market-product-card__subtitle">Active seller listings will automatically populate this section.
+                  </p>
                 </div>
               </div>
             @endforelse

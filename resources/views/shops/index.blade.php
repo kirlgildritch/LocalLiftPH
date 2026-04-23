@@ -72,14 +72,20 @@
                         @forelse($shops as $shop)
                             <article class="shop-card panel">
                                 <div class="shop-logo">
-                                    <img src="{{ !empty($shop->profile_image) ? asset('storage/' . $shop->profile_image) : asset('assets/images/default-product.png') }}"
-                                        alt="{{ $shop->name }}">
+                                    @if(!empty($shop->sellerProfile?->shop_logo))
+                                        <img src="{{ asset('storage/' . $shop->sellerProfile->shop_logo) }}" alt="Shop Logo"
+                                            class="shop-logo">
+                                    @else
+                                        <div class="shop-logo-placeholder">
+                                            <i class="fa-solid fa-store"></i>
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="shop-card-body">
                                     <span class="shop-badge">Local Seller</span>
-                                    <h3>{{ $shop->name }}</h3>
-                                    <p>Discover products from this local seller on LocalLift.</p>
+                                    <h3>{{ $shop->sellerProfile->store_name }}</h3>
+
 
                                     <div class="shop-rating">
                                         <i class="fa-solid fa-star"></i>

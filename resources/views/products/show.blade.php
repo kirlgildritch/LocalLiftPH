@@ -55,12 +55,14 @@
                             <span><i class="fa-solid fa-box-open"></i>
                                 {{ $product->stock > 0 ? 'Ready to ship' : 'Out of stock' }}</span>
                             <span><i class="fa-solid fa-cubes"></i> Stock: {{ $product->stock }}</span>
-                            <span><i class="fa-solid fa-star"></i> {{ $averageRating > 0 ? number_format($averageRating, 1) : 'New' }} | {{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
+                            <span><i class="fa-solid fa-star"></i>
+                                {{ $averageRating > 0 ? number_format($averageRating, 1) : 'New' }} |
+                                {{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
                         </div>
 
                         <div class="product-price">P{{ number_format($product->price, 2) }}</div>
 
-                      
+
                         <div class="product-feature-grid">
                             <div class="feature-card">
                                 <strong>Category</strong>
@@ -76,7 +78,8 @@
                             </div>
                             <div class="feature-card">
                                 <strong>Buyer Reviews</strong>
-                                <span>{{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
+                                <span>{{ $product->reviews_count }}
+                                    review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
                             </div>
                         </div>
                     </div>
@@ -216,7 +219,8 @@
                                 </div>
 
                                 @if($reviewableOrderItems->count() > 1)
-                                    <span class="review-order-note">{{ $reviewableOrderItems->count() }} delivered purchases eligible</span>
+                                    <span class="review-order-note">{{ $reviewableOrderItems->count() }} delivered purchases
+                                        eligible</span>
                                 @endif
                             </div>
 
@@ -235,7 +239,8 @@
 
                                 <div class="review-form-field review-form-field-full">
                                     <label for="comment">Your review</label>
-                                    <textarea name="comment" id="comment" rows="4" placeholder="Share what you liked about this product...">{{ old('comment') }}</textarea>
+                                    <textarea name="comment" id="comment" rows="4"
+                                        placeholder="Share what you liked about this product...">{{ old('comment') }}</textarea>
                                 </div>
                             </div>
 
@@ -285,7 +290,8 @@
                                     <p class="market-product-card__meta-line">
                                         <i class="fa-solid fa-star"></i>
                                         {{ $relatedProduct->reviews_avg_rating ? number_format((float) $relatedProduct->reviews_avg_rating, 1) : 'New' }}
-                                        <span>| {{ $relatedProduct->reviews_count }} review{{ $relatedProduct->reviews_count !== 1 ? 's' : '' }}</span>
+                                        <span>| {{ $relatedProduct->reviews_count }}
+                                            review{{ $relatedProduct->reviews_count !== 1 ? 's' : '' }}</span>
                                     </p>
                                 </x-slot:meta>
                             </x-product-card>

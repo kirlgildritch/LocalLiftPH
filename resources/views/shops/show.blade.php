@@ -19,14 +19,18 @@
         <div class="shop-hero panel">
             <div class="shop-hero-copy">
                 <span class="section-kicker">Curated Storefront</span>
-                <h1>{{ $user->name }}</h1>
-                <p>
-                    Discover products from this local seller through a cleaner, easier-to-browse storefront.
+
+                <h3>{{ $user->sellerProfile->store_name ?? 'My Shop' }}</h3>
+
+                <p class="shop-description">
+                    {{ $user->sellerProfile->store_description ?? 'No shop description available yet.' }}
                 </p>
 
                 <div class="shop-meta">
-                    <span><i class="fa-solid fa-box-open"></i> {{ $products->count() }} products</span>
-                    <span><i class="fa-solid fa-location-dot"></i> LocalLift Seller</span>
+                    <span><i class="fa-solid fa-phone"></i>
+                        {{ $user->sellerProfile->contact_number ?? 'No contact number' }}</span>
+                    <span><i class="fa-solid fa-location-dot"></i>
+                        {{ $user->sellerProfile->address ?? 'No address provided' }}</span>
                 </div>
 
                 <div class="shop-hero-actions">
@@ -48,8 +52,14 @@
 
             <div class="shop-hero-card">
                 <div class="shop-hero-art">
-                    <img src="{{ !empty($user->profile_image) ? asset('storage/' . $user->profile_image) : asset('assets/images/default-product.png') }}"
-                        alt="{{ $user->name }}">
+                    @if(!empty($user->sellerProfile?->shop_logo))
+                        <img src="{{ asset('storage/' . $user->sellerProfile->shop_logo) }}" alt="Shop Logo"
+                            class="shop-logo">
+                    @else
+                        <div class="shop-logo-placeholder">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="shop-highlight-grid">
