@@ -13,7 +13,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
     <link rel="stylesheet" href="{{ asset('assets/css/seller_dashboard.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
+    @if(empty($disableFloatingChatWidget))
+        <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
+    @endif
     <link rel="icon" href="{{ asset('assets/image/Logo.png') }}">
     <style>
         html,
@@ -35,11 +37,12 @@
 
         @include('partials.seller-footer')
 
-        @if(auth('seller')->check())
+        @if(auth('seller')->check() && empty($disableFloatingChatWidget))
             @include('messages.partials.floating-chat')
         @endif
     </div>
 
+    <script src="{{ asset('assets/js/skeleton-loader.js') }}" defer></script>
 </body>
 
 </html>

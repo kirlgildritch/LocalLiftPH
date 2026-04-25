@@ -9,6 +9,8 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
+                    @include('seller.partials.success-toast')
+
                     <section class="seller-page-panel panel">
                         <div class="page-header">
                             <div>
@@ -22,27 +24,32 @@
                         </div>
 
                         <div class="product-status-tabs">
-                            <a href="{{ route('seller.products.index', ['status' => 'live']) }}" class="product-status-tab {{ $currentTab === 'live' ? 'active' : '' }}">
+                            <a href="{{ route('seller.products.index', ['status' => 'live']) }}"
+                                class="product-status-tab {{ $currentTab === 'live' ? 'active' : '' }}">
                                 <span>Live</span>
                                 <strong>({{ $statusCounts['live'] }})</strong>
                             </a>
 
-                            <a href="{{ route('seller.products.index', ['status' => 'sold_out']) }}" class="product-status-tab {{ $currentTab === 'sold_out' ? 'active' : '' }}">
+                            <a href="{{ route('seller.products.index', ['status' => 'sold_out']) }}"
+                                class="product-status-tab {{ $currentTab === 'sold_out' ? 'active' : '' }}">
                                 <span>Sold Out</span>
                                 <strong>({{ $statusCounts['sold_out'] }})</strong>
                             </a>
 
-                            <a href="{{ route('seller.products.index', ['status' => 'reviewing']) }}" class="product-status-tab {{ $currentTab === 'reviewing' ? 'active' : '' }}">
+                            <a href="{{ route('seller.products.index', ['status' => 'reviewing']) }}"
+                                class="product-status-tab {{ $currentTab === 'reviewing' ? 'active' : '' }}">
                                 <span>Reviewing</span>
                                 <strong>({{ $statusCounts['reviewing'] }})</strong>
                             </a>
 
-                            <a href="{{ route('seller.products.index', ['status' => 'violation']) }}" class="product-status-tab {{ $currentTab === 'violation' ? 'active' : '' }}">
+                            <a href="{{ route('seller.products.index', ['status' => 'violation']) }}"
+                                class="product-status-tab {{ $currentTab === 'violation' ? 'active' : '' }}">
                                 <span>Violation</span>
                                 <strong>({{ $statusCounts['violation'] }})</strong>
                             </a>
 
-                            <a href="{{ route('seller.products.index', ['status' => 'delisted']) }}" class="product-status-tab {{ $currentTab === 'delisted' ? 'active' : '' }}">
+                            <a href="{{ route('seller.products.index', ['status' => 'delisted']) }}"
+                                class="product-status-tab {{ $currentTab === 'delisted' ? 'active' : '' }}">
                                 <span>Delisted</span>
                                 <strong>({{ $statusCounts['delisted'] }})</strong>
                             </a>
@@ -52,10 +59,6 @@
                             <div class="reviewing-note">
                                 Your products under review are not visible to buyers yet.
                             </div>
-                        @endif
-
-                        @if(session('success'))
-                            <p class="seller-feedback success-message">{{ session('success') }}</p>
                         @endif
 
                         <div class="table-panel">
@@ -93,8 +96,8 @@
                                             }
                                         @endphp
 
-                                        <tr>
-                                            <td>
+                                        <tr class="seller-product-row">
+                                            <td data-label="Image" class="seller-product-image-cell">
                                                 @if($product->image)
                                                     <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}"
                                                         class="product-image">
@@ -102,7 +105,7 @@
                                                     <span class="muted-label">No Image</span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td data-label="Product" class="seller-product-main-cell">
                                                 <div class="seller-product-name">{{ $product->name }}</div>
                                                 <div class="seller-review-inline">
                                                     <span class="seller-rating-chip">
@@ -110,26 +113,30 @@
                                                         {{ $product->reviews_avg_rating ? number_format((float) $product->reviews_avg_rating, 1) : 'New' }}
                                                     </span>
                                                     <span class="seller-review-count">
-                                                        {{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}
+                                                        {{ $product->reviews_count }}
+                                                        review{{ $product->reviews_count !== 1 ? 's' : '' }}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td>{{ $product->category?->name ?? 'Uncategorized' }}</td>
-                                            <td>PHP {{ number_format($product->price, 2) }}</td>
-                                            <td>{{ $product->stock }}</td>
-                                            <td>
+                                            <td data-label="Category">{{ $product->category?->name ?? 'Uncategorized' }}</td>
+                                            <td data-label="Price">&#8369;{{ number_format($product->price, 2) }}</td>
+                                            <td data-label="Stock">{{ $product->stock }}</td>
+                                            <td data-label="Rating">
                                                 <div class="seller-rating-chip">
                                                     <i class="fa-solid fa-star"></i>
                                                     {{ $product->reviews_avg_rating ? number_format((float) $product->reviews_avg_rating, 1) : 'New' }}
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-label="Status">
                                                 <span class="status-chip {{ $statusClass }}">{{ $displayStatus }}</span>
                                             </td>
 
-                                            <td class="action-buttons">
-                                                <a href="{{ url('/edit-product/' . $product->id) }}"
+                                            <td data-label="Action" class="action-buttons">
+                                                <a href="{{ route('seller.products.edit', $product) }}"
                                                     class="table-action secondary">Edit</a>
+
+                                                <a href="{{ route('seller.products.reviews', $product) }}"
+                                                    class="table-action secondary">Reviews</a>
 
                                                 <form action="{{ url('/delete-product/' . $product->id) }}" method="POST"
                                                     onsubmit="return confirm('Delete this product?')">
@@ -137,33 +144,6 @@
                                                     @method('DELETE')
                                                     <button type="submit" class="table-action danger">Delete</button>
                                                 </form>
-                                            </td>
-                                        </tr>
-                                        <tr class="seller-review-row">
-                                            <td colspan="8">
-                                                <div class="seller-review-panel">
-                                                    <strong>Recent Reviews</strong>
-
-                                                    @if($product->reviews->isNotEmpty())
-                                                        <div class="seller-review-list">
-                                                            @foreach($product->reviews->take(3) as $review)
-                                                                <article class="seller-review-card">
-                                                                    <div class="seller-review-card-header">
-                                                                        <span>{{ $review->user->name ?? 'Buyer' }}</span>
-                                                                        <span>{{ $review->created_at->format('M d, Y') }}</span>
-                                                                    </div>
-                                                                    <div class="seller-rating-chip">
-                                                                        <i class="fa-solid fa-star"></i>
-                                                                        {{ $review->rating }}/5
-                                                                    </div>
-                                                                    <p>{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
-                                                                </article>
-                                                            @endforeach
-                                                        </div>
-                                                    @else
-                                                        <p class="empty-review-copy">No ratings or reviews for this product yet.</p>
-                                                    @endif
-                                                </div>
                                             </td>
                                         </tr>
                                     @empty

@@ -100,4 +100,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\Review::class);
     }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(\App\Models\Report::class);
+    }
+
+    public function sellerReports(): HasMany
+    {
+        return $this->hasMany(\App\Models\Report::class, 'seller_id');
+    }
 }

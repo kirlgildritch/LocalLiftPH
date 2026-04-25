@@ -12,6 +12,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductBrowseController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SellerAuthenticatedSessionController;
 use App\Http\Controllers\Seller\SellerCenterEntryController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\SellerRegisteredUserController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\ProductApprovalController;
 use App\Http\Controllers\Admin\SellerReviewController;
 use App\Http\Controllers\SellerController;
@@ -84,6 +86,9 @@ Route::middleware('seller')->group(function () {
     Route::get('/add-product', [ProductController::class, 'create'])->name('seller.products.create');
     Route::post('/add-product', [ProductController::class, 'store'])->name('seller.products.store');
     Route::get('/manage-products', [ProductController::class, 'index'])->name('seller.products.index');
+    Route::get('/seller/products/{product}/edit', [ProductController::class, 'edit'])->name('seller.products.edit');
+    Route::patch('/seller/products/{product}', [ProductController::class, 'update'])->name('seller.products.update');
+    Route::get('/seller/products/{product}/reviews', [ProductController::class, 'reviews'])->name('seller.products.reviews');
 
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
     Route::patch('/seller-orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus'])->name('seller.orders.shipping-status');
@@ -126,7 +131,8 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/sellers', [SellerReviewController::class, 'index'])->name('sellers');
     Route::patch('/sellers/{seller}/status', [SellerReviewController::class, 'updateStatus'])->name('sellers.status');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders');
-    Route::view('/reports', 'admin.reports')->name('reports');
+    Route::get('/reports', [AdminReportController::class, 'index'])->name('reports');
+    Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
 });
 Route::middleware('buyer')->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -160,6 +166,7 @@ Route::middleware('buyer')->group(function () {
     Route::post('/messages/{conversation}', [MessageController::class, 'store'])->name('messages.store');
     Route::post('/messages/{conversation}/typing', [MessageController::class, 'typing'])->name('messages.typing');
     Route::get('/chat/widget', [MessageController::class, 'widget'])->name('chat.widget');
+    Route::post('/reports', [ReportController::class, 'store'])->name('reports.store');
 });
 
 require __DIR__ . '/auth.php';

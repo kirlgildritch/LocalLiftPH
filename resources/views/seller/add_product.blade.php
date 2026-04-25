@@ -10,12 +10,19 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
+                    @include('seller.partials.success-toast')
+
                     <section class="seller-page-panel panel">
                         <div class="page-header">
                             <div>
                                 <span class="section-kicker">Catalog</span>
                                 <h2>Add Product</h2>
                             </div>
+
+                            <a href="{{ route('seller.products.index') }}" class="table-action secondary">
+                                <i class="fa-solid fa-arrow-left"></i>
+                                Back
+                            </a>
                         </div>
 
                         <form class="product-form" action="{{ route('seller.products.store') }}" method="POST"
@@ -49,7 +56,7 @@
                                 <div class="form-group">
                                     <label for="price">Price</label>
                                     <input type="number" id="price" name="price" step="0.01" min="0"
-                                        value="{{ old('price') }}" placeholder="PHP">
+                                        value="{{ old('price') }}" placeholder="&#8369; ">
                                     @error('price')
                                         <small class="error-text">{{ $message }}</small>
                                     @enderror
@@ -172,8 +179,8 @@
 
             <div class="shipping-fee-preview">
                 <span>Calculated Shipping Fee</span>
-                <strong id="shippingFeePreview">PHP 0.00</strong>
-                <small>Formula: PHP 60 base fee + PHP 35 x billable weight.</small>
+                <strong id="shippingFeePreview">&#8369; 0.00</strong>
+                <small>Formula: &#8369; 60 base fee + &#8369; 35 x billable weight.</small>
             </div>
 
             <div class="shipping-modal-actions">
@@ -256,7 +263,7 @@
                 const billableWeight = Math.max(weight, volumetricWeight);
                 const fee = billableWeight > 0 ? (60 + (billableWeight * 35)) : 0;
 
-                feePreview.textContent = `PHP ${fee.toFixed(2)}`;
+                feePreview.innerHTML = `&#8369; ${fee.toFixed(2)}`;
 
                 return fee;
             }
@@ -274,7 +281,7 @@
                     return;
                 }
 
-                summaryFee.textContent = `PHP ${fee.toFixed(2)}`;
+                summaryFee.innerHTML = `&#8369; ${fee.toFixed(2)}`;
                 summaryMeta.textContent = `${weight} kg • ${width}cm x ${length}cm x ${height}cm`;
             }
 

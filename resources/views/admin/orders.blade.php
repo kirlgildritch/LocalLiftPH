@@ -41,7 +41,7 @@
                                 <td>{{ $order->created_at?->format('M d, Y') }}</td>
                                 <td>{{ $order->user->name ?? 'Buyer' }}</td>
                                 <td>{{ $sellerNames->isNotEmpty() ? $sellerNames->join(', ') : 'Seller unavailable' }}</td>
-                                <td>PHP {{ number_format($order->total_price, 2) }}</td>
+                                <td>&#8369; {{ number_format($order->total_price, 2) }}</td>
                                 <td><span class="status-pill status-pill--{{ $statusClass }}">{{ $order->shippingStatusLabel() }}</span></td>
                             </tr>
                         @empty

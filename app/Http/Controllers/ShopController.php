@@ -47,7 +47,7 @@ class ShopController extends Controller
             'most_products' => $shopsQuery->orderByDesc('products_count')->get(),
             'name_asc' => $shopsQuery->orderBy('name')->get(),
             'name_desc' => $shopsQuery->orderByDesc('name')->get(),
-            default => $shopsQuery->latest()->get(),
+            default => $shopsQuery->latest()->get(), 
         };
 
         return view('shops.index', compact('shops', 'categories', 'categorySlug', 'sort'));
@@ -61,9 +61,13 @@ class ShopController extends Controller
 
         $products = $user->products()
             ->with('category')
+            ->withRatings()
             ->visibleToBuyers()
             ->latest()
             ->get();
+
+
+        
 
         return view('shops.show', compact('user', 'products'));
     }

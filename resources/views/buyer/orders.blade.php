@@ -53,7 +53,7 @@
                 @forelse($orders as $order)
                     @php
                         $hasRateableItems = $order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED
-                            && $order->items->contains(fn ($item) => $item->product && !$item->review);
+                            && $order->items->contains(fn($item) => $item->product && !$item->review);
                     @endphp
                     <article class="order-card panel">
                         <div class="order-card-top">
@@ -128,7 +128,8 @@
                                     </form>
                                 @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_DELIVERED, \App\Models\Order::SHIPPING_CANCELLED], true))
                                     @if($hasRateableItems)
-                                        <a href="{{ route('buyer.orders.show', $order) }}#rate-products" class="order-btn secondary-btn">
+                                        <a href="{{ route('buyer.orders.show', $order) }}#rate-products"
+                                            class="order-btn secondary-btn">
                                             Rate Products
                                         </a>
                                     @endif

@@ -1,77 +1,88 @@
-@extends('layouts.app')
+@extends('layouts.log')
 @section('title', 'LocalLift PH - Login')
-@section('content')
-<link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
 
-<section class="auth-page">
-    <div class="container auth-shell">
-        <div class="checkout-breadcrumb">
-            <a href="{{ route('home') }}">Home</a>
-            <span>&gt;</span>
-            <span>Login</span>
+@section('content')
+    <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
+
+    <section class="auth-page">
+        <div class="auth-topbar">
+            <div class="container auth-topbar-inner">
+                <a href="{{ route('home') }}" class="auth-brand">
+                    <img src="{{ asset('assets/image/Logo.png') }}" alt="LocalLift Logo">
+                    <div>
+                        <strong>LocalLift</strong>
+                        <span>PH</span>
+                    </div>
+                </a>
+
+                <a href="{{ route('home') }}" class="auth-help">Need help?</a>
+            </div>
         </div>
 
-        <div class="auth-layout">
-            <div class="auth-card panel">
-                <div class="auth-card-header">
-                    <h2>Log In</h2>
-                    <p>Use your email and password to access your account.</p>
+        <div class="auth-hero">
+            <div class="container auth-shell">
+                <div class="auth-promo">
+                    <span class="promo-badge">Local marketplace</span>
+                    <h1>Shop local products with ease.</h1>
+                    <p>Discover trusted sellers, support local businesses, and enjoy a cleaner marketplace experience.</p>
+
+                    <div class="promo-highlights">
+                        <span><i class="fa-solid fa-store"></i> Local sellers</span>
+                        <span><i class="fa-solid fa-shield-heart"></i> Trusted shops</span>
+                        <span><i class="fa-solid fa-bag-shopping"></i> Easy shopping</span>
+                    </div>
                 </div>
 
-                <form method="POST" action="{{ route('login') }}" class="auth-form">
-                    @csrf
+                <div class="auth-card panel">
+                    <div class="auth-card-header">
+                        <h2>Log In</h2>
+                    </div>
 
-                    <div class="input-group">
-                        <label for="email">Email Address</label>
-                        <div class="input-wrap">
-                            <i class="fa-solid fa-envelope"></i>
-                            <input
-                                id="email"
-                                type="email"
-                                name="email"
-                                value="{{ old('email') }}"
-                                placeholder="Enter your email address"
-                                required
-                                autofocus
-                            >
+                    <form method="POST" action="{{ route('login') }}" class="auth-form">
+                        @csrf
+
+                        <div class="input-group">
+                            <div class="input-wrap">
+                                <i class="fa-solid fa-envelope"></i>
+                                <input id="email" type="email" name="email" value="{{ old('email') }}"
+                                    placeholder="Email Address" required autofocus>
+                            </div>
+                            @error('email')
+                                <small class="error-text">{{ $message }}</small>
+                            @enderror
                         </div>
-                        @error('email')
-                            <small class="error-text">{{ $message }}</small>
-                        @enderror
-                    </div>
 
-                    <div class="input-group">
-                        <label for="password">Password</label>
-                        <div class="input-wrap">
-                            <i class="fa-solid fa-lock"></i>
-                            <input
-                                id="password"
-                                type="password"
-                                name="password"
-                                placeholder="Enter your password"
-                                required
-                            >
+                        <div class="input-group">
+                            <div class="input-wrap">
+                                <i class="fa-solid fa-lock"></i>
+                                <input id="password" type="password" name="password" placeholder="Password" required>
+                            </div>
+                            @error('password')
+                                <small class="error-text">{{ $message }}</small>
+                            @enderror
                         </div>
-                        @error('password')
-                            <small class="error-text">{{ $message }}</small>
-                        @enderror
+
+                        <button type="submit" class="auth-btn">Log In</button>
+
+                        <div class="forgot">
+                            @if (Route::has('password.request'))
+                                <a href="{{ route('password.request') }}">Forgot password?</a>
+                            @endif
+                        </div>
+                    </form>
+
+                    <div class="auth-divider">
+                        <span></span>
+                        <small>OR</small>
+                        <span></span>
                     </div>
 
-                    <div class="forgot">
-                        @if (Route::has('password.request'))
-                            <a href="{{ route('password.request') }}">Forgot password?</a>
-                        @endif
+                    <div class="auth-footer">
+                        New to LocalLift?
+                        <a href="{{ route('register') }}">Create Account</a>
                     </div>
-
-                    <button type="submit" class="auth-btn">Log In</button>
-                </form>
-
-                <div class="auth-footer">
-                    Don't have an account?
-                    <a href="{{ route('register') }}">Create one here</a>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 @endsection

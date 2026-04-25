@@ -6,7 +6,7 @@
                 <h3>LocalLift <span>PH</span></h3>
             </div>
 
-            <p>
+            <p style="font-size: 13px">
                 A modern marketplace for discovering local products, regional sellers, and communities worth supporting.
             </p>
 

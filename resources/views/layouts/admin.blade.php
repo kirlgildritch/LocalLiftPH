@@ -33,21 +33,25 @@
                     <i class="fa-solid fa-gauge-high"></i>
                     <span>Overview</span>
                 </a>
+
                 <a class="sidebar__link {{ $currentRoute === 'admin.products' ? 'is-active' : '' }}"
                     href="{{ route('admin.products') }}">
                     <i class="fa-solid fa-box-open"></i>
                     <span>Product Approvals</span>
                 </a>
+
                 <a class="sidebar__link {{ $currentRoute === 'admin.sellers' ? 'is-active' : '' }}"
                     href="{{ route('admin.sellers') }}">
                     <i class="fa-solid fa-user-check"></i>
                     <span>Seller Reviews</span>
                 </a>
+
                 <a class="sidebar__link {{ $currentRoute === 'admin.orders' ? 'is-active' : '' }}"
                     href="{{ route('admin.orders') }}">
                     <i class="fa-solid fa-receipt"></i>
                     <span>Orders</span>
                 </a>
+
                 <a class="sidebar__link {{ $currentRoute === 'admin.reports' ? 'is-active' : '' }}"
                     href="{{ route('admin.reports') }}">
                     <i class="fa-solid fa-flag"></i>
@@ -56,6 +60,13 @@
             </nav>
 
 
+            <form method="POST" action="{{ route('admin.logout') }}" class="sidebar__logout">
+                @csrf
+                <button type="submit" class="sidebar__link">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
         </aside>
 
         <div class="admin-main">
@@ -70,18 +81,12 @@
                 </div>
 
                 <div class="topbar__meta">
-                    <div class="topbar__note">@yield('page-description', 'Clean, consistent admin management screens.')
+                    <div class="topbar__note">
                     </div>
                     <div class="user-chip">
                         <span class="user-chip__avatar">AD</span>
                         <span>{{ auth()->user()?->name ?? 'Admin User' }}</span>
                     </div>
-                    <form method="POST" action="{{ route('admin.logout') }}">
-                        @csrf
-                        <button type="submit" class="topbar__logout" aria-label="Log out">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                        </button>
-                    </form>
                 </div>
             </header>
 
@@ -93,6 +98,7 @@
 
     @stack('modals')
     @stack('scripts')
+
     <script>
         const toggleButton = document.querySelector('[data-sidebar-toggle]');
         const shell = document.querySelector('.admin-shell');

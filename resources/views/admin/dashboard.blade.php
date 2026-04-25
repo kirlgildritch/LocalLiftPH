@@ -47,7 +47,7 @@
                                         </div>
                                         <div class="meta-row">
                                             <span>Price:</span>
-                                            <strong>PHP {{ number_format($product->price, 2) }}</strong>
+                                            <strong>&#8369; {{ number_format($product->price, 2) }}</strong>
                                         </div>
                                     </div>
 

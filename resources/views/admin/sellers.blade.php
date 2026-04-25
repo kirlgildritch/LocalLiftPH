@@ -3,7 +3,7 @@
 @section('title', 'Manage Sellers')
 @section('eyebrow', 'Verification')
 @section('page-title', 'Manage Sellers')
-@section('page-description', 'View and manage all registered sellers.')
+
 
 @section('content')
     @php
@@ -31,7 +31,8 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" placeholder="Search sellers..." />
             </div>
-            <div class="inline-select"><i class="fa-solid fa-gear"></i> Filter <i class="fa-solid fa-chevron-down"></i></div>
+            <div class="inline-select"><i class="fa-solid fa-gear"></i> Filter <i class="fa-solid fa-chevron-down"></i>
+            </div>
             <div class="inline-select"><i class="fa-solid fa-magnifying-glass"></i></div>
         </div>
 
@@ -90,29 +91,12 @@
                                 <td>{{ optional($seller->submitted_at ?? $seller->created_at)->format('m/d/Y') }}</td>
                                 <td>
                                     <div class="table-actions__primary">
-                                        <button
-                                            class="action-button action-button--primary"
-                                            type="button"
-                                            data-seller-view="{{ $seller->id }}"
-                                        >
+                                        <button class="action-button action-button--primary" type="button"
+                                            data-seller-view="{{ $seller->id }}">
                                             <i class="fa-solid fa-magnifying-glass"></i> View
                                         </button>
-                                        @if ($seller->application_status !== 'approved')
-                                            <form method="POST" action="{{ route('admin.sellers.status', $seller) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="application_status" value="approved">
-                                                <button class="action-button action-button--warning" type="submit">Approve</button>
-                                            </form>
-                                        @endif
-                                        @if ($seller->application_status !== 'rejected')
-                                            <form method="POST" action="{{ route('admin.sellers.status', $seller) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="application_status" value="rejected">
-                                                <button class="action-button action-button--danger" type="submit">Reject</button>
-                                            </form>
-                                        @endif
+
+
                                     </div>
                                 </td>
                             </tr>
@@ -191,29 +175,29 @@
                             <select class="field-select" id="seller-review-reason">
                                 <option value="">Select Reason</option>
                                 <option value="Please upload proof of address for verification.">Proof of Address</option>
-                                <option value="Please upload your tax identification number document.">Tax Identification Number</option>
+                                <option value="Please upload your tax identification number document.">Tax Identification
+                                    Number</option>
                                 <option value="Please upload a recent bank statement.">Bank Statement</option>
                             </select>
-                            <button class="action-button action-button--warning" type="button" id="request-documents-button">Request Documents</button>
+                            <button class="action-button action-button--warning" type="button"
+                                id="request-documents-button">Request Documents</button>
                         </div>
 
-                        <textarea
-                            class="field-textarea"
-                            name="review_notes"
-                            id="seller-review-notes"
-                            rows="4"
-                            placeholder="Add admin review notes or required document instructions..."
-                        ></textarea>
+                        <textarea class="field-textarea" name="review_notes" id="seller-review-notes" rows="4"
+                            placeholder="Add admin review notes or required document instructions..."></textarea>
 
-                        <div class="alert-note">Additional document requests will notify the seller through the dashboard review state.</div>
+                        <div class="alert-note">Additional document requests will notify the seller through the dashboard
+                            review state.</div>
                     </form>
                 </div>
             </div>
 
             <div class="modal-card__footer">
                 <div class="footer-actions">
-                    <button class="action-button action-button--success" type="button" data-status-submit="approved">Verify Seller</button>
-                    <button class="action-button action-button--danger" type="button" data-status-submit="rejected">Reject Seller</button>
+                    <button class="action-button action-button--success" type="button" data-status-submit="approved">Verify
+                        Seller</button>
+                    <button class="action-button action-button--danger" type="button" data-status-submit="rejected">Reject
+                        Seller</button>
                     <button class="button" type="button" data-status-submit="pending">Save as Pending</button>
                 </div>
             </div>

@@ -54,6 +54,11 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function reports(): HasMany
+    {
+        return $this->hasMany(Report::class);
+    }
+
     public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_APPROVED);
@@ -66,5 +71,10 @@ class Product extends Model
             ->whereHas('user.sellerProfile', function (Builder $sellerQuery) {
                 $sellerQuery->where('application_status', Seller::STATUS_APPROVED);
             });
+    }
+    public function scopeWithRatings($query)
+    {
+        return $query->withAvg('reviews', 'rating')
+            ->withCount('reviews');
     }
 }

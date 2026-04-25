@@ -20,17 +20,17 @@
                     <div class="earnings-stats">
                         <article class="mini-stat panel">
                             <span>Total Earnings</span>
-                            <strong>PHP {{ number_format($totalEarnings, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($totalEarnings, 2) }}</strong>
                         </article>
 
                         <article class="mini-stat panel">
                             <span>This Month</span>
-                            <strong>PHP {{ number_format($monthlyEarnings, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($monthlyEarnings, 2) }}</strong>
                         </article>
 
                         <article class="mini-stat panel">
                             <span>Pending Payout</span>
-                            <strong class="highlight">PHP {{ number_format($pendingPayout, 2) }}</strong>
+                            <strong class="highlight">&#8369; {{ number_format($pendingPayout, 2) }}</strong>
                         </article>
                     </div>
 

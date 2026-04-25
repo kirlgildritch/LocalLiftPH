@@ -18,6 +18,22 @@
                 <aside class="market-sidebar">
                     <div class="panel sidebar-panel">
                         <h3>Categories</h3>
+
+                        <div class="mobile-category-dropdown">
+                            <select onchange="if(this.value) window.location.href=this.value">
+                                <option value="{{ route('shops.index', array_filter(['sort' => $sort])) }}" {{ empty($categorySlug) ? 'selected' : '' }}>
+                                    All ({{ $categories->sum('products_count') }})
+                                </option>
+                                @foreach($categories as $categoryOption)
+                                    <option
+                                        value="{{ route('shops.index', array_filter(['category' => $categoryOption->slug, 'sort' => $sort])) }}"
+                                        {{ $categorySlug === $categoryOption->slug ? 'selected' : '' }}>
+                                        {{ $categoryOption->name }} ({{ $categoryOption->products_count }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div class="filter-list">
                             <a href="{{ route('shops.index', array_filter(['sort' => $sort])) }}"
                                 class="filter-item {{ empty($categorySlug) ? 'active' : '' }}">
@@ -36,68 +52,45 @@
                 </aside>
 
                 <div class="market-main">
-                    <div class="market-toolbar panel">
-                        <div class="toolbar-copy">
-                            <span class="toolbar-label">Curated storefronts</span>
-                            <h2>Shops</h2>
-                        </div>
-
-                        <div class="toolbar-controls">
-                            <div class="inline-select">
-                                <label>Sort By</label>
-                                <form action="{{ route('shops.index') }}" method="GET">
-                                    @if(!empty($categorySlug))
-                                        <input type="hidden" name="category" value="{{ $categorySlug }}">
-                                    @endif
-                                    <select name="sort" onchange="this.form.submit()">
-                                        <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Newest</option>
-                                        <option value="most_products" {{ $sort === 'most_products' ? 'selected' : '' }}>Most
-                                            Products</option>
-                                        <option value="name_asc" {{ $sort === 'name_asc' ? 'selected' : '' }}>Name A-Z
-                                        </option>
-                                        <option value="name_desc" {{ $sort === 'name_desc' ? 'selected' : '' }}>Name Z-A
-                                        </option>
-                                    </select>
-                                </form>
-                            </div>
-
-                            <div class="view-icons">
-                                <i class="fa-solid fa-table-cells-large"></i>
-                                <i class="fa-solid fa-list"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="shops-grid">
+                    <div class="shops-grid" data-skeleton-group data-skeleton-delay="420">
                         @forelse($shops as $shop)
-                            <article class="shop-card panel">
+                            <article class="shop-card panel skeleton-shell is-loading" data-skeleton-item data-skeleton-kind="shop-card">
                                 <div class="shop-logo">
-                                    @if(!empty($shop->sellerProfile?->shop_logo))
-                                        <img src="{{ asset('storage/' . $shop->sellerProfile->shop_logo) }}" alt="Shop Logo"
-                                            class="shop-logo">
-                                    @else
-                                        <div class="shop-logo-placeholder">
-                                            <i class="fa-solid fa-store"></i>
-                                        </div>
-                                    @endif
+                                    <div class="shop-logo-frame skeleton skeleton-image">
+                                        @if(!empty($shop->sellerProfile?->shop_logo))
+                                            <img src="{{ asset('storage/' . $shop->sellerProfile->shop_logo) }}" alt="Shop Logo">
+                                        @else
+                                            <div class="shop-logo-placeholder">
+                                                <i class="fa-solid fa-store"></i>
+                                            </div>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div class="shop-card-body">
-                                    <span class="shop-badge">Local Seller</span>
-                                    <h3>{{ $shop->sellerProfile->store_name }}</h3>
+                                    <span class="shop-badge skeleton skeleton-text">
+                                        <i class="fa-solid fa-store"></i>
+                                        Local Seller
+                                    </span>
 
+                                    <h3 class="skeleton skeleton-text">{{ $shop->sellerProfile?->store_name ?? $shop->name }}</h3>
 
-                                    <div class="shop-rating">
+                                    <div class="shop-rating skeleton skeleton-text">
                                         <i class="fa-solid fa-star"></i>
                                         <span>Trusted Local Seller</span>
                                     </div>
 
-                                    <div class="shop-products">
-                                        {{ $shop->products_count }} product{{ $shop->products_count != 1 ? 's' : '' }} available
+                                    <div class="shop-products skeleton skeleton-text">
+                                        <i class="fa-solid fa-bag-shopping"></i>
+                                        <span>{{ $shop->products_count }} product{{ $shop->products_count != 1 ? 's' : '' }}
+                                            available</span>
                                     </div>
 
-                                    <a href="{{ route('shops.show', $shop->id) }}" class="action-btn primary-btn">
-                                        Visit Shop
+                                    <a href="{{ route('shops.show', $shop->id) }}" class="action-btn primary-btn skeleton skeleton-button">
+                                        <span class="btn-left">
+                                            <i class="fa-solid fa-store"></i>
+                                            Visit Shop
+                                        </span>
                                     </a>
                                 </div>
                             </article>

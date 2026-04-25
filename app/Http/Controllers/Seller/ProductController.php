@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -101,6 +102,14 @@ class ProductController extends Controller
         return view('seller.add_product', compact('categories'));
     }
 
+    public function edit($id)
+    {
+        $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+        $categories = Category::orderBy('name')->get();
+
+        return view('seller.products.edit', compact('product', 'categories'));
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -149,5 +158,76 @@ class ProductController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Product submitted for approval.');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'category_id' => 'required|exists:categories,id',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'condition' => 'required|in:new,used',
+            'description' => 'required|string',
+            'weight' => 'required|numeric|min:0.01',
+            'width_cm' => 'required|numeric|min:0.01',
+            'length_cm' => 'required|numeric|min:0.01',
+            'height_cm' => 'required|numeric|min:0.01',
+            'image' => 'nullable|image|max:2048',
+        ]);
+
+        $shippingFee = $this->calculateShippingFee(
+            (float) $validated['weight'],
+            (float) $validated['width_cm'],
+            (float) $validated['length_cm'],
+            (float) $validated['height_cm']
+        );
+
+        if ($request->hasFile('image')) {
+            $newImagePath = $request->file('image')->store('products', 'public');
+
+            if (! empty($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+
+            $validated['image'] = $newImagePath;
+        }
+
+        $product->update([
+            'name' => $validated['name'],
+            'category_id' => $validated['category_id'],
+            'price' => $validated['price'],
+            'stock' => $validated['stock'],
+            'condition' => $validated['condition'],
+            'description' => $validated['description'],
+            'weight' => $validated['weight'],
+            'width_cm' => $validated['width_cm'],
+            'length_cm' => $validated['length_cm'],
+            'height_cm' => $validated['height_cm'],
+            'shipping_fee' => $shippingFee,
+            'image' => $validated['image'] ?? $product->image,
+        ]);
+
+        return redirect()
+            ->route('seller.products.index')
+            ->with('success', 'Product updated successfully.');
+    }
+
+    public function reviews($id)
+    {
+        $product = Product::with('category')
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
+            ->where('user_id', Auth::guard('seller')->id())
+            ->findOrFail($id);
+
+        $reviews = $product->reviews()
+            ->with('user')
+            ->latest()
+            ->paginate(10);
+
+        return view('seller.products.reviews', compact('product', 'reviews'));
     }
 }

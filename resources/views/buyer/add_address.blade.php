@@ -16,11 +16,6 @@
         </div>
 
         <div class="address-hero panel">
-            <div>
-                <span class="section-kicker">New Address</span>
-                <h1>Add a delivery address with the same clean layout</h1>
-                <p>Use the same form rhythm, controls, and spacing as the address list and editor so the flow feels consistent.</p>
-            </div>
 
             <a href="{{ $returnTo ?: route('buyer.addresses') }}" class="action-btn secondary-btn">
                 <i class="fa-solid fa-arrow-left"></i>
@@ -37,12 +32,14 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="full_name">Full Name</label>
-                        <input id="full_name" type="text" name="full_name" placeholder="Full Name" value="{{ old('full_name', auth()->user()->name) }}">
+                        <input id="full_name" type="text" name="full_name" placeholder="Full Name"
+                            value="{{ old('full_name', auth()->user()->name) }}">
                     </div>
 
                     <div class="form-group">
                         <label for="phone">Phone Number</label>
-                        <input id="phone" type="text" name="phone" placeholder="Phone Number" value="{{ old('phone') }}">
+                        <input id="phone" type="text" name="phone" placeholder="Phone Number"
+                            value="{{ old('phone') }}">
                     </div>
 
                     <div class="form-group">
@@ -52,7 +49,8 @@
 
                     <div class="form-group">
                         <label for="province">Province</label>
-                        <input id="province" type="text" name="province" placeholder="Province" value="{{ old('province') }}">
+                        <input id="province" type="text" name="province" placeholder="Province"
+                            value="{{ old('province') }}">
                     </div>
 
                     <div class="form-group">
@@ -62,22 +60,24 @@
 
                     <div class="form-group">
                         <label for="barangay">Barangay</label>
-                        <input id="barangay" type="text" name="barangay" placeholder="Barangay" value="{{ old('barangay') }}">
+                        <input id="barangay" type="text" name="barangay" placeholder="Barangay"
+                            value="{{ old('barangay') }}">
                     </div>
 
                     <div class="form-group">
                         <label for="postal_code">Postal Code</label>
-                        <input id="postal_code" type="text" name="postal_code" placeholder="Postal Code" value="{{ old('postal_code') }}">
+                        <input id="postal_code" type="text" name="postal_code" placeholder="Postal Code"
+                            value="{{ old('postal_code') }}">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="street_address">Street Address</label>
-                    <textarea id="street_address" name="street_address" rows="3" placeholder="Street name, building, house number">{{ old('street_address') }}</textarea>
+                    <textarea id="street_address" name="street_address" rows="3"
+                        placeholder="Street name, building, house number">{{ old('street_address') }}</textarea>
                 </div>
-            </div>
+                <br>
 
-            <div class="form-panel panel">
                 <div class="modal-section">
                     <div class="default-row">
                         <span>Set as default address</span>
@@ -87,7 +87,7 @@
                         </label>
                     </div>
                 </div>
-
+                <br>
                 <div class="modal-section">
                     <div class="label-row">
                         <span>Label as</span>
@@ -109,9 +109,11 @@
                         </div>
                     </div>
                 </div>
-
+                <br>
                 <button type="submit" class="action-btn primary-btn full-btn">Save Address</button>
             </div>
+
+
         </form>
     </div>
 </section>

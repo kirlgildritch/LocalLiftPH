@@ -15,3 +15,42 @@
     font-size: 0.72rem;
     font-weight: 700;
 }
+
+.admin-report-feedback {
+    padding: 0.9rem 1rem;
+    border: 1px solid #cfe6d3;
+    border-radius: 14px;
+    background: #edf8ef;
+    color: #26733a;
+    font-weight: 600;
+}
+
+.report-thumb-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef4ff;
+    color: #3b6fd6;
+    border: 1px solid #d8e4fb;
+    flex-shrink: 0;
+}
+
+.report-thumb-icon--large {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 1.3rem;
+    font-size: 1.35rem;
+}
+
+.admin-report-inline-value {
+    font-weight: 500;
+    color: #c77628;
+}
+
+.empty-text {
+    color: #6e7890;
+    text-align: center;
+}

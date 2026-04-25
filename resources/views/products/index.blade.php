@@ -17,7 +17,25 @@
             <div class="market-layout">
                 <aside class="market-sidebar">
                     <div class="panel sidebar-panel">
-                        <h3>Category</h3>
+                        <h3>Categories</h3>
+
+                        <div class="mobile-category-dropdown">
+                            <select onchange="if(this.value) window.location.href=this.value">
+                                <option
+                                    value="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                    {{ empty($categorySlug) ? 'selected' : '' }}>
+                                    All ({{ $categories->sum('products_count') }})
+                                </option>
+                                @foreach($categories as $categoryOption)
+                                    <option
+                                        value="{{ route('products.index', array_filter(['search' => $search, 'category' => $categoryOption->slug, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                        {{ $categorySlug === $categoryOption->slug ? 'selected' : '' }}>
+                                        {{ $categoryOption->name }} ({{ $categoryOption->products_count }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div class="filter-list">
                             <a href="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
                                 class="filter-item {{ empty($categorySlug) ? 'active' : '' }}">
@@ -81,7 +99,6 @@
                             </option>
                         </select>
                     </form>
-
                 </aside>
 
                 <div class="market-main">
@@ -91,11 +108,13 @@
                             {{ session('success') }}
                         </div>
                     @endif
+
                     @if(!empty($search))
                         <div class="panel" style="padding: 10px; margin-bottom: 16px;">
                             <p>Search results for: <strong>{{ $search }}</strong></p>
                         </div>
                     @endif
+
                     @if(!empty($search) && isset($shops) && $shops->count())
                         <div class="panel" style="padding: 20px; margin-bottom: 20px;">
                             <h3 style="margin-bottom: 14px;">Matching Shops</h3>
@@ -123,7 +142,8 @@
                             </div>
                         </div>
                     @endif
-                    <div class="product-grid product-card-grid">
+
+                    <div class="product-grid product-card-grid" data-skeleton-group data-skeleton-delay="420">
                         @forelse($products as $product)
                             <x-product-card :product="$product" />
                         @empty
@@ -138,9 +158,35 @@
                             </div>
                         @endforelse
                     </div>
+
+                    @if($products->hasPages())
+                        <div class="panel"
+                            style="padding: 16px 20px; margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                            <p style="margin: 0; color: #9fb3c8; font-size: 14px;">
+                                Showing {{ $products->firstItem() }}-{{ $products->lastItem() }} of {{ $products->total() }}
+                                products
+                            </p>
+
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                @if($products->onFirstPage())
+                                    <span class="action-btn secondary-btn" style="opacity: 0.5; pointer-events: none;">Previous</span>
+                                @else
+                                    <a href="{{ $products->previousPageUrl() }}" class="action-btn secondary-btn">Previous</a>
+                                @endif
+
+                                <span style="color: #dbeafe; font-size: 14px;">Page {{ $products->currentPage() }} of
+                                    {{ $products->lastPage() }}</span>
+
+                                @if($products->hasMorePages())
+                                    <a href="{{ $products->nextPageUrl() }}" class="action-btn secondary-btn">Next</a>
+                                @else
+                                    <span class="action-btn secondary-btn" style="opacity: 0.5; pointer-events: none;">Next</span>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </section>
-
 @endsection

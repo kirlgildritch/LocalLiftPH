@@ -69,7 +69,7 @@
                                             <h4>{{ $product->name }}</h4>
                                             <p class="product-category">{{ $product->category?->name ?? 'Uncategorized' }}</p>
                                             <div class="product-preview-bottom">
-                                                <span class="product-price">PHP {{ number_format($product->price, 2) }}</span>
+                                                <span class="product-price">&#8369; {{ number_format($product->price, 2) }}</span>
                                                 <span class="product-stock">Stock: {{ $product->stock }}</span>
                                             </div>
                                         </div>

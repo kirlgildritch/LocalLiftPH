@@ -65,15 +65,15 @@
                         </div>
                         <div>
                             <span class="toolbar-label">Subtotal</span>
-                            <p>P{{ number_format($orderSubtotal, 2) }}</p>
+                            <p>&#8369; {{ number_format($orderSubtotal, 2) }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Shipping</span>
-                            <p>P{{ number_format($orderShipping, 2) }}</p>
+                            <p>&#8369; {{ number_format($orderShipping, 2) }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Total</span>
-                            <p>P{{ number_format($order->total_price, 2) }}</p>
+                            <p>&#8369; {{ number_format($order->total_price, 2) }}</p>
                         </div>
                     </div>
                 </div>
@@ -102,9 +102,9 @@
 
                                 <div class="order-product-info">
                                     <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
-                                    <p>Sold by: {{ $item->product->user->name ?? 'LocalLift Seller' }}</p>
+                                    <p>Sold by: {{ $item->product->user?->sellerProfile?->store_name ?? $item->product->user?->name ?? 'LocalLift Seller' }}</p>
                                     <p>Quantity: {{ $item->quantity }}</p>
-                                    <p>Unit Price: P{{ number_format($item->price, 2) }}</p>
+                                    <p>Unit Price: &#8369; {{ number_format($item->price, 2) }}</p>
 
                                     @if($order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED && $item->product)
                                         <div class="order-item-actions">
@@ -121,7 +121,7 @@
                                 </div>
 
                                 <div class="order-product-price">
-                                    P{{ number_format($item->price * $item->quantity, 2) }}
+                                    &#8369; {{ number_format($item->price * $item->quantity, 2) }}
                                 </div>
                             </div>
                         @endforeach
@@ -131,15 +131,15 @@
                         <div class="total-text">
                             <div>
                                 <span>Subtotal</span>
-                                <strong>P{{ number_format($orderSubtotal, 2) }}</strong>
+                                <strong>&#8369; {{ number_format($orderSubtotal, 2) }}</strong>
                             </div>
                             <div>
                                 <span>Shipping</span>
-                                <strong>P{{ number_format($orderShipping, 2) }}</strong>
+                                <strong>&#8369; {{ number_format($orderShipping, 2) }}</strong>
                             </div>
                             <div>
                                 <span>Order Total</span>
-                                <strong>P{{ number_format($order->total_price, 2) }}</strong>
+                                <strong>&#8369; {{ number_format($order->total_price, 2) }}</strong>
                             </div>
                         </div>
 

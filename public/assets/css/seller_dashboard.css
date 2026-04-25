@@ -14,6 +14,8 @@ body {
     radial-gradient(circle at top, rgba(66, 165, 245, 0.12), transparent 34%),
     #040b16;
   color: #f5f9ff;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 a {

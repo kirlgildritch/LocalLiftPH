@@ -3,7 +3,6 @@
 @section('title', 'Product Approvals')
 @section('eyebrow', 'Moderation')
 @section('page-title', 'Product Approvals')
-@section('page-description', 'Product approval screen rebuilt from the document, including view-details and seller-profile modals.')
 
 @section('content')
     @php
@@ -19,7 +18,7 @@
                 'seller' => '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_'),
                 'seller_name' => $sellerDisplay,
                 'category' => $product->category->name ?? 'Uncategorized',
-                'price' => 'PHP ' . number_format((float) $product->price, 2),
+                'price' => '&#8369; ' . number_format((float) $product->price, 2),
                 'materials' => $product->description ?: 'No materials/details provided.',
                 'dimensions' => trim(collect([
                     $product->length_cm ? $product->length_cm . ' cm L' : null,
@@ -48,14 +47,12 @@
         <div class="table-card__header" style="padding: 0; border: 0;">
             <div>
                 <h3 class="section-title">Pending Products</h3>
-                <p class="sub-line">{{ $products->count() }} Pending Products</p>
+
             </div>
             <div class="toolbar-row">
-                <div class="chip is-active">All</div>
-                <div class="chip">Jewelry</div>
-                <div class="chip"><i class="fa-solid fa-flask"></i> Toys</div>
-                <div class="chip">Home Decor</div>
-                <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" placeholder="Search products..." /></div>
+
+                <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text"
+                        placeholder="Search products..." /></div>
             </div>
         </div>
 
@@ -82,15 +79,17 @@
                                         <div class="mini-thumb mini-thumb--earrings"></div>
                                         <div class="product-cell__text">
                                             <div class="product-title">{{ $product->name }}</div>
-                                            <div class="sub-line"><i class="fa-solid fa-user"></i> {{ '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_') }}</div>
-                                            <div class="sub-line">Category: {{ $product->category->name ?? 'Uncategorized' }}</div>
+                                            <div class="sub-line"><i class="fa-solid fa-user"></i>
+                                                {{ '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_') }}</div>
+                                            <div class="sub-line">Category: {{ $product->category->name ?? 'Uncategorized' }}
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="product-cell__text">
                                         <div>{{ '@' . \Illuminate\Support\Str::slug($sellerDisplay, '_') }}</div>
-                                        <div class="product-title">PHP {{ number_format((float) $product->price, 2) }}</div>
+                                        <div class="product-title">&#8369; {{ number_format((float) $product->price, 2) }}</div>
                                     </div>
                                 </td>
                                 <td>
@@ -99,20 +98,22 @@
                                             <form method="POST" action="{{ route('admin.products.approve', $product) }}">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button class="action-button action-button--success" type="submit">Approve</button>
+                                                <button class="action-button action-button--success"
+                                                    type="submit">Approve</button>
                                             </form>
                                             <form method="POST" action="{{ route('admin.products.reject', $product) }}">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button class="action-button action-button--danger" type="submit">Reject</button>
+                                                <button class="action-button action-button--danger"
+                                                    type="submit">Reject</button>
                                             </form>
-                                            <button class="action-button action-button--primary" type="button" data-product-view="{{ $product->id }}">
+                                            <button class="action-button action-button--primary" type="button"
+                                                data-product-view="{{ $product->id }}">
                                                 <i class="fa-solid fa-magnifying-glass"></i> View Details
                                             </button>
                                         </div>
                                         <div class="table-actions__secondary">
-                                            <button type="button"><i class="fa-solid fa-rotate-left"></i> Undo</button>
-                                            <button type="button" data-product-view="{{ $product->id }}"><i class="fa-regular fa-file-lines"></i> View Details</button>
+
                                         </div>
                                     </div>
                                 </td>
@@ -148,22 +149,22 @@
                         <div class="hero-thumb" id="product-modal-hero"></div>
                         <div class="thumb-strip" id="product-modal-thumbs"></div>
                         <div>
-                            <h4 class="section-title">Product Details</h4>
-                            <div class="detail-list">
-                                <div class="detail-list__item"><span>Category:</span><strong id="product-modal-category-left"></strong></div>
-                                <div class="detail-list__item"><span>Materials:</span><strong id="product-modal-materials-left"></strong></div>
-                                <div class="detail-list__item"><span>Dimensions:</span><strong id="product-modal-dimensions-left"></strong></div>
-                                <div class="detail-list__item"><span>Weight:</span><strong id="product-modal-weight-left"></strong></div>
-                            </div>
+
+
                         </div>
                     </div>
                     <div>
                         <div class="detail-list">
-                            <div class="detail-list__item"><span>Category:</span><strong id="product-modal-category-right"></strong></div>
-                            <div class="detail-list__item"><span>Price:</span><strong id="product-modal-price"></strong></div>
-                            <div class="detail-list__item"><span>Materials:</span><strong id="product-modal-materials-right"></strong></div>
-                            <div class="detail-list__item"><span>Dimensions:</span><strong id="product-modal-dimensions-right"></strong></div>
-                            <div class="detail-list__item"><span>Weight:</span><strong id="product-modal-weight-right"></strong></div>
+                            <div class="detail-list__item"><span>Category:</span><strong
+                                    id="product-modal-category-right"></strong></div>
+                            <div class="detail-list__item"><span>Price:</span><strong id="product-modal-price"></strong>
+                            </div>
+                            <div class="detail-list__item"><span>Description:</span><strong
+                                    id="product-modal-materials-right"></strong></div>
+                            <div class="detail-list__item"><span>Dimensions:</span><strong
+                                    id="product-modal-dimensions-right"></strong></div>
+                            <div class="detail-list__item"><span>Weight:</span><strong
+                                    id="product-modal-weight-right"></strong></div>
                         </div>
 
                         <div class="seller-box">
@@ -176,7 +177,8 @@
                                         <div class="sub-line" id="product-modal-seller-name"></div>
                                     </div>
                                 </div>
-                                <button class="action-button action-button--primary" type="button" id="product-modal-open-seller">View Seller Profile</button>
+                                <button class="action-button action-button--primary" type="button"
+                                    id="product-modal-open-seller">View Seller Profile</button>
                             </div>
                         </div>
                     </div>
@@ -225,7 +227,8 @@
                 <div class="document-row">
                     <h4 class="section-title">Verification Documents</h4>
                     <div class="sub-line">These documents have been submitted by the seller for verification.</div>
-                    <div><span class="status-pill status-pill--pending"><i class="fa-regular fa-clock"></i> Verification Status: <span id="product-seller-review-status"></span></span></div>
+                    <div><span class="status-pill status-pill--pending"><i class="fa-regular fa-clock"></i> Verification
+                            Status: <span id="product-seller-review-status"></span></span></div>
 
                     <div class="document-row__item">
                         <div class="doc-thumb doc-thumb--id"></div>
@@ -233,7 +236,8 @@
                             <div class="seller-name" id="product-seller-id-label">Government Issued ID</div>
                             <div class="sub-line">Uploaded seller verification document</div>
                         </div>
-                        <div><a class="action-button action-button--primary" href="#" target="_blank" id="product-seller-id-link">View</a></div>
+                        <div><a class="action-button action-button--primary" href="#" target="_blank"
+                                id="product-seller-id-link">View</a></div>
                     </div>
                     <div class="document-row__item">
                         <div class="doc-thumb doc-thumb--license"></div>
@@ -241,7 +245,8 @@
                             <div class="seller-name">Business License / Permit</div>
                             <div class="sub-line">Uploaded only when applicable</div>
                         </div>
-                        <div><a class="action-button action-button--primary" href="#" target="_blank" id="product-seller-permit-link">View</a></div>
+                        <div><a class="action-button action-button--primary" href="#" target="_blank"
+                                id="product-seller-permit-link">View</a></div>
                     </div>
                     <div class="document-row__item">
                         <div class="doc-thumb doc-thumb--address"></div>
@@ -300,13 +305,10 @@
                     activeProduct = product;
 
                     document.getElementById('product-modal-title').textContent = product.name;
-                    document.getElementById('product-modal-category-left').textContent = product.category;
-                    document.getElementById('product-modal-materials-left').textContent = product.materials;
-                    document.getElementById('product-modal-dimensions-left').textContent = product.dimensions;
-                    document.getElementById('product-modal-weight-left').textContent = product.weight;
+
                     document.getElementById('product-modal-category-right').textContent = product.category;
-                    document.getElementById('product-modal-price').textContent = product.price;
-                    document.getElementById('product-modal-materials-right').textContent = product.materials;
+                    document.getElementById('product-modal-price').innerHTML = product.price;
+                    document.getElementById('product-modal-materials-right').innerHTML = product.materials;
                     document.getElementById('product-modal-dimensions-right').textContent = product.dimensions;
                     document.getElementById('product-modal-weight-right').textContent = product.weight;
                     document.getElementById('product-modal-seller-avatar').textContent = product.avatar;

@@ -13,6 +13,14 @@ return new class extends Migration
             return;
         }
 
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('messages', function (Blueprint $table) {
+                $table->text('message')->nullable()->change();
+            });
+
+            return;
+        }
+
         DB::statement('ALTER TABLE messages MODIFY message TEXT NULL');
     }
 
@@ -23,6 +31,15 @@ return new class extends Migration
         }
 
         DB::statement("UPDATE messages SET message = '' WHERE message IS NULL");
+
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('messages', function (Blueprint $table) {
+                $table->text('message')->change();
+            });
+
+            return;
+        }
+
         DB::statement('ALTER TABLE messages MODIFY message TEXT NOT NULL');
     }
 };

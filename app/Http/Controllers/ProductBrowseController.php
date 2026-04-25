@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\JsonResponse;
 
 class ProductBrowseController extends Controller
 {
@@ -21,6 +22,8 @@ class ProductBrowseController extends Controller
         $sort = $request->get('sort', 'newest');
 
         $productsQuery = Product::with(['user', 'category'])
+            ->withAvg('reviews', 'rating')
+            ->withCount('reviews')
             ->visibleToBuyers();
 
         if ($search) {
@@ -29,6 +32,10 @@ class ProductBrowseController extends Controller
                     ->orWhere('description', 'like', "%{$search}%")
                     ->orWhereHas('user', function ($sellerQuery) use ($search) {
                         $sellerQuery->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('user.sellerProfile', function ($sellerProfileQuery) use ($search) {
+                        $sellerProfileQuery->where('store_name', 'like', "%{$search}%")
+                            ->orWhere('store_description', 'like', "%{$search}%");
                     })
                     ->orWhereHas('category', function ($categoryQuery) use ($search) {
                         $categoryQuery->where('name', 'like', "%{$search}%");
@@ -50,12 +57,16 @@ class ProductBrowseController extends Controller
             $productsQuery->where('price', '<=', $maxPrice);
         }
 
-        $products = match ($sort) {
-            'price_asc' => $productsQuery->orderBy('price')->get(),
-            'price_desc' => $productsQuery->orderByDesc('price')->get(),
-            'oldest' => $productsQuery->oldest()->get(),
-            default => $productsQuery->latest()->get(),
+        $sortedProductsQuery = match ($sort) {
+            'price_asc' => $productsQuery->orderBy('price'),
+            'price_desc' => $productsQuery->orderByDesc('price'),
+            'oldest' => $productsQuery->oldest(),
+            default => $productsQuery->latest(),
         };
+
+        $products = $sortedProductsQuery
+            ->paginate(12)
+            ->withQueryString();
 
         $categories = Category::withCount([
             'products' => function ($query) {
@@ -73,7 +84,13 @@ class ProductBrowseController extends Controller
                 $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
             })
             ->when($search, function ($query) use ($search) {
-                $query->where('name', 'like', '%' . $search . '%');
+                $query->where(function ($nestedQuery) use ($search) {
+                    $nestedQuery->where('name', 'like', '%' . $search . '%')
+                        ->orWhereHas('sellerProfile', function ($sellerProfileQuery) use ($search) {
+                            $sellerProfileQuery->where('store_name', 'like', '%' . $search . '%')
+                                ->orWhere('store_description', 'like', '%' . $search . '%');
+                        });
+                });
             })
             ->latest()
             ->take(6)
@@ -91,11 +108,77 @@ class ProductBrowseController extends Controller
         ));
     }
 
+    public function suggestions(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->get('q', ''));
+
+        if (mb_strlen($search) < 1) {
+            return response()->json([]);
+        }
+
+        $products = Product::query()
+            ->visibleToBuyers()
+            ->where('name', 'like', "%{$search}%")
+            ->orderBy('name')
+            ->limit(5)
+            ->pluck('name');
+
+        $shops = User::query()
+            ->where('is_seller', 1)
+            ->whereHas('sellerProfile', function ($query) {
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+            })
+            ->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('sellerProfile', function ($sellerProfileQuery) use ($search) {
+                        $sellerProfileQuery->where('store_name', 'like', "%{$search}%")
+                            ->orWhere('store_description', 'like', "%{$search}%");
+                    });
+            })
+            ->orderBy('name')
+            ->limit(3)
+            ->get()
+            ->map(function ($shop) {
+                return $shop->sellerProfile?->store_name ?: $shop->name;
+            });
+
+        $categories = Category::query()
+            ->where('name', 'like', "%{$search}%")
+            ->orderBy('name')
+            ->limit(2)
+            ->pluck('name');
+
+        $suggestions = $products
+            ->concat($shops)
+            ->concat($categories)
+            ->map(fn ($value) => trim((string) $value))
+            ->filter()
+            ->unique()
+            ->values()
+            ->take(8)
+            ->map(fn ($label) => [
+                'label' => $label,
+                'selectable' => true,
+            ])
+            ->values();
+
+        if ($suggestions->isEmpty()) {
+            return response()->json([
+                [
+                    'label' => 'Product not found.',
+                    'selectable' => false,
+                ],
+            ]);
+        }
+
+        return response()->json($suggestions);
+    }
+
     public function show(Product $product)
     {
         abort_if(
             $product->status !== Product::STATUS_APPROVED
-            || ! $product->is_active
+            || !$product->is_active
             || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED,
             404
         );

@@ -1,3 +1,32 @@
+
+.ratings {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.review-stars-display {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.review-stars-display i {
+  color: #ffd166;
+  /* yellow stars */
+  font-size: 14px;
+}
+
+.review-summary-chip {
+  display: flex;
+  align-items: center;
+}
+
+.review-summary-chip strong {
+  font-size: 14px;
+  color: #ffd166;
+}
+
 .product-card-grid {
   align-items: stretch;
 }
@@ -12,6 +41,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 22px;
   background: rgba(7, 15, 27, 0.84);
@@ -24,6 +54,12 @@
   transform: translateY(-3px);
   border-color: rgba(66, 165, 245, 0.34);
   background: rgba(11, 21, 35, 0.94);
+}
+
+.market-product-card.is-loading:hover {
+  transform: none;
+  border-color: var(--border);
+  background: rgba(7, 15, 27, 0.84);
 }
 
 .market-product-card__image {
@@ -119,6 +155,53 @@
 
 .market-product-card--empty .market-product-card__body {
   justify-content: center;
+}
+
+.market-product-card.is-loading .market-product-card__image {
+  background: rgba(10, 18, 31, 0.72);
+}
+
+.market-product-card.is-loading .market-product-card__badge {
+  min-width: 110px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.market-product-card.is-loading .market-product-card__title {
+  width: min(82%, 220px);
+  min-height: 1.35em;
+  white-space: normal;
+}
+
+.market-product-card.is-loading .ratings {
+  width: 118px;
+  min-height: 22px;
+  border-radius: 999px;
+}
+
+.market-product-card.is-loading .ratings > * {
+  opacity: 0;
+}
+
+.market-product-card.is-loading .market-product-card__subtitle {
+  width: min(74%, 180px);
+  min-height: 1.45em;
+}
+
+.market-product-card.is-loading .market-product-card__meta {
+  width: min(88%, 210px);
+  min-height: 1.45em;
+  border-radius: 12px;
+}
+
+.market-product-card.is-loading .market-product-card__meta * {
+  opacity: 0;
+}
+
+.market-product-card.is-loading .market-product-card__price {
+  width: 96px;
+  min-height: 1.5em;
+  text-shadow: none;
 }
 
 @media (max-width: 640px) {

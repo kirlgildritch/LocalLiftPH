@@ -55,7 +55,7 @@
                                                 {{ $order->shippingStatusLabel() }}
                                             </span>
                                         </td>
-                                        <td>PHP {{ number_format($order->total_price ?? 0, 2) }}</td>
+                                        <td>&#8369; {{ number_format($order->total_price ?? 0, 2) }}</td>
                                         <td>
                                             @if($canManageShipping && $nextStatuses)
                                                 <form method="POST" action="{{ route('seller.orders.shipping-status', $order) }}" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">

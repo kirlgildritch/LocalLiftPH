@@ -1,3 +1,5 @@
+
+
 @extends('layouts.app')
 
 @section('content')
@@ -26,7 +28,6 @@
             $selectedShipping = 0;
         @endphp
 
-
         <div
             class="cart-layout"
             data-selected-cart-item-id="{{ $selectedCartItemId ?? '' }}"
@@ -34,17 +35,7 @@
             data-selection-storage-key="locallift-cart-selection-{{ auth()->id() }}"
         >
             <div class="cart-main">
-                <div class="cart-toolbar panel">
-                    <div class="toolbar-copy">
-                        <span class="toolbar-label">Selection</span>
-                        <h2>Shopping Cart</h2>
-                    </div>
-
-                    <div class="toolbar-note">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <span>You are eligible for free shipping.</span>
-                    </div>
-                </div>
+               
 
                 <div class="cart-list panel">
                     <div class="select-all-row">
@@ -55,7 +46,6 @@
                     </div>
 
                     <div class="cart-table-head">
-                        <div>Select</div>
                         <div>Product</div>
                         <div>Price</div>
                         <div>Quantity</div>
@@ -91,13 +81,12 @@
                                 </div>
 
                                 <div class="product-copy">
-                                    <span class="product-badge">Cart Item</span>
                                     <h3>{{ $item->product->name }}</h3>
-                                    <p>{{ $item->product->shop_name ?? 'LocalLift Shop' }}</p>
+                                    <p>{{ $item->product->user?->sellerProfile?->store_name ?? 'LocalLift Shop' }}</p>
                                 </div>
                             </div>
 
-                            <div class="item-price">P{{ number_format($item->product->price, 2) }}</div>
+                            <div class="item-price">&#8369; {{ number_format($item->product->price, 2) }}</div>
 
                             <div class="item-quantity">
                                 <div class="qty-box">
@@ -120,7 +109,7 @@
                             </div>
 
                             <div class="item-subtotal">
-                                <strong>P{{ number_format($subtotal, 2) }}</strong>
+                                <strong>&#8369; {{ number_format($subtotal, 2) }}</strong>
 
                                 <form action="{{ route('cart.remove', $item->id) }}" method="POST">
                                     @csrf
@@ -142,33 +131,29 @@
 
             <aside class="cart-sidebar">
                 <div class="cart-summary panel">
-                    <span class="section-kicker">Summary</span>
-                    <h3>Cart Summary</h3>
+                    <div class="summary-title">
+                        <h3>Cart Summary</h3>
+                    </div>
 
                     <div class="summary-line">
                         <span>Subtotal</span>
-                        <strong id="cart-summary-subtotal">P{{ number_format($selectedSubtotal, 2) }}</strong>
+                        <strong id="cart-summary-subtotal">&#8369; {{ number_format($selectedSubtotal, 2) }}</strong>
                     </div>
 
                     <div class="summary-line">
                         <span>Shipping</span>
-                        <strong id="cart-summary-shipping">P{{ number_format($selectedShipping, 2) }}</strong>
+                        <strong id="cart-summary-shipping">&#8369; {{ number_format($selectedShipping, 2) }}</strong>
                     </div>
 
                     <div class="summary-total">
                         <span>Total</span>
-                        <strong id="cart-summary-total">P{{ number_format($selectedSubtotal + $selectedShipping, 2) }}</strong>
+                        <strong id="cart-summary-total">&#8369; {{ number_format($selectedSubtotal + $selectedShipping, 2) }}</strong>
                     </div>
 
                     <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form">
                         <div id="selected-cart-items-inputs"></div>
                         <button type="submit" class="action-btn primary-btn full-btn">Checkout</button>
                     </form>
-
-                    <div class="coupon-box">
-                        <input type="text" placeholder="Enter coupon code">
-                        <button type="button">Apply</button>
-                    </div>
                 </div>
             </aside>
         </div>
@@ -200,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     })();
 
-    const formatPeso = (value) => `P${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatPeso = (value) => `&#8369; ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
     const loadSavedSelection = () => {
         try {
@@ -214,9 +199,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const saveSelection = (selectedIds) => {
         try {
             window.localStorage.setItem(storageKey, JSON.stringify(selectedIds));
-        } catch (error) {
-            // Ignore storage failures and keep the cart usable.
-        }
+        } catch (error) {}
     };
 
     const applySelection = (selectedIds) => {
@@ -253,9 +236,9 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        subtotalEl.textContent = formatPeso(selectedTotal);
-        shippingEl.textContent = formatPeso(selectedShipping);
-        totalEl.textContent = formatPeso(selectedTotal + selectedShipping);
+        subtotalEl.innerHTML = formatPeso(selectedTotal);
+        shippingEl.innerHTML = formatPeso(selectedShipping);
+        totalEl.innerHTML = formatPeso(selectedTotal + selectedShipping);
         selectAll.checked = selectedCount === itemCheckboxes.length;
         selectAll.indeterminate = selectedCount > 0 && selectedCount < itemCheckboxes.length;
         saveSelection(selectedIds);

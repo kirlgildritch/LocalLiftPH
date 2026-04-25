@@ -128,7 +128,7 @@
                                     </div>
 
                                     <div class="summary-price">
-                                        <strong>P{{ number_format($item->product->price, 2) }}</strong>
+                                        <strong>&#8369; {{ number_format($item->product->price, 2) }}</strong>
                                         <span>x{{ $item->quantity }}</span>
                                     </div>
                                 </div>
@@ -139,17 +139,17 @@
 
                         <div class="summary-line">
                             <span>Subtotal</span>
-                            <strong>P{{ number_format($subtotal, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($subtotal, 2) }}</strong>
                         </div>
 
                         <div class="summary-line">
                             <span>Shipping Fee</span>
-                            <strong>P{{ number_format($shippingFee, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($shippingFee, 2) }}</strong>
                         </div>
 
                         <div class="summary-total">
                             <span>Total</span>
-                            <strong>P{{ number_format($total, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($total, 2) }}</strong>
                         </div>
 
                         <form action="{{ route('checkout.store') }}" method="POST">

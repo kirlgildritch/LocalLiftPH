@@ -13,8 +13,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/product_cards.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
-    <link rel="icon" href="{{ asset('assets/image/Logo.png') }}">
+    @if(empty($disableFloatingChatWidget))
+        <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
+    @endif
+    <link rel="stylesheet" href="{{ asset('assets/css/helpbot.css') }}">
+    <link rel="icon" sizes="32x32" href="{{ asset('assets/image/Logo.png') }}">
 </head>
 
 <body>
@@ -27,7 +30,8 @@
 
     @include('partials.footer')
 
-    @if(auth('web')->check())
+    @if(auth('web')->check() && empty($disableFloatingChatWidget))
+        @include('partials.helpbot')
         @include('messages.partials.floating-chat')
     @endif
 
@@ -53,6 +57,7 @@
             }
         });
     </script>
+    <script src="{{ asset('assets/js/skeleton-loader.js') }}" defer></script>
 </body>
 
 </html>

@@ -187,7 +187,7 @@
                                     <i class="fa-solid fa-coins"></i>
                                     <span>Total Sales</span>
                                 </div>
-                                <strong>PHP {{ number_format($stats['total_sales'], 2) }}</strong>
+                                <strong>&#8369; {{ number_format($stats['total_sales'], 2) }}</strong>
                                 <p>Current revenue snapshot across completed order items.</p>
                             </article>
 
@@ -241,8 +241,7 @@
                                                     class="status-chip {{ in_array($item->order?->status, ['completed', 'delivered']) ? 'completed' : (in_array($item->order?->status, ['processing']) ? 'processing' : (in_array($item->order?->status, ['shipped']) ? 'shipped' : 'pending')) }}">
                                                     {{ ucfirst($item->order?->status ?? 'pending') }}
                                                 </span>
-                                                <strong>PHP
-                                                    {{ number_format(($item->price ?? 0) * ($item->quantity ?? 1), 2) }}</strong>
+                                                <strong>&#8369; {{ number_format(($item->price ?? 0) * ($item->quantity ?? 1), 2) }}</strong>
                                             </div>
                                         </article>
                                     @empty
@@ -290,7 +289,7 @@
                                             <h3>{{ $product->name }}</h3>
                                             <p>{{ ucfirst($product->status) }} {{ $product->is_active ? 'listing' : 'draft' }}</p>
                                             <div class="product-card-bottom">
-                                                <strong>PHP {{ number_format($product->price, 2) }}</strong>
+                                                <strong>&#8369; {{ number_format($product->price, 2) }}</strong>
                                                 <a href="{{ route('seller.products.index') }}" class="mini-action">View</a>
                                             </div>
                                         </div>

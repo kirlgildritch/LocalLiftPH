@@ -23,12 +23,19 @@
         </button>
 
         <form action="{{ url('/products') }}" method="GET" class="search-bar" style="position: relative;">
-            <i class="fa-solid fa-magnifying-glass"></i>
+
 
             <input type="text" id="searchInput" name="search" value="{{ request('search') }}"
                 placeholder="Search for products, shops, and more..." title="Search" autocomplete="off">
 
-            <button type="submit" class="search-btn" title="Search">Search</button>
+            <button type="button" id="searchClearButton" class="search-clear-btn is-hidden" title="Clear search"
+                aria-label="Clear search">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <button type="submit" class="search-btn" title="Search" aria-label="Search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </button>
 
             <div id="searchSuggestions" class="search-suggestions"></div>
         </form>
@@ -55,6 +62,10 @@
                         <i class="fa-solid fa-box"></i>
                         <span>My Orders</span>
                     </a>
+                    <a href="{{ route('buyer.addresses') }}">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                        <span>Addresses</span>
+                    </a>
                     <a href="{{ route('seller.center') }}" class="seller-link">
                         <i class="fa-solid fa-store"></i>
                         <span>Start Selling</span>
@@ -69,8 +80,8 @@
                 </div>
             </div>
             <?php else: ?>
-            <a href="{{ route('login') }}" class="action-link action-link-muted action-link-desktop">Log In</a>
-            <a href="{{ route('register') }}" class="action-link action-link-primary">Create Account</a>
+            <a href="{{ route('login') }}" class="action-link action-link-muted action-link-desktop">Login</a>
+            <a href="{{ route('register') }}" class="action-link action-link-primary action-link-desktop">Sign Up</a>
             <a href="{{ route('seller.center') }}" class="action-link action-link-muted action-link-desktop">Start
                 Selling</a>
             <?php endif; ?>
@@ -79,7 +90,6 @@
             <div class="cart-dropdown">
                 <a href="{{ url('/cart') }}" class="cart-trigger" title="Cart">
                     <i class="fa-solid fa-cart-shopping"></i>
-                    <span>Cart</span>
                     <?php    if ($isLoggedIn): ?>
                     <span id="header-cart-badge" class="cart-badge {{ ($cartCount ?? 0) > 0 ? '' : 'is-hidden' }}">
                         {{ $cartCount ?? 0 }}
@@ -113,7 +123,7 @@
                             </div>
 
                             <span class="cart-preview-price">
-                                P{{ number_format($item->product->price ?? 0, 2) }}
+                                &#8369; {{ number_format($item->product->price ?? 0, 2) }}
                             </span>
                         </div>
                         <?php        endforeach; ?>
@@ -151,6 +161,7 @@
             <?php if (!$isLoggedIn): ?>
             <div class="navbar-mobile-actions">
                 <a href="{{ route('login') }}" class="action-link action-link-muted">Log In</a>
+                <a href="{{ route('register') }}" class="action-link action-link-primary">Sign Up</a>
                 <a href="{{ route('seller.center') }}" class="action-link action-link-muted">Start Selling</a>
             </div>
             <?php endif; ?>
@@ -198,34 +209,10 @@
                 <input type="email" name="email" id="email" value="{{ old('email', $currentUser->email) }}">
             </div>
 
-            <div class="form-group">
-                <label for="phone">Phone Number</label>
-                <input type="text" name="phone" id="phone" value="{{ old('phone', $currentUser->phone ?? '') }}">
-            </div>
 
-            <div class="form-group address-group">
-                <div class="address-label-row">
-                    <label for="address">Address</label>
-                    <a href="{{ route('buyer.addresses') }}" class="edit-address-link">Edit</a>
-                </div>
-
-                <textarea id="address" rows="3" readonly>
-    {{ $defaultAddress
-        ? trim(
-            ($defaultAddress->street_address ?? '') .
-            ', ' . ($defaultAddress->barangay ?? '') .
-            ', ' . ($defaultAddress->city ?? '') .
-            ', ' . ($defaultAddress->province ?? '') .
-            ', ' . ($defaultAddress->region ?? '') .
-            ($defaultAddress->postal_code ? ', ' . $defaultAddress->postal_code : ''),
-            ', '
-        )
-        : 'No address added yet.'
-    }}
-                    </textarea>
-            </div>
 
             <h4 class="modal-section-title">Change Email and Password</h4>
+            <br>
             <hr class="section-line">
 
             <div class="form-group">
@@ -257,9 +244,11 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const isCompactViewport = () => window.matchMedia('(max-width: 820px)').matches;
+        const body = document.body;
         const headerMain = document.querySelector('.header-main');
         const nav = document.querySelector('.navbar');
         const navToggle = document.querySelector('.header-menu-toggle');
+        const navClose = document.querySelector('.navbar-close');
         const mobileProfileDropdown = { container: '.buyer-profile-dropdown', trigger: '.profile-trigger' };
         const mobileDropdowns = [mobileProfileDropdown];
         const desktopHoverDropdowns = [
@@ -300,6 +289,7 @@
             headerMain.classList.remove('nav-open');
             nav.classList.remove('is-open');
             navToggle.setAttribute('aria-expanded', 'false');
+            body.classList.remove('frontend-nav-open');
         };
 
         if (nav && navToggle && headerMain) {
@@ -315,6 +305,18 @@
                 headerMain.classList.toggle('nav-open', shouldOpen);
                 nav.classList.toggle('is-open', shouldOpen);
                 navToggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+                body.classList.toggle('frontend-nav-open', shouldOpen);
+            });
+        }
+
+        if (navClose && nav) {
+            navClose.addEventListener('click', function (event) {
+                if (!isCompactViewport()) {
+                    return;
+                }
+
+                event.preventDefault();
+                closeCompactNav();
             });
         }
 
@@ -486,56 +488,118 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('searchInput');
+        const searchClearButton = document.getElementById('searchClearButton');
         const suggestionsBox = document.getElementById('searchSuggestions');
+        let activeRequestController = null;
 
-        if (!searchInput || !suggestionsBox) return;
+        if (!searchInput || !searchClearButton || !suggestionsBox) return;
 
-        searchInput.addEventListener('input', async function () {
-            const query = this.value.trim();
+        const hideSuggestions = () => {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.style.display = 'none';
+        };
 
-            if (query.length < 1) {
-                suggestionsBox.innerHTML = '';
-                suggestionsBox.style.display = 'none';
+        const syncClearButton = () => {
+            const hasValue = searchInput.value.trim().length > 0;
+            searchClearButton.classList.toggle('is-hidden', !hasValue);
+        };
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const renderSuggestions = (suggestions) => {
+            if (!suggestions.length) {
+                hideSuggestions();
                 return;
             }
 
-            try {
-                const response = await fetch(`/products/suggestions?q=${encodeURIComponent(query)}`);
-                const suggestions = await response.json();
+            suggestionsBox.innerHTML = suggestions.map((item) => {
+                const label = escapeHtml(item.label);
 
-                if (!suggestions.length) {
-                    suggestionsBox.innerHTML = '';
-                    suggestionsBox.style.display = 'none';
+                if (item.selectable === false) {
+                    return `<div class="suggestion-item is-empty">${label}</div>`;
+                }
+
+                return `<div class="suggestion-item" data-suggestion-label="${label}">${label}</div>`;
+            }).join('');
+
+            suggestionsBox.style.display = 'block';
+
+            suggestionsBox.querySelectorAll('.suggestion-item').forEach(item => {
+                if (item.classList.contains('is-empty')) {
                     return;
                 }
 
-                suggestionsBox.innerHTML = suggestions.map(item => `
-                <div class="suggestion-item">${item}</div>
-            `).join('');
-
-                suggestionsBox.style.display = 'block';
-
-                document.querySelectorAll('.suggestion-item').forEach(item => {
-                    item.addEventListener('click', function () {
-                        searchInput.value = this.textContent;
-                        suggestionsBox.innerHTML = '';
-                        suggestionsBox.style.display = 'none';
-                        searchInput.form.submit();
-                    });
+                item.addEventListener('click', function () {
+                    searchInput.value = this.dataset.suggestionLabel || this.textContent;
+                    hideSuggestions();
+                    searchInput.form.submit();
                 });
-            } catch (error) {
-                console.error(error);
-                suggestionsBox.innerHTML = '';
-                suggestionsBox.style.display = 'none';
+            });
+        };
+
+        searchInput.addEventListener('input', function () {
+            const query = this.value.trim();
+
+            syncClearButton();
+
+            if (activeRequestController) {
+                activeRequestController.abort();
+                activeRequestController = null;
             }
+
+            if (query.length < 1) {
+                hideSuggestions();
+                return;
+            }
+
+            activeRequestController = new AbortController();
+
+            fetch(`/products/suggestions?q=${encodeURIComponent(query)}`, {
+                signal: activeRequestController.signal,
+                headers: {
+                    'Accept': 'application/json',
+                },
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error(`Suggestion request failed with status ${response.status}`);
+                    }
+
+                    return response.json();
+                })
+                .then((suggestions) => {
+                    renderSuggestions(Array.isArray(suggestions) ? suggestions : []);
+                })
+                .catch((error) => {
+                    if (error.name !== 'AbortError') {
+                        console.error(error);
+                        hideSuggestions();
+                    }
+                })
+                .finally(() => {
+                    activeRequestController = null;
+                });
+        });
+
+        searchClearButton.addEventListener('click', function () {
+            searchInput.value = '';
+            syncClearButton();
+            hideSuggestions();
+            window.location.assign(searchInput.form.action);
         });
 
         document.addEventListener('click', function (e) {
             if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
-                suggestionsBox.innerHTML = '';
-                suggestionsBox.style.display = 'none';
+                hideSuggestions();
             }
         });
+
+        syncClearButton();
     });
 </script>
 <script>

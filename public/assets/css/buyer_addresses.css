@@ -1,10 +1,12 @@
+/* assets/css/buyer_addresses.css */
+
 .address-page {
-  padding: 30px 0 18px;
+  padding: 22px 0 14px;
 }
 
 .address-shell {
   display: grid;
-  gap: 20px;
+  gap: 14px;
 }
 
 .checkout-breadcrumb {
@@ -12,7 +14,7 @@
   align-items: center;
   gap: 8px;
   color: var(--text-soft);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .checkout-breadcrumb a {
@@ -21,17 +23,17 @@
 
 .panel {
   border: 1px solid var(--border);
-  border-radius: 28px;
+  border-radius: 20px;
   background: rgba(7, 15, 27, 0.84);
   box-shadow: var(--shadow);
 }
 
 .address-hero {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 28px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 16px;
   animation: rise-in 720ms ease both;
 }
 
@@ -39,91 +41,67 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 12px;
-}
-
-.address-hero h1 {
-  max-width: 14ch;
-  margin: 12px 0 14px;
-  font-size: clamp(2.3rem, 6vw, 4rem);
-  line-height: 1;
-  letter-spacing: -0.05em;
-}
-
-.address-hero p,
-.address-content p,
-.empty-box p {
-  color: var(--text-muted);
-  line-height: 1.8;
-}
-
-.section-kicker {
-  display: inline-flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
-  border: 1px solid rgba(187, 222, 251, 0.18);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--accent);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  gap: 10px;
 }
 
 .success-message {
-  padding: 14px 18px;
+  padding: 10px 14px;
   border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 18px;
+  border-radius: 14px;
   background: rgba(76, 175, 80, 0.1);
   color: #a7f2b2;
+  font-size: 14px;
 }
 
 .address-list,
 .address-form-shell {
   display: grid;
-  gap: 18px;
+  gap: 12px;
 }
 
 .address-card,
 .form-panel {
-  padding: 24px;
+  padding: 16px;
 }
 
 .address-card-top {
   display: flex;
-  align-items: start;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 
 .address-card h3 {
-  margin-bottom: 6px;
-  font-size: 1.25rem;
+  margin-bottom: 3px;
+  font-size: 1.05rem;
   color: var(--text);
 }
 
-.address-phone {
-  color: var(--text-soft);
+.address-phone,
+.address-content p,
+.empty-box p {
+  color: var(--text-muted);
+  line-height: 1.55;
+  font-size: 14px;
 }
 
 .address-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tag {
   display: inline-flex;
   align-items: center;
-  min-height: 30px;
-  padding: 0 12px;
+  min-height: 26px;
+  padding: 0 10px;
   border: 1px solid rgba(187, 222, 251, 0.2);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--accent);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -134,30 +112,31 @@
 
 .address-content {
   display: grid;
-  gap: 6px;
+  gap: 3px;
 }
 
 .address-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 46px;
-  padding: 0 18px;
+  gap: 7px;
+  min-height: 38px;
+  padding: 0 14px;
   border: 1px solid rgba(66, 165, 245, 0.28);
   border-radius: 999px;
+  font-size: 14px;
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .action-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   border-color: rgba(66, 165, 245, 0.42);
 }
 
@@ -180,9 +159,9 @@
 
 .empty-box {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   justify-items: start;
-  padding: 28px;
+  padding: 20px;
 }
 
 .empty-box h3,
@@ -192,47 +171,48 @@
 }
 
 .form-panel h2 {
-  margin-bottom: 18px;
-  font-size: 1.5rem;
+  margin-bottom: 14px;
+  font-size: 1.25rem;
 }
 
 .address-form {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .form-group {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .form-group label,
 .default-row span,
 .label-row span {
   color: var(--accent);
+  font-size: 14px;
   font-weight: 600;
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
-  min-height: 50px;
-  padding: 12px 14px;
+  min-height: 42px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--text);
   outline: none;
 }
 
 .form-group textarea {
-  min-height: 110px;
+  min-height: 86px;
   resize: none;
 }
 
@@ -243,7 +223,7 @@
 }
 
 .modal-section {
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
 }
 
@@ -252,13 +232,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
 }
 
 .label-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .label-buttons input {
@@ -268,8 +248,8 @@
 .label-buttons span {
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
-  padding: 0 18px;
+  min-height: 36px;
+  padding: 0 14px;
   border: 1px solid rgba(187, 222, 251, 0.18);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.03);
@@ -278,7 +258,7 @@
   transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 
-.label-buttons input:checked + span {
+.label-buttons input:checked+span {
   background: rgba(66, 165, 245, 0.14);
   border-color: rgba(66, 165, 245, 0.36);
   color: var(--accent);
@@ -287,8 +267,9 @@
 .switch {
   position: relative;
   display: inline-block;
-  width: 54px;
-  height: 30px;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
 }
 
 .switch input {
@@ -308,8 +289,8 @@
 .slider::before {
   content: "";
   position: absolute;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   top: 3px;
   left: 3px;
   border-radius: 50%;
@@ -317,12 +298,12 @@
   transition: 0.3s ease;
 }
 
-.switch input:checked + .slider {
+.switch input:checked+.slider {
   background: var(--primary);
 }
 
-.switch input:checked + .slider::before {
-  transform: translateX(24px);
+.switch input:checked+.slider::before {
+  transform: translateX(22px);
 }
 
 .full-btn {
@@ -330,7 +311,7 @@
 }
 
 .divider {
-  margin: 14px 0 18px;
+  margin: 10px 0 14px;
   border: none;
   border-top: 1px solid var(--border);
 }
@@ -339,10 +320,11 @@
   position: fixed;
   inset: 0;
   display: none;
-  padding: 36px 16px;
+  padding: 24px 14px;
   background: rgba(1, 5, 10, 0.72);
   backdrop-filter: blur(18px);
   z-index: 1000;
+  overflow-y: auto;
 }
 
 .address-modal-overlay.show {
@@ -350,23 +332,25 @@
 }
 
 .address-modal {
-  width: min(640px, 100%);
+  position: relative;
+  width: min(620px, 100%);
   margin: 0 auto;
-  padding: 28px;
+  padding: 20px;
 }
 
 .close-address-modal {
   position: absolute;
-  top: 18px;
-  right: 20px;
+  top: 14px;
+  right: 16px;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: 30px;
+  font-size: 26px;
   cursor: pointer;
 }
 
 @media (max-width: 900px) {
+
   .address-hero,
   .address-card-top,
   .default-row,
@@ -387,25 +371,26 @@
 
 @media (max-width: 640px) {
   .address-page {
-    padding-top: 22px;
+    padding-top: 18px;
   }
 
   .panel,
   .address-card,
   .form-panel,
   .address-modal {
-    border-radius: 22px;
+    border-radius: 18px;
   }
 
   .address-hero,
   .address-card,
   .form-panel,
   .address-modal {
-    padding: 22px 18px;
+    padding: 16px 14px;
   }
 
-  .address-hero h1 {
-    max-width: none;
+  .address-actions,
+  .hero-actions {
+    width: 100%;
   }
 
   .action-btn,

@@ -5,17 +5,12 @@
     $widgetFetchUrl = $isSellerWidget ? route('seller.chat.widget') : route('chat.widget');
 @endphp
 
-<div
-    class="chat-widget-shell"
-    data-chat-widget
-    data-fetch-url="{{ $widgetFetchUrl }}"
-    data-initial-conversation="{{ (int) $initialConversation }}"
-    data-auto-open="{{ $autoOpenWidget ? '1' : '0' }}"
->
+<div class="chat-widget-shell" data-chat-widget data-fetch-url="{{ $widgetFetchUrl }}"
+    data-initial-conversation="{{ (int) $initialConversation }}" data-auto-open="{{ $autoOpenWidget ? '1' : '0' }}">
     <button type="button" class="chat-widget-fab" data-chat-toggle aria-label="Open chat">
         <i class="fa-regular fa-comments"></i>
-        <span>Chat</span>
-        <strong class="chat-widget-count" data-chat-count>0</strong>
+
+        <strong class="chat-widget-count" data-chat-count></strong>
     </button>
 
     <section class="chat-widget-panel panel" data-chat-panel aria-hidden="true">
@@ -42,7 +37,7 @@
                     <input type="text" placeholder="Search conversations..." data-chat-search>
                 </div>
 
-                <div class="chat-widget-conversations" data-chat-conversations></div>
+                <div class="chat-widget-conversations skeleton-swap is-content-ready" data-chat-conversations></div>
             </aside>
 
             <div class="chat-widget-main">
@@ -56,7 +51,7 @@
                     </div>
                 </div>
 
-                <div class="chat-widget-messages" data-chat-messages></div>
+                <div class="chat-widget-messages skeleton-swap is-content-ready" data-chat-messages></div>
 
                 <form class="chat-widget-form" data-chat-form enctype="multipart/form-data">
                     @csrf
@@ -99,23 +94,119 @@
             const previewEl = widget.querySelector('[data-chat-preview]');
             const backBtn = widget.querySelector('[data-chat-back]');
             let pollTimer = null;
+            let relativeTimeTimer = null;
             let typingTimer = null;
             let typingResetTimer = null;
             let imagePreviewUrl = null;
             let pendingScrollBehavior = 'auto';
+            let conversationsSwapTimer = null;
+            let messagesSwapTimer = null;
 
             const state = {
                 open: autoOpen,
                 minimized: false,
                 loading: false,
+                hasLoadedOnce: false,
                 activeConversationId: initialConversationId || null,
                 conversations: [],
                 activeConversation: null,
                 mobileView: initialConversationId ? 'thread' : 'list',
+                renderCache: {
+                    conversationsKey: '',
+                    messagesKey: '',
+                },
             };
 
             const isMobileChatViewport = () => window.matchMedia('(max-width: 640px)').matches;
             const openForLiveUpdates = () => state.open && !state.minimized;
+            const clearSwapTimer = (element) => {
+                if (element === conversationsEl && conversationsSwapTimer) {
+                    window.clearTimeout(conversationsSwapTimer);
+                    conversationsSwapTimer = null;
+                }
+
+                if (element === messagesEl && messagesSwapTimer) {
+                    window.clearTimeout(messagesSwapTimer);
+                    messagesSwapTimer = null;
+                }
+            };
+            const setSwapTimer = (element, timer) => {
+                if (element === conversationsEl) {
+                    conversationsSwapTimer = timer;
+                }
+
+                if (element === messagesEl) {
+                    messagesSwapTimer = timer;
+                }
+            };
+            const pulseSwap = (element) => {
+                if (!element) {
+                    return;
+                }
+
+                clearSwapTimer(element);
+                element.classList.remove('is-animating');
+                element.classList.remove('is-content-ready');
+                window.requestAnimationFrame(() => {
+                    element.classList.add('is-animating');
+                    element.classList.add('is-content-ready');
+                    setSwapTimer(element, window.setTimeout(() => {
+                        element.classList.remove('is-animating');
+                        clearSwapTimer(element);
+                    }, 320));
+                });
+            };
+            const normalizeConversationsKey = (conversations) => JSON.stringify(
+                (Array.isArray(conversations) ? conversations : []).map((conversation) => [
+                    conversation.id,
+                    conversation.name,
+                    conversation.preview,
+                    conversation.unread_count,
+                    conversation.active ? 1 : 0,
+                    conversation.updated_at_iso || '',
+                    conversation.avatar_url || '',
+                    conversation.avatar_initials || '',
+                ])
+            );
+            const normalizeMessagesKey = (activeConversation) => {
+                if (!activeConversation) {
+                    return 'no-active-conversation';
+                }
+
+                return JSON.stringify([
+                    activeConversation.id,
+                    activeConversation.name,
+                    activeConversation.role_label,
+                    activeConversation.avatar_url || '',
+                    activeConversation.avatar_initials || '',
+                    activeConversation.shop_url || '',
+                    activeConversation.typing_text || '',
+                    (Array.isArray(activeConversation.messages) ? activeConversation.messages : []).map((message) => [
+                        message.id,
+                        message.sender_label,
+                        message.message || '',
+                        message.image_url || '',
+                        message.time,
+                        message.is_current_user ? 1 : 0,
+                        message.is_seen ? 1 : 0,
+                        message.status_label || '',
+                    ]),
+                ]);
+            };
+            const setComposerBusy = (busy) => {
+                form.classList.toggle('is-busy', busy);
+                form.classList.toggle('is-disabled', busy || !state.activeConversation);
+                input.disabled = busy || !state.activeConversation;
+
+                const sendButton = form.querySelector('.chat-widget-send');
+                if (sendButton) {
+                    sendButton.disabled = busy || !state.activeConversation;
+                }
+
+                if (attachBtn) {
+                    attachBtn.disabled = busy || !state.activeConversation;
+                }
+            };
             const isNearMessagesBottom = () => {
                 if (!messagesEl) {
                     return true;
@@ -132,6 +223,63 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+            const relativeTimeFormatter = typeof Intl !== 'undefined' && Intl.RelativeTimeFormat
+                ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+                : null;
+            const formatRelativeTime = (isoValue, fallback) => {
+                if (!isoValue) {
+                    return fallback || 'No messages yet';
+                }
+
+                const timestamp = new Date(isoValue);
+                const timestampMs = timestamp.getTime();
+                if (Number.isNaN(timestampMs)) {
+                    return fallback || 'No messages yet';
+                }
+
+                if (!relativeTimeFormatter) {
+                    return fallback || 'No messages yet';
+                }
+
+                const diffSeconds = Math.round((timestampMs - Date.now()) / 1000);
+                const absoluteSeconds = Math.abs(diffSeconds);
+
+                if (absoluteSeconds < 45) {
+                    return relativeTimeFormatter.format(diffSeconds, 'second');
+                }
+
+                if (absoluteSeconds < 2700) {
+                    return relativeTimeFormatter.format(Math.round(diffSeconds / 60), 'minute');
+                }
+
+                if (absoluteSeconds < 64800) {
+                    return relativeTimeFormatter.format(Math.round(diffSeconds / 3600), 'hour');
+                }
+
+                if (absoluteSeconds < 561600) {
+                    return relativeTimeFormatter.format(Math.round(diffSeconds / 86400), 'day');
+                }
+
+                if (absoluteSeconds < 2419200) {
+                    return relativeTimeFormatter.format(Math.round(diffSeconds / 604800), 'week');
+                }
+
+                return fallback || timestamp.toLocaleDateString();
+            };
+            const refreshConversationRelativeTimes = () => {
+                conversationsEl.querySelectorAll('[data-chat-relative-time]').forEach((element) => {
+                    const isoValue = element.getAttribute('data-chat-relative-time');
+                    const fallback = element.getAttribute('data-chat-relative-fallback') || '';
+                    element.textContent = formatRelativeTime(isoValue, fallback);
+                });
+            };
+            const startRelativeTimeTicker = () => {
+                if (relativeTimeTimer) {
+                    return;
+                }
+
+                relativeTimeTimer = window.setInterval(refreshConversationRelativeTimes, 30000);
+            };
 
             const updateShellState = () => {
                 widget.classList.toggle('is-open', state.open && !state.minimized);
@@ -199,6 +347,70 @@
                 });
             };
 
+            const renderConversationsLoading = () => {
+                const placeholderCount = isMobileChatViewport() ? 4 : 5;
+                clearSwapTimer(conversationsEl);
+                conversationsEl.classList.remove('is-animating');
+                conversationsEl.classList.add('is-loading');
+                conversationsEl.classList.remove('is-content-ready');
+                conversationsEl.innerHTML = Array.from({ length: placeholderCount }, (_, index) => `
+                    <div class="chat-widget-conversation chat-widget-conversation--placeholder skeleton-shell is-loading" aria-hidden="true">
+                        <span class="chat-widget-avatar skeleton skeleton-avatar"></span>
+                        <span class="chat-widget-conversation-copy">
+                            <strong class="chat-widget-skeleton-line chat-widget-skeleton-line--title skeleton skeleton-text">Conversation ${index + 1}</strong>
+                            <span class="chat-widget-skeleton-line chat-widget-skeleton-line--body skeleton skeleton-text">Loading preview</span>
+                            <small class="chat-widget-skeleton-line chat-widget-skeleton-line--meta skeleton skeleton-text">Now</small>
+                        </span>
+                    </div>
+                `).join('');
+            };
+
+            const renderMessagesLoading = () => {
+                headerEl.innerHTML = `
+                    <div class="chat-widget-loading-header skeleton-shell is-loading" aria-hidden="true">
+                        <span class="chat-widget-profile-avatar skeleton skeleton-avatar"></span>
+                        <span class="chat-widget-loading-copy">
+                            <span class="chat-widget-loading-title skeleton skeleton-text">Loading conversation</span>
+                            <span class="chat-widget-loading-subtitle skeleton skeleton-text">Fetching latest messages</span>
+                        </span>
+                    </div>
+                `;
+
+                clearSwapTimer(messagesEl);
+                messagesEl.classList.remove('is-animating');
+                messagesEl.classList.add('is-loading');
+                messagesEl.classList.remove('is-content-ready');
+                messagesEl.innerHTML = `
+                    <div class="chat-widget-row chat-widget-row--placeholder is-left skeleton-shell is-loading" aria-hidden="true">
+                        <div class="chat-widget-bubble skeleton">
+                            <div class="chat-widget-message-lines">
+                                <span class="skeleton skeleton-text">Loading message</span>
+                                <span class="skeleton skeleton-text">Loading message</span>
+                            </div>
+                        </div>
+                        <span class="chat-widget-time skeleton skeleton-text">Now</span>
+                    </div>
+                    <div class="chat-widget-row chat-widget-row--placeholder is-right skeleton-shell is-loading" aria-hidden="true">
+                        <div class="chat-widget-bubble skeleton">
+                            <div class="chat-widget-message-lines">
+                                <span class="skeleton skeleton-text">Loading message</span>
+                                <span class="skeleton skeleton-text">Loading message</span>
+                            </div>
+                        </div>
+                        <span class="chat-widget-time skeleton skeleton-text">Now</span>
+                    </div>
+                    <div class="chat-widget-row chat-widget-row--placeholder is-left skeleton-shell is-loading" aria-hidden="true">
+                        <div class="chat-widget-bubble skeleton">
+                            <div class="chat-widget-message-lines">
+                                <span class="skeleton skeleton-text">Loading message</span>
+                                <span class="skeleton skeleton-text">Loading message</span>
+                            </div>
+                        </div>
+                        <span class="chat-widget-time skeleton skeleton-text">Now</span>
+                    </div>
+                `;
+            };
+
             const syncTyping = async (typing) => {
                 const typingUrl = state.activeConversation?.typing_url;
                 if (!typingUrl) {
@@ -259,7 +471,7 @@
                 startPolling();
             };
 
-            const renderConversations = () => {
+            const renderConversations = ({ force = false, animate = false } = {}) => {
                 const keyword = (searchInput.value || '').trim().toLowerCase();
                 const filtered = state.conversations.filter((conversation) => {
                     if (!keyword) {
@@ -273,6 +485,16 @@
                 countBadge.textContent = state.conversations.length;
                 countBadge.classList.toggle('is-hidden', state.conversations.length < 1);
 
+                const renderKey = JSON.stringify([
+                    keyword,
+                    state.activeConversationId || 0,
+                    normalizeConversationsKey(filtered),
+                ]);
+
+                if (!force && renderKey === state.renderCache.conversationsKey && !conversationsEl.classList.contains('is-loading')) {
+                    return;
+                }
+
                 if (!filtered.length) {
                     conversationsEl.innerHTML = `
                         <div class="chat-widget-empty">
@@ -280,24 +502,47 @@
                             <p>Try a different keyword or start a conversation from a product page.</p>
                         </div>
                     `;
+                    conversationsEl.classList.remove('is-loading');
+                    if (animate) {
+                        pulseSwap(conversationsEl);
+                    } else {
+                        clearSwapTimer(conversationsEl);
+                        conversationsEl.classList.remove('is-animating');
+                        conversationsEl.classList.add('is-content-ready');
+                    }
+                    state.renderCache.conversationsKey = renderKey;
                     return;
                 }
 
                 conversationsEl.innerHTML = filtered.map((conversation) => `
                     <button type="button" class="chat-widget-conversation ${conversation.id === state.activeConversationId ? 'is-active' : ''}" data-conversation-id="${conversation.id}">
                         ${conversation.avatar_url
-                            ? `<img src="${escapeHtml(conversation.avatar_url)}" alt="${escapeHtml(conversation.name)}">`
-                            : `<span class="chat-widget-avatar">${escapeHtml(conversation.avatar_initials)}</span>`}
+                        ? `<img src="${escapeHtml(conversation.avatar_url)}" alt="${escapeHtml(conversation.name)}">`
+                        : `<span class="chat-widget-avatar">${escapeHtml(conversation.avatar_initials)}</span>`}
                         <span class="chat-widget-conversation-copy">
                             <span class="chat-widget-conversation-topline">
                                 <strong>${escapeHtml(conversation.name)}</strong>
                                 ${conversation.unread_count > 0 ? `<span class="chat-widget-unread-badge">${conversation.unread_count}</span>` : ''}
                             </span>
                             <p>${escapeHtml(conversation.preview)}</p>
-                            <small>${escapeHtml(conversation.updated_at)}</small>
+                            <small
+                                data-chat-relative-time="${escapeHtml(conversation.updated_at_iso || '')}"
+                                data-chat-relative-fallback="${escapeHtml(conversation.updated_at || 'No messages yet')}">
+                                ${escapeHtml(formatRelativeTime(conversation.updated_at_iso, conversation.updated_at))}
+                            </small>
                         </span>
                     </button>
                 `).join('');
+                conversationsEl.classList.remove('is-loading');
+                if (animate) {
+                    pulseSwap(conversationsEl);
+                } else {
+                    clearSwapTimer(conversationsEl);
+                    conversationsEl.classList.remove('is-animating');
+                    conversationsEl.classList.add('is-content-ready');
+                }
+                state.renderCache.conversationsKey = renderKey;
+                refreshConversationRelativeTimes();
 
                 conversationsEl.querySelectorAll('[data-conversation-id]').forEach((button) => {
                     button.addEventListener('click', function () {
@@ -315,9 +560,16 @@
                 });
             };
 
-            const renderMessages = () => {
+            const renderMessages = ({ force = false, animate = false } = {}) => {
                 const active = state.activeConversation;
                 const shouldStickToBottom = pendingScrollBehavior === 'force' || isNearMessagesBottom();
+                const renderKey = normalizeMessagesKey(active);
+
+                if (!force && renderKey === state.renderCache.messagesKey && !messagesEl.classList.contains('is-loading')) {
+                    setComposerBusy(false);
+                    updateShellState();
+                    return;
+                }
 
                 if (!active) {
                     resetSelectedFile();
@@ -333,11 +585,16 @@
                             <p>Select a conversation or start one from a product or shop page.</p>
                         </div>
                     `;
-                    form.classList.add('is-disabled');
-                    input.disabled = true;
-                    if (attachBtn) {
-                        attachBtn.disabled = true;
+                    messagesEl.classList.remove('is-loading');
+                    setComposerBusy(false);
+                    if (animate) {
+                        pulseSwap(messagesEl);
+                    } else {
+                        clearSwapTimer(messagesEl);
+                        messagesEl.classList.remove('is-animating');
+                        messagesEl.classList.add('is-content-ready');
                     }
+                    state.renderCache.messagesKey = renderKey;
                     updateShellState();
                     return;
                 }
@@ -346,8 +603,8 @@
                     ${active.shop_url
                         ? `<a href="${escapeHtml(active.shop_url)}" class="chat-widget-profile-link">
                                 ${active.avatar_url
-                                    ? `<img src="${escapeHtml(active.avatar_url)}" alt="${escapeHtml(active.name)}" class="chat-widget-profile-image">`
-                                    : `<span class="chat-widget-profile-avatar">${escapeHtml(active.avatar_initials)}</span>`}
+                            ? `<img src="${escapeHtml(active.avatar_url)}" alt="${escapeHtml(active.name)}" class="chat-widget-profile-image">`
+                            : `<span class="chat-widget-profile-avatar">${escapeHtml(active.avatar_initials)}</span>`}
                                 <span class="chat-widget-active-copy">
                                     <h4>${escapeHtml(active.name)}</h4>
                                     <span>${escapeHtml(active.role_label)}</span>
@@ -391,12 +648,17 @@
                     `);
                 }
 
-                form.classList.remove('is-disabled');
-                input.disabled = false;
-                if (attachBtn) {
-                    attachBtn.disabled = false;
-                }
+                messagesEl.classList.remove('is-loading');
+                setComposerBusy(false);
                 form.dataset.sendUrl = active.send_url;
+                if (animate) {
+                    pulseSwap(messagesEl);
+                } else {
+                    clearSwapTimer(messagesEl);
+                    messagesEl.classList.remove('is-animating');
+                    messagesEl.classList.add('is-content-ready');
+                }
+                state.renderCache.messagesKey = renderKey;
 
                 if (shouldStickToBottom) {
                     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -406,9 +668,9 @@
                 updateShellState();
             };
 
-            const renderAll = () => {
-                renderConversations();
-                renderMessages();
+            const renderAll = (options = {}) => {
+                renderConversations(options);
+                renderMessages(options);
             };
 
             const loadWidget = async (conversationId = state.activeConversationId) => {
@@ -420,10 +682,19 @@
                 const requestedConversationId = conversationId || null;
                 const previousConversationId = state.activeConversationId || null;
                 const preserveBottom = isNearMessagesBottom();
+                const shouldShowLoadingState = !state.hasLoadedOnce
+                    || requestedConversationId !== previousConversationId
+                    || (!state.activeConversation && (!!requestedConversationId || state.conversations.length > 0));
 
                 const url = new URL(fetchUrl, window.location.origin);
                 if (conversationId) {
                     url.searchParams.set('conversation', String(conversationId));
+                }
+
+                if (shouldShowLoadingState) {
+                    renderConversationsLoading();
+                    renderMessagesLoading();
+                    setComposerBusy(true);
                 }
 
                 try {
@@ -443,6 +714,7 @@
                     state.conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
                     state.activeConversation = payload.active_conversation || null;
                     state.activeConversationId = state.activeConversation?.id || (state.conversations[0]?.id ?? null);
+                    state.hasLoadedOnce = true;
                     pendingScrollBehavior = requestedConversationId !== previousConversationId
                         ? 'force'
                         : (preserveBottom ? 'force' : 'preserve');
@@ -451,11 +723,16 @@
                         state.mobileView = state.activeConversation ? 'thread' : 'list';
                     }
 
-                    renderAll();
-                    restartPolling();
+                    renderAll({
+                        force: shouldShowLoadingState,
+                        animate: shouldShowLoadingState,
+                    });
                 } catch (error) {
                     console.error(error);
                 } finally {
+                    if (shouldShowLoadingState) {
+                        setComposerBusy(false);
+                    }
                     state.loading = false;
                 }
             };
@@ -466,7 +743,7 @@
                 updateShellState();
                 restartPolling();
 
-                if (!state.conversations.length) {
+                if (!state.hasLoadedOnce) {
                     loadWidget();
                 } else {
                     renderAll();
@@ -519,7 +796,9 @@
                 });
             }
 
-            searchInput.addEventListener('input', renderConversations);
+            searchInput.addEventListener('input', function () {
+                renderConversations({ force: true, animate: false });
+            });
 
             document.querySelectorAll('[data-chat-start-form]').forEach((startForm) => {
                 startForm.addEventListener('submit', async function (event) {
@@ -557,7 +836,7 @@
                             pendingScrollBehavior = 'force';
                             resetSelectedFile();
                             openWidget();
-                            renderAll();
+                            renderAll({ force: true, animate: true });
                             return;
                         }
 
@@ -670,7 +949,7 @@
                         window.clearTimeout(typingResetTimer);
                         syncTyping(false);
                         resetSelectedFile();
-                        renderAll();
+                        renderAll({ force: true, animate: true });
                     } else {
                         await loadWidget(state.activeConversationId);
                         input.value = '';
@@ -682,6 +961,8 @@
             });
 
             updateShellState();
+            startRelativeTimeTicker();
+            refreshConversationRelativeTimes();
 
             window.addEventListener('resize', function () {
                 if (!isMobileChatViewport()) {

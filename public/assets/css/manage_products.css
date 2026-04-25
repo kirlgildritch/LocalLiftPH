@@ -130,3 +130,66 @@
   color: #dfeaff;
   font-size: 13px;
 }
+
+.seller-table .action-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(190px, 100%);
+  min-width: 190px;
+}
+
+.seller-table .action-buttons .table-action {
+  width: 100%;
+  min-height: 42px;
+}
+
+.seller-table .action-buttons form {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.seller-table .action-buttons form .table-action {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .table-panel {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-panel::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .table-panel::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(143, 167, 196, 0.4);
+  }
+
+  .table-panel::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .seller-table {
+    min-width: 980px;
+  }
+
+  .seller-table .action-buttons {
+    min-width: 190px;
+  }
+}
+
+@media (max-width: 560px) {
+  .product-status-tabs {
+    gap: 10px;
+  }
+
+  .product-status-tab {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 0;
+    padding: 0 12px;
+  }
+}

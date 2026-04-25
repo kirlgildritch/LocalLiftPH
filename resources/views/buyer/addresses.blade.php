@@ -14,11 +14,7 @@
         </div>
 
         <div class="address-hero panel">
-            <div>
-                <span class="section-kicker">Address Book</span>
-                <h1>Manage saved delivery addresses</h1>
-                <p>Keep delivery details organized with one clean address list, consistent actions, and a simpler editing flow.</p>
-            </div>
+
 
             <div class="hero-actions">
                 @if($returnTo)
@@ -28,7 +24,8 @@
                     </a>
                 @endif
 
-                <a href="{{ route('buyer.addresses.create', ['return_to' => $returnTo]) }}" class="action-btn primary-btn">
+                <a href="{{ route('buyer.addresses.create', ['return_to' => $returnTo]) }}"
+                    class="action-btn primary-btn">
                     <i class="fa-solid fa-plus"></i>
                     Add New Address
                 </a>
@@ -79,23 +76,18 @@
                             </form>
                         @endif
 
-                        <button type="button"
-                                class="action-btn secondary-btn open-edit-address"
-                                data-id="{{ $address->id }}"
-                                data-full_name="{{ $address->full_name }}"
-                                data-phone="{{ $address->phone }}"
-                                data-region="{{ $address->region }}"
-                                data-province="{{ $address->province }}"
-                                data-city="{{ $address->city }}"
-                                data-barangay="{{ $address->barangay }}"
-                                data-postal_code="{{ $address->postal_code }}"
-                                data-label="{{ $address->label }}"
-                                data-street_address="{{ $address->street_address }}"
-                                data-is_default="{{ $address->is_default ? 1 : 0 }}">
+                        <button type="button" class="action-btn secondary-btn open-edit-address"
+                            data-id="{{ $address->id }}" data-full_name="{{ $address->full_name }}"
+                            data-phone="{{ $address->phone }}" data-region="{{ $address->region }}"
+                            data-province="{{ $address->province }}" data-city="{{ $address->city }}"
+                            data-barangay="{{ $address->barangay }}" data-postal_code="{{ $address->postal_code }}"
+                            data-label="{{ $address->label }}" data-street_address="{{ $address->street_address }}"
+                            data-is_default="{{ $address->is_default ? 1 : 0 }}">
                             Edit
                         </button>
 
-                        <form action="{{ route('buyer.addresses.destroy', $address) }}" method="POST" onsubmit="return confirm('Delete this address?')">
+                        <form action="{{ route('buyer.addresses.destroy', $address) }}" method="POST"
+                            onsubmit="return confirm('Delete this address?')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="action-btn danger-btn">Delete</button>
@@ -163,7 +155,8 @@
 
             <div class="form-group">
                 <label for="edit_street_address">Street Address</label>
-                <textarea name="street_address" id="edit_street_address" rows="3" placeholder="Street Address"></textarea>
+                <textarea name="street_address" id="edit_street_address" rows="3"
+                    placeholder="Street Address"></textarea>
             </div>
 
             <div class="modal-section">
@@ -204,47 +197,47 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const modal = document.getElementById('editAddressModal');
-    const closeBtn = document.getElementById('closeEditAddressModal');
-    const form = document.getElementById('editAddressForm');
+    document.addEventListener('DOMContentLoaded', function () {
+        const modal = document.getElementById('editAddressModal');
+        const closeBtn = document.getElementById('closeEditAddressModal');
+        const form = document.getElementById('editAddressForm');
 
-    if (!modal || !closeBtn || !form) return;
+        if (!modal || !closeBtn || !form) return;
 
-    document.querySelectorAll('.open-edit-address').forEach(button => {
-        button.addEventListener('click', function () {
-            const id = this.dataset.id;
-            const label = this.dataset.label || '';
-            form.action = `/my-addresses/${id}`;
-            document.getElementById('edit_full_name').value = this.dataset.full_name || '';
-            document.getElementById('edit_phone').value = this.dataset.phone || '';
-            document.getElementById('edit_region').value = this.dataset.region || '';
-            document.getElementById('edit_province').value = this.dataset.province || '';
-            document.getElementById('edit_city').value = this.dataset.city || '';
-            document.getElementById('edit_barangay').value = this.dataset.barangay || '';
-            document.getElementById('edit_postal_code').value = this.dataset.postal_code || '';
-            document.getElementById('edit_street_address').value = this.dataset.street_address || '';
-            document.getElementById('edit_label_home').checked = label === 'Home';
-            document.getElementById('edit_label_work').checked = label === 'Work';
-            document.getElementById('edit_label_other').checked = label === 'Other';
-            document.getElementById('edit_is_default').checked = this.dataset.is_default == '1';
+        document.querySelectorAll('.open-edit-address').forEach(button => {
+            button.addEventListener('click', function () {
+                const id = this.dataset.id;
+                const label = this.dataset.label || '';
+                form.action = `/my-addresses/${id}`;
+                document.getElementById('edit_full_name').value = this.dataset.full_name || '';
+                document.getElementById('edit_phone').value = this.dataset.phone || '';
+                document.getElementById('edit_region').value = this.dataset.region || '';
+                document.getElementById('edit_province').value = this.dataset.province || '';
+                document.getElementById('edit_city').value = this.dataset.city || '';
+                document.getElementById('edit_barangay').value = this.dataset.barangay || '';
+                document.getElementById('edit_postal_code').value = this.dataset.postal_code || '';
+                document.getElementById('edit_street_address').value = this.dataset.street_address || '';
+                document.getElementById('edit_label_home').checked = label === 'Home';
+                document.getElementById('edit_label_work').checked = label === 'Work';
+                document.getElementById('edit_label_other').checked = label === 'Other';
+                document.getElementById('edit_is_default').checked = this.dataset.is_default == '1';
 
-            modal.classList.add('show');
-            document.body.classList.add('modal-open');
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+            });
         });
-    });
 
-    closeBtn.addEventListener('click', function () {
-        modal.classList.remove('show');
-        document.body.classList.remove('modal-open');
-    });
-
-    modal.addEventListener('click', function (e) {
-        if (e.target === modal) {
+        closeBtn.addEventListener('click', function () {
             modal.classList.remove('show');
             document.body.classList.remove('modal-open');
-        }
+        });
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+                document.body.classList.remove('modal-open');
+            }
+        });
     });
-});
 </script>
 @endsection
