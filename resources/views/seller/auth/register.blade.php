@@ -6,7 +6,7 @@
         <div class="seller-auth-topbar">
             <a href="{{ route('home') }}" class="seller-auth-brand">
                 <div class="seller-auth-brand-mark">
-                    <img src="{{ asset('assets/image/Logo.png') }}" alt="">
+                    <img src="{{ asset('assets/image/Logo.png') }}" alt="Logo">
                 </div>
                 <div class="seller-auth-brand-copy">
                     <strong>LocalLift Seller Center</strong>

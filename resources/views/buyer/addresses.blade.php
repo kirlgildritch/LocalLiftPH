@@ -13,7 +13,7 @@
             <span>Addresses</span>
         </div>
 
-        <div class="address-hero panel">
+        <div>
 
 
             <div class="hero-actions">
@@ -32,9 +32,6 @@
             </div>
         </div>
 
-        @if(session('success'))
-            <p class="success-message">{{ session('success') }}</p>
-        @endif
 
         <div class="address-list">
             @forelse($addresses as $address)

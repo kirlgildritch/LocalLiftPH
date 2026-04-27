@@ -15,13 +15,7 @@
             <span>New Address</span>
         </div>
 
-        <div class="address-hero panel">
 
-            <a href="{{ $returnTo ?: route('buyer.addresses') }}" class="action-btn secondary-btn">
-                <i class="fa-solid fa-arrow-left"></i>
-                {{ $returnTo ? 'Back' : 'Back to Addresses' }}
-            </a>
-        </div>
 
         <form action="{{ route('buyer.addresses.store') }}" method="POST" class="address-form-shell">
             @csrf

@@ -178,9 +178,6 @@
             <div class="divider"></div>
         </div>
 
-        @if(session('success'))
-            <p class="success-message">{{ session('success') }}</p>
-        @endif
 
         <form action="{{ route('buyer.profile.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -204,10 +201,6 @@
                 <input type="text" name="name" id="name" value="{{ old('name', $currentUser->name) }}">
             </div>
 
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" name="email" id="email" value="{{ old('email', $currentUser->email) }}">
-            </div>
 
 
 

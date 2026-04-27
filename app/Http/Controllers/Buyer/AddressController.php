@@ -63,7 +63,8 @@ class AddressController extends Controller
             ]));
         });
 
-        return back()->with('address_success', 'Address added successfully.');
+        return redirect()->to(request('return_to') ?: route('buyer.addresses'))
+            ->with('success', 'Address saved successfully.');
     }
 
     public function update(Request $request, Address $address)
