@@ -17,20 +17,6 @@
                 <span>Order #{{ $order->id }}</span>
             </div>
 
-            @if(session('success'))
-                <div class="feedback-banner success-banner panel">{{ session('success') }}</div>
-            @endif
-
-            @if(session('error'))
-                <div class="feedback-banner error-banner panel">{{ session('error') }}</div>
-            @endif
-
-            @if($errors->any())
-                <div class="feedback-banner error-banner panel">
-                    {{ $errors->first() }}
-                </div>
-            @endif
-
             <div class="orders-toolbar panel">
                 <div class="toolbar-copy">
                     <span class="toolbar-label">Details</span>
