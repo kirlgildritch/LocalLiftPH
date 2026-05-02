@@ -9,8 +9,6 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
-                    @include('seller.partials.success-toast')
-
                     @php
                         $descriptionValue = old('description');
 

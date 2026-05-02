@@ -17,10 +17,6 @@
                         </div>
                     </div>
 
-                    @if(session('success'))
-                        <p class="seller-feedback success-message">Profile updated successfully.</p>
-                    @endif
-
                     <form method="POST" action="{{ route('seller.profile.update') }}" enctype="multipart/form-data" class="profile-form">
                         @csrf
                         @method('PATCH')

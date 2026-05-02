@@ -9,15 +9,7 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
-                    @include('seller.partials.success-toast')
-
                     <section class="seller-page-panel panel">
-                        @if(session('error'))
-                            <div class="seller-feedback error-message" style="margin-bottom: 14px;">
-                                {{ session('error') }}
-                            </div>
-                        @endif
-
                         <div class="page-header">
                             <div>
                                 <span class="section-kicker">Catalog</span>

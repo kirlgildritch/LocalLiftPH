@@ -15,7 +15,36 @@
 </head>
 
 <body>
-    @php($currentRoute = request()->route()?->getName())
+    @php
+        $currentRoute = request()->route()?->getName();
+        $adminToast = null;
+
+        foreach (['success', 'error', 'warning', 'info'] as $type) {
+            if (session()->has($type)) {
+                $adminToast = [
+                    'type' => $type,
+                    'message' => session($type),
+                ];
+                break;
+            }
+        }
+
+        if (! $adminToast && $errors->any()) {
+            $adminToast = [
+                'type' => 'error',
+                'message' => $errors->first(),
+            ];
+        }
+
+        $adminToastIcon = $adminToast
+            ? match ($adminToast['type']) {
+                'error' => 'fa-circle-xmark',
+                'warning' => 'fa-triangle-exclamation',
+                'info' => 'fa-circle-info',
+                default => 'fa-circle-check',
+            }
+            : null;
+    @endphp
 
     <div class="admin-shell">
         <aside class="sidebar">
@@ -104,6 +133,18 @@
     @stack('modals')
     @stack('scripts')
 
+    @if ($adminToast)
+        <div
+            id="admin-toast"
+            class="toast-message toast-message--{{ $adminToast['type'] }}"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="fa-solid {{ $adminToastIcon }}"></i>
+            <span>{{ $adminToast['message'] }}</span>
+        </div>
+    @endif
+
     <script>
         const toggleButton = document.querySelector('[data-sidebar-toggle]');
         const closeButton = document.querySelector('[data-sidebar-close]');
@@ -154,6 +195,22 @@
             if (!isMobileAdminViewport()) {
                 closeSidebar();
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const toast = document.getElementById('admin-toast');
+
+            if (!toast) {
+                return;
+            }
+
+            window.setTimeout(() => {
+                toast.classList.add('toast-hide');
+
+                window.setTimeout(() => {
+                    toast.remove();
+                }, 400);
+            }, 3000);
         });
     </script>
 </body>

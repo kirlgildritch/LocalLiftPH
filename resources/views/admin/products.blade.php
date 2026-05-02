@@ -120,14 +120,6 @@
     @endphp
 
     <div class="page-stack">
-        @if (session('success'))
-            <div class="alert-note">{{ session('success') }}</div>
-        @endif
-
-        @if ($errors->any())
-            <div class="alert-note alert-note--danger">{{ $errors->first() }}</div>
-        @endif
-
         <div class="status-tabs" role="tablist" aria-label="Product moderation statuses">
             @foreach ($statusMeta as $tab => $meta)
                 <a class="chip {{ $currentTab === $tab ? 'is-active' : '' }}"

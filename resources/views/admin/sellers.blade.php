@@ -18,10 +18,6 @@
     @endphp
 
     <div class="page-stack">
-        @if (session('success'))
-            <div class="alert-note">{{ session('success') }}</div>
-        @endif
-
         <section class="seller-stats-grid">
             @foreach ($stats as $stat)
                 <article class="seller-stat-card seller-stat-card--{{ $stat['tone'] }}">
@@ -236,28 +232,47 @@
                         <input type="hidden" name="application_status" value="pending" id="seller-review-status">
                         <input type="hidden" name="request_more_documents" value="0" id="seller-request-more-documents">
 
-                        <div class="info-card">
-                            <div class="detail-line"><span>Reason</span><strong id="seller-request-current-reason">None</strong></div>
-                            <div class="detail-line"><span>Notes</span><strong id="seller-request-current-notes">None</strong></div>
-                            <div class="detail-line"><span>Requested</span><strong id="seller-request-current-date">N/A</strong></div>
-                            <div class="detail-line"><span>Status</span><strong id="seller-request-current-status">None</strong></div>
+                        <div class="seller-request-card">
+                            <div class="seller-request-empty-state" id="seller-request-empty-state">
+                                <strong>No document request yet.</strong>
+                                <p>Send a request below if you need more verification documents from this seller.</p>
+                            </div>
+
+                            <div class="seller-request-details" id="seller-request-details" hidden>
+                                <div class="seller-request-detail-row">
+                                    <span>Reason</span>
+                                    <strong id="seller-request-current-reason">None</strong>
+                                </div>
+                                <div class="seller-request-detail-row">
+                                    <span>Notes</span>
+                                    <strong id="seller-request-current-notes">None</strong>
+                                </div>
+                                <div class="seller-request-detail-row">
+                                    <span>Requested</span>
+                                    <strong id="seller-request-current-date">N/A</strong>
+                                </div>
+                                <div class="seller-request-detail-row">
+                                    <span>Status</span>
+                                    <span class="seller-request-status-badge" id="seller-request-current-status">None</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="form-row spacer-top">
-                            <select class="field-select" id="seller-review-reason" name="document_request_reason">
+                        <div class="seller-request-form-row spacer-top">
+                            <select class="field-select seller-request-select" id="seller-review-reason" name="document_request_reason">
                                 <option value="">Select Reason</option>
                                 @foreach ($documentRequestReasons as $value => $label)
                                     <option value="{{ $value }}">{{ $label }}</option>
                                 @endforeach
                             </select>
-                            <button class="action-button action-button--warning" type="button"
+                            <button class="action-button action-button--warning seller-request-button" type="button"
                                 id="request-documents-button">Request Documents</button>
                         </div>
 
-                        <textarea class="field-textarea" name="review_notes" id="seller-review-notes" rows="4"
+                        <textarea class="field-textarea seller-request-notes" name="review_notes" id="seller-review-notes" rows="4"
                             placeholder="Add admin review notes or required document instructions..."></textarea>
 
-                        <div class="alert-note">Additional document requests will notify the seller through the dashboard
+                        <div class="alert-note seller-request-note">Additional document requests will notify the seller through the dashboard
                             review state.</div>
                     </form>
                 </div>
@@ -357,6 +372,9 @@
             const documentPreviewStage = document.getElementById('seller-document-preview-stage');
             const documentOpenLink = document.getElementById('seller-document-open-link');
             const sellerRequestMoreDocuments = document.getElementById('seller-request-more-documents');
+            const sellerRequestEmptyState = document.getElementById('seller-request-empty-state');
+            const sellerRequestDetails = document.getElementById('seller-request-details');
+            const sellerRequestCurrentStatus = document.getElementById('seller-request-current-status');
 
             const openModal = (id) => {
                 const modal = document.getElementById(id);
@@ -379,6 +397,33 @@
                     return new URL(url, window.location.origin).pathname.split('.').pop().toLowerCase();
                 } catch (error) {
                     return '';
+                }
+            };
+
+            const hasDocumentRequest = (seller) => Boolean(
+                seller?.latest_request_reason
+                || seller?.latest_request_status
+                || seller?.latest_request_date
+                || seller?.latest_request_notes
+            );
+
+            const requestStatusBadgeClass = (status) => {
+                switch (status) {
+                    case 'pending':
+                        return 'is-pending';
+                    case 'resubmitted':
+                        return 'is-resubmitted';
+                    case 'resolved':
+                        return 'is-resolved';
+                    default:
+                        return 'is-none';
+                }
+            };
+
+            const setText = (id, value, fallback = 'None') => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value || fallback;
                 }
             };
 
@@ -466,14 +511,23 @@
                         permitStatus.textContent = 'Optional / Not uploaded';
                     }
 
-                    document.getElementById('seller-request-current-reason').textContent = seller
-                        .latest_request_reason_label || 'None';
-                    document.getElementById('seller-request-current-notes').textContent = seller
-                        .latest_request_notes || 'None';
-                    document.getElementById('seller-request-current-date').textContent = seller
-                        .latest_request_date || 'N/A';
-                    document.getElementById('seller-request-current-status').textContent = seller
-                        .latest_request_status_label || 'None';
+                    setText('seller-request-current-reason', seller.latest_request_reason_label);
+                    setText('seller-request-current-notes', seller.latest_request_notes);
+                    setText('seller-request-current-date', seller.latest_request_date, 'N/A');
+                    setText('seller-request-current-status', seller.latest_request_status_label);
+
+                    if (sellerRequestCurrentStatus) {
+                        sellerRequestCurrentStatus.className = `seller-request-status-badge ${requestStatusBadgeClass(seller.latest_request_status)}`;
+                    }
+
+                    const requestExists = hasDocumentRequest(seller);
+                    if (sellerRequestEmptyState) {
+                        sellerRequestEmptyState.hidden = requestExists;
+                    }
+                    if (sellerRequestDetails) {
+                        sellerRequestDetails.hidden = !requestExists;
+                    }
+
                     document.getElementById('seller-requested-document-label').textContent = seller
                         .latest_request_reason_label || 'Requested Document';
 
@@ -599,6 +653,130 @@
             pointer-events: none;
         }
 
+        .seller-request-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: linear-gradient(180deg, #fbfcff 0%, #f5f8fe 100%);
+            padding: 1rem 1.1rem;
+        }
+
+        .seller-request-empty-state {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .seller-request-empty-state strong {
+            color: var(--text);
+            font-size: 0.98rem;
+        }
+
+        .seller-request-empty-state p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .seller-request-details {
+            display: grid;
+            gap: 0;
+        }
+
+        .seller-request-detail-row {
+            display: grid;
+            grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
+            gap: 0.9rem;
+            align-items: start;
+            padding: 0.82rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .seller-request-detail-row:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .seller-request-detail-row:first-child {
+            padding-top: 0;
+        }
+
+        .seller-request-detail-row span:first-child {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .seller-request-detail-row strong {
+            color: var(--text);
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .seller-request-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        .seller-request-status-badge.is-pending {
+            background: #fff5dc;
+            color: #bf8612;
+        }
+
+        .seller-request-status-badge.is-resubmitted {
+            background: #e8f0ff;
+            color: #3b6fd6;
+        }
+
+        .seller-request-status-badge.is-resolved {
+            background: #edf8ef;
+            color: #3e9c4c;
+        }
+
+        .seller-request-status-badge.is-none {
+            background: #eef2f8;
+            color: #6e7890;
+        }
+
+        .seller-request-form-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.8rem;
+            align-items: stretch;
+        }
+
+        .seller-request-select {
+            max-width: none;
+            min-height: 48px;
+            border-color: #dbe4f1;
+            background: #fff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+        }
+
+        .seller-request-select:focus,
+        .seller-request-notes:focus {
+            border-color: rgba(59, 111, 214, 0.36);
+            box-shadow: 0 0 0 3px rgba(59, 111, 214, 0.08);
+            outline: none;
+        }
+
+        .seller-request-button {
+            min-width: 190px;
+        }
+
+        .seller-request-notes {
+            min-height: 120px;
+            line-height: 1.6;
+        }
+
+        .seller-request-note {
+            margin-top: 0;
+        }
+
         @media (max-width: 720px) {
             .seller-filter-bar > * {
                 flex: 1 1 100%;
@@ -610,6 +788,20 @@
 
             .seller-table-card .pagination-bar {
                 width: 100%;
+            }
+
+            .seller-request-detail-row {
+                grid-template-columns: 1fr;
+                gap: 0.35rem;
+            }
+
+            .seller-request-form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .seller-request-button {
+                width: 100%;
+                min-width: 0;
             }
         }
     </style>

@@ -252,15 +252,6 @@
     @endphp
 
     <div class="page-stack">
-        @if (session('success'))
-            <div class="admin-report-feedback">{{ session('success') }}</div>
-        @endif
-
-        @if ($errors->any())
-            <div class="admin-report-feedback" style="background:#fff0f0;border-color:#f0c9c9;color:#b12f2f;">
-                {{ $errors->first() }}</div>
-        @endif
-
         <div class="filter-bar">
             <div class="chip is-active">All {{ $reports->count() }}</div>
             <div class="chip">Pending {{ $pendingCount }}</div>

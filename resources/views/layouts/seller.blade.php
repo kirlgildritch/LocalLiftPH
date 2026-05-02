@@ -29,6 +29,36 @@
 </head>
 
 <body>
+    @php
+        $sellerToast = null;
+
+        foreach (['success', 'error', 'warning', 'info'] as $type) {
+            if (session()->has($type)) {
+                $sellerToast = [
+                    'type' => $type,
+                    'message' => session($type),
+                ];
+                break;
+            }
+        }
+
+        if (! $sellerToast && $errors->any()) {
+            $sellerToast = [
+                'type' => 'error',
+                'message' => $errors->first(),
+            ];
+        }
+
+        $sellerToastIcon = $sellerToast
+            ? match ($sellerToast['type']) {
+                'error' => 'fa-circle-xmark',
+                'warning' => 'fa-triangle-exclamation',
+                'info' => 'fa-circle-info',
+                default => 'fa-circle-check',
+            }
+            : null;
+    @endphp
+
     <div class="page-wrapper">
         @include('partials.seller-header')
 
@@ -43,6 +73,35 @@
         @endif
     </div>
 
+    @if ($sellerToast)
+        <div
+            id="seller-toast"
+            class="toast-message toast-message--{{ $sellerToast['type'] }}"
+            role="status"
+            aria-live="polite"
+        >
+            <i class="fa-solid {{ $sellerToastIcon }}"></i>
+            <span>{{ $sellerToast['message'] }}</span>
+        </div>
+    @endif
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toast = document.getElementById('seller-toast');
+
+            if (!toast) {
+                return;
+            }
+
+            window.setTimeout(() => {
+                toast.classList.add('toast-hide');
+
+                window.setTimeout(() => {
+                    toast.remove();
+                }, 400);
+            }, 3000);
+        });
+    </script>
     <script src="{{ asset('assets/js/skeleton-loader.js') }}" defer></script>
 </body>
 

@@ -10,8 +10,6 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
-                    @include('seller.partials.success-toast')
-
                     <section class="seller-page-panel panel">
                         <div class="page-header">
                             <div>

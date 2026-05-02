@@ -17,14 +17,6 @@
                         </div>
                     </div>
 
-                    @if(session('success'))
-                        <p class="seller-feedback success-message">{{ session('success') }}</p>
-                    @endif
-
-                    @if(session('error'))
-                        <p class="seller-feedback error-message">{{ session('error') }}</p>
-                    @endif
-
                     <div class="settings-tabs">
                         <button class="tab-btn active" onclick="showSettingsTab(event, 'general')">General</button>
                         <button class="tab-btn" onclick="showSettingsTab(event, 'notifications')">Notifications</button>
