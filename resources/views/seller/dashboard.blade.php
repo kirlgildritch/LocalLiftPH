@@ -1,6 +1,20 @@
 @extends('layouts.seller')
 
 @section('content')
+    @php
+        $requestStatusLabel = match ($latestDocumentRequest?->status) {
+            \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED => 'Resubmitted',
+            \App\Models\SellerDocumentRequest::STATUS_RESOLVED => 'Resolved',
+            default => 'Pending',
+        };
+
+        $requestReasonLabel = match ($latestDocumentRequest?->reason) {
+            'proof_of_address' => 'Proof of Address',
+            'tax_identification_number' => 'Tax Identification Number',
+            'bank_statement' => 'Bank Statement',
+            default => $latestDocumentRequest?->reason ? ucfirst(str_replace('_', ' ', $latestDocumentRequest->reason)) : null,
+        };
+    @endphp
     <section class="dashboard-wrapper">
         <div class="container">
             <div class="dashboard-layout">
@@ -9,6 +23,25 @@
                 <main class="dashboard-main panel">
                     @if (session('success'))
                         <p class="seller-feedback success-message">{{ session('success') }}</p>
+                    @endif
+
+                    @if (session('error'))
+                        <p class="seller-feedback error-message">{{ session('error') }}</p>
+                    @endif
+
+                    @if ($moderationNotifications->isNotEmpty())
+                        <section class="dashboard-status-state panel">
+                            <span class="section-kicker">Moderation Updates</span>
+                            <div class="status-card-grid">
+                                @foreach ($moderationNotifications as $notification)
+                                    @php($payload = $notification->data)
+                                    <article class="status-card panel">
+                                        <strong>{{ $payload['title'] ?? 'Update' }}</strong>
+                                        <p>{{ $payload['message'] ?? '' }}</p>
+                                    </article>
+                                @endforeach
+                            </div>
+                        </section>
                     @endif
 
                     @if ($dashboardState === 'not_started')
@@ -32,8 +65,18 @@
                                 </div>
                             </div>
 
-                            <p class="application-copy">Submit your verification details here. This stays inside the dashboard
-                                and goes directly to the admin seller review queue.</p>
+                            @if ($latestDocumentRequest && $latestDocumentRequest->status === \App\Models\SellerDocumentRequest::STATUS_PENDING)
+                                <div class="status-card-grid">
+                                    <article class="status-card panel">
+                                        <strong>{{ $requestReasonLabel }}</strong>
+                                        <p>{{ $latestDocumentRequest->admin_notes ?: 'Additional verification document requested.' }}</p>
+                                    </article>
+                                    <article class="status-card panel">
+                                        <strong>Requested</strong>
+                                        <p>{{ optional($latestDocumentRequest->requested_at)->format('M d, Y h:i A') ?: 'N/A' }}</p>
+                                    </article>
+                                </div>
+                            @endif
 
                             <form action="{{ route('seller.dashboard.application.store') }}" method="POST"
                                 enctype="multipart/form-data" class="seller-application-form">
@@ -131,29 +174,93 @@
                                         @endif
                                         @error('business_permit')<small class="error-text">{{ $message }}</small>@enderror
                                     </div>
+
+                                    @if ($latestDocumentRequest && $latestDocumentRequest->status === \App\Models\SellerDocumentRequest::STATUS_PENDING)
+                                        <div class="form-group form-group-wide">
+                                            <label for="requested_document">Requested Document</label>
+                                            <input type="file" id="requested_document" name="requested_document"
+                                                accept=".jpg,.jpeg,.png,.pdf,.webp">
+                                            <small class="muted-label">{{ $requestReasonLabel }}</small>
+                                            @error('requested_document')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
+                                    @endif
                                 </div>
 
                                 <div class="form-actions">
-                                    <button type="submit" class="page-action-btn">Submit Application</button>
+                                    <button type="submit" class="page-action-btn">
+                                        {{ $latestDocumentRequest && $latestDocumentRequest->status === \App\Models\SellerDocumentRequest::STATUS_PENDING ? 'Upload and Resubmit' : 'Submit Application' }}
+                                    </button>
                                 </div>
                             </form>
+                        </section>
+                    @elseif ($dashboardState === 'documents_requested')
+                        <section class="dashboard-status-state panel">
+                            <span class="section-kicker">Documents Required</span>
+                            <h1>Additional document requested</h1>
+
+                            <div class="status-card-grid">
+                                <article class="status-card panel">
+                                    <strong>{{ $requestReasonLabel }}</strong>
+                                    <p>{{ $latestDocumentRequest?->admin_notes ?: 'Upload the requested document to continue review.' }}</p>
+                                </article>
+                                <article class="status-card panel">
+                                    <strong>Requested</strong>
+                                    <p>{{ optional($latestDocumentRequest?->requested_at)->format('M d, Y h:i A') ?: 'N/A' }}</p>
+                                </article>
+                                <article class="status-card panel">
+                                    <strong>Status</strong>
+                                    <p>{{ $requestStatusLabel }}</p>
+                                </article>
+                            </div>
+
+                            <div class="dashboard-empty-actions">
+                                <a href="{{ route('seller.dashboard', ['resubmit' => 1]) }}" class="page-action-btn">Upload
+                                    Documents</a>
+                            </div>
+                        </section>
+                    @elseif ($dashboardState === 'suspended')
+                        <section class="dashboard-status-state panel">
+                            <span class="section-kicker">Account Status</span>
+                            <h1>Seller account suspended</h1>
+                            <div class="status-card-grid">
+                                <article class="status-card panel">
+                                    <strong>Status</strong>
+                                    <p>Suspended</p>
+                                </article>
+                                <article class="status-card panel">
+                                    <strong>Reason</strong>
+                                    <p>{{ $seller?->suspension_reason ?: 'Account under moderation review.' }}</p>
+                                </article>
+                            </div>
                         </section>
                     @elseif ($dashboardState === 'pending')
                         <section class="dashboard-status-state panel">
                             <span class="section-kicker">Pending Review</span>
-                            <h1>Application Submitted</h1>
+                            <h1>{{ $latestDocumentRequest?->status === \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED ? 'Resubmitted for Review' : 'Application Submitted' }}</h1>
                             <div class="status-card-grid">
                                 <article class="status-card panel">
-                                    <strong>Application Submitted</strong>
-                                    <p>Your seller details and uploaded documents are now in the admin review queue.</p>
+                                    <strong>{{ $latestDocumentRequest?->status === \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED ? 'Latest Request' : 'Application Submitted' }}</strong>
+                                    <p>
+                                        @if ($latestDocumentRequest?->status === \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED)
+                                            {{ $requestReasonLabel }}. {{ $latestDocumentRequest->admin_notes ?: 'Document resubmitted for review.' }}
+                                        @else
+                                            Your seller details and uploaded documents are now in the admin review queue.
+                                        @endif
+                                    </p>
                                 </article>
                                 <article class="status-card panel">
-                                    <strong>Pending Admin Review</strong>
-                                    <p>Your dashboard analytics and shop controls will unlock after approval.</p>
+                                    <strong>{{ $latestDocumentRequest?->status === \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED ? 'Requested' : 'Pending Admin Review' }}</strong>
+                                    <p>
+                                        @if ($latestDocumentRequest?->status === \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED)
+                                            {{ optional($latestDocumentRequest->requested_at)->format('M d, Y h:i A') ?: 'N/A' }}
+                                        @else
+                                            Your dashboard analytics and shop controls will unlock after approval.
+                                        @endif
+                                    </p>
                                 </article>
                                 <article class="status-card panel">
-                                    <strong>We Will Notify You</strong>
-                                    <p>Keep checking Seller Center for updates on approval, rejection, or requested changes.</p>
+                                    <strong>Status</strong>
+                                    <p>{{ $latestDocumentRequest?->status === \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED ? $requestStatusLabel : 'Under Review' }}</p>
                                 </article>
                             </div>
                         </section>

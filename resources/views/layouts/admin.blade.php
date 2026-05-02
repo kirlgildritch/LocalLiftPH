@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('assets/admin.css') }}">
-    <link rel="icon" href="{{ asset('assets/image/Logo.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
     @stack('styles')
 </head>
 
@@ -20,11 +20,16 @@
     <div class="admin-shell">
         <aside class="sidebar">
             <div class="sidebar__brand">
-                <div class="sidebar__logo"><img src="{{ asset('assets/image/Logo.png') }}" alt="Logo"></div>
-                <div>
-                    <p class="sidebar__eyebrow">Marketplace</p>
-                    <h1>Admin Dashboard</h1>
+                <div class="sidebar__brand-copy">
+                    <div class="sidebar__logo"><img src="{{ asset('assets/image/Logo.png') }}" alt="Logo"></div>
+                    <div>
+                        <p class="sidebar__eyebrow">Marketplace</p>
+                        <h1>Admin Dashboard</h1>
+                    </div>
                 </div>
+                <button class="sidebar__close" type="button" data-sidebar-close aria-label="Close navigation">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
 
             <nav class="sidebar__nav" aria-label="Admin Navigation">
@@ -101,13 +106,55 @@
 
     <script>
         const toggleButton = document.querySelector('[data-sidebar-toggle]');
+        const closeButton = document.querySelector('[data-sidebar-close]');
         const shell = document.querySelector('.admin-shell');
+        const sidebar = document.querySelector('.sidebar');
+
+        const isMobileAdminViewport = () => window.matchMedia('(max-width: 980px)').matches;
+        const closeSidebar = () => shell?.classList.remove('sidebar-open');
 
         if (toggleButton && shell) {
             toggleButton.addEventListener('click', () => {
                 shell.classList.toggle('sidebar-open');
             });
         }
+
+        if (closeButton && shell) {
+            closeButton.addEventListener('click', () => {
+                closeSidebar();
+            });
+        }
+
+        document.addEventListener('click', (event) => {
+            if (!shell || !sidebar || !isMobileAdminViewport()) {
+                return;
+            }
+
+            if (!shell.classList.contains('sidebar-open')) {
+                return;
+            }
+
+            const clickedSidebar = sidebar.contains(event.target);
+            const clickedToggle = toggleButton?.contains(event.target);
+
+            if (!clickedSidebar && !clickedToggle) {
+                closeSidebar();
+            }
+        });
+
+        document.querySelectorAll('.sidebar__link').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (isMobileAdminViewport()) {
+                    closeSidebar();
+                }
+            });
+        });
+
+        window.addEventListener('resize', () => {
+            if (!isMobileAdminViewport()) {
+                closeSidebar();
+            }
+        });
     </script>
 </body>
 

@@ -12,6 +12,12 @@
                     @include('seller.partials.success-toast')
 
                     <section class="seller-page-panel panel">
+                        @if(session('error'))
+                            <div class="seller-feedback error-message" style="margin-bottom: 14px;">
+                                {{ session('error') }}
+                            </div>
+                        @endif
+
                         <div class="page-header">
                             <div>
                                 <span class="section-kicker">Catalog</span>
@@ -138,7 +144,7 @@
                                                 <a href="{{ route('seller.products.reviews', $product) }}"
                                                     class="table-action secondary">Reviews</a>
 
-                                                <form action="{{ url('/delete-product/' . $product->id) }}" method="POST"
+                                                <form action="{{ route('seller.products.destroy', $product) }}" method="POST"
                                                     onsubmit="return confirm('Delete this product?')">
                                                     @csrf
                                                     @method('DELETE')

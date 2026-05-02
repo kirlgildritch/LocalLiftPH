@@ -215,6 +215,40 @@ class ProductController extends Controller
             ->with('success', 'Product updated successfully.');
     }
 
+    public function destroy($id)
+    {
+        $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+
+        $hasExistingOrders = $product->orderItems()
+            ->whereHas('order', function ($query) {
+                $query->whereNotIn('shipping_status', [
+                    \App\Models\Order::SHIPPING_COMPLETED,
+                    \App\Models\Order::SHIPPING_CANCELLED,
+                ]);
+            })
+            ->exists();
+
+        if ($hasExistingOrders) {
+            return redirect()
+                ->route('seller.products.index')
+                ->with('error', 'This product cannot be deleted because it is still part of an existing order.');
+        }
+
+        $product->carts()->delete();
+        $product->reviews()->delete();
+        $product->reports()->delete();
+
+        if (! empty($product->image)) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $product->delete();
+
+        return redirect()
+            ->route('seller.products.index')
+            ->with('success', 'Product deleted successfully.');
+    }
+
     public function reviews($id)
     {
         $product = Product::with('category')

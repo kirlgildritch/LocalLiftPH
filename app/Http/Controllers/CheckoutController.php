@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Order;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
@@ -51,6 +53,14 @@ class CheckoutController extends Controller
         ];
     }
 
+    protected function groupedCartItemsBySeller(Collection $cartItems): Collection
+    {
+        return $cartItems
+            ->filter(fn ($item) => $item->product && $item->product->user_id)
+            ->groupBy(fn ($item) => (int) $item->product->user_id)
+            ->sortKeys();
+    }
+
     public function index(Request $request)
     {
         $validated = $request->validate([
@@ -64,7 +74,7 @@ class CheckoutController extends Controller
             ->unique()
             ->values();
 
-        $cartQuery = Cart::with(['product.user'])
+        $cartQuery = Cart::with(['product.user.sellerProfile'])
             ->where('user_id', Auth::id())
             ->when($selectedCartItemIds->isNotEmpty(), function ($query) use ($selectedCartItemIds) {
                 $query->whereIn('id', $selectedCartItemIds);
@@ -87,6 +97,7 @@ class CheckoutController extends Controller
         }
 
         $totals = $this->calculateCartTotals($cartItems);
+        $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
 
         $defaultAddress = Auth::user()->addresses()
             ->where('is_default', 1)
@@ -96,6 +107,7 @@ class CheckoutController extends Controller
 
         return view('checkout.index', [
             'cartItems' => $cartItems,
+            'groupedCartItems' => $groupedCartItems,
             'subtotal' => $totals['subtotal'],
             'shippingFee' => $totals['shippingFee'],
             'total' => $totals['total'],
@@ -145,26 +157,34 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
-        $totals = $this->calculateCartTotals($cartItems);
+        $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
+        $checkoutGroup = (string) Str::uuid();
+        $createdOrders = collect();
 
-        $order = null;
+        DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders) {
+            foreach ($groupedCartItems as $sellerId => $sellerCartItems) {
+                $totals = $this->calculateCartTotals($sellerCartItems);
 
-        DB::transaction(function () use ($cartItems, $totals, &$order) {
-            $order = Order::create([
-                'user_id' => Auth::id(),
-                'shipping_fee' => $totals['shippingFee'],
-                'total_price' => $totals['total'],
-                'status' => Order::STATUS_PENDING,
-                'shipping_status' => Order::SHIPPING_PENDING,
-            ]);
-
-            foreach ($cartItems as $item) {
-                $order->items()->create([
-                    'product_id' => $item->product->id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
-                    'shipping_fee' => $item->product->shipping_fee ?? 0,
+                $order = Order::create([
+                    'user_id' => Auth::id(),
+                    'seller_id' => (int) $sellerId,
+                    'checkout_group' => $checkoutGroup,
+                    'shipping_fee' => $totals['shippingFee'],
+                    'total_price' => $totals['total'],
+                    'status' => Order::STATUS_PENDING,
+                    'shipping_status' => Order::SHIPPING_PENDING,
                 ]);
+
+                foreach ($sellerCartItems as $item) {
+                    $order->items()->create([
+                        'product_id' => $item->product->id,
+                        'quantity' => $item->quantity,
+                        'price' => $item->product->price,
+                        'shipping_fee' => $item->product->shipping_fee ?? 0,
+                    ]);
+                }
+
+                $createdOrders->push($order);
             }
 
             Cart::where('user_id', Auth::id())
@@ -172,6 +192,10 @@ class CheckoutController extends Controller
                 ->delete();
         });
 
-        return redirect()->route('buyer.orders')->with('success', 'Order placed successfully!');
+        $primaryOrder = $createdOrders->sortBy('id')->first();
+
+        return redirect()
+            ->route('buyer.orders.show', $primaryOrder)
+            ->with('success', 'Order placed successfully!');
     }
 }

@@ -33,7 +33,6 @@
                                 <tbody>
                                     @forelse($orders as $order)
                                         @php
-                                            $canManageShipping = $order->sellerOwnsAllItems(auth('seller')->user());
                                             $nextStatuses = $order->nextShippingStatuses();
                                         @endphp
                                         <tr>
@@ -46,7 +45,7 @@
                                             </td>
                                             <td>&#8369; {{ number_format($order->total_price ?? 0, 2) }}</td>
                                             <td>
-                                                @if($canManageShipping && $nextStatuses)
+                                                @if($nextStatuses)
                                                     <form method="POST"
                                                         action="{{ route('seller.orders.shipping-status', $order) }}"
                                                         style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -61,8 +60,6 @@
                                                         </select>
                                                         <button type="submit" class="table-action secondary">Update</button>
                                                     </form>
-                                                @elseif(!$canManageShipping)
-                                                    <span class="empty-text">Mixed-seller order</span>
                                                 @else
                                                     <span class="empty-text">No more updates</span>
                                                 @endif
@@ -76,6 +73,28 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        @if($orders->hasPages())
+                            <div class="seller-orders-pagination">
+                                @if($orders->onFirstPage())
+                                    <span class="table-action secondary seller-orders-pagination-button is-disabled">Previous</span>
+                                @else
+                                    <a href="{{ $orders->previousPageUrl() }}"
+                                        class="table-action secondary seller-orders-pagination-button">Previous</a>
+                                @endif
+
+                                <span class="seller-orders-pagination-meta">
+                                    Page {{ $orders->currentPage() }} of {{ $orders->lastPage() }}
+                                </span>
+
+                                @if($orders->hasMorePages())
+                                    <a href="{{ $orders->nextPageUrl() }}"
+                                        class="table-action secondary seller-orders-pagination-button">Next</a>
+                                @else
+                                    <span class="table-action secondary seller-orders-pagination-button is-disabled">Next</span>
+                                @endif
+                            </div>
+                        @endif
                     </section>
                 </main>
             </div>

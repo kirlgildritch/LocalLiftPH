@@ -11,7 +11,6 @@
                 <span>My Orders</span>
             </div>
 
-
             <div class="orders-toolbar panel">
                 <div class="toolbar-copy">
                     <span class="toolbar-label">History</span>
@@ -34,13 +33,9 @@
                         class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_SHIPPED ? 'active' : '' }}">
                         Shipped ({{ $statusCounts->get(\App\Models\Order::SHIPPING_SHIPPED, 0) }})
                     </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_OUT_FOR_DELIVERY]) }}"
-                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_OUT_FOR_DELIVERY ? 'active' : '' }}">
-                        Out for Delivery ({{ $statusCounts->get(\App\Models\Order::SHIPPING_OUT_FOR_DELIVERY, 0) }})
-                    </a>
-                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_DELIVERED]) }}"
-                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_DELIVERED ? 'active' : '' }}">
-                        Delivered ({{ $statusCounts->get(\App\Models\Order::SHIPPING_DELIVERED, 0) }})
+                    <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_COMPLETED]) }}"
+                        class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_COMPLETED ? 'active' : '' }}">
+                        Completed ({{ $statusCounts->get(\App\Models\Order::SHIPPING_COMPLETED, 0) }})
                     </a>
                     <a href="{{ route('buyer.orders', ['status' => \App\Models\Order::SHIPPING_CANCELLED]) }}"
                         class="tab-btn {{ $currentStatus === \App\Models\Order::SHIPPING_CANCELLED ? 'active' : '' }}">
@@ -52,16 +47,20 @@
             <div class="orders-list">
                 @forelse($orders as $order)
                     @php
-                        $hasRateableItems = $order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED
+                        $hasRateableItems = $order->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED
                             && $order->items->contains(fn($item) => $item->product && !$item->review);
+                        $groupShopCount = $checkoutGroupCounts->get($order->checkoutGroupKey(), 1);
                     @endphp
                     <article class="order-card panel">
                         <div class="order-card-top">
                             <div class="shop-info">
-                                <i class="fa-solid fa-bag-shopping"></i>
+                                <i class="fa-solid fa-store"></i>
                                 <div>
-                                    <span class="toolbar-label">Order</span>
-                                    <strong>#{{ $order->id }}</strong>
+                                    <span class="toolbar-label">{{ $order->shopDisplayName() }}</span>
+                                    <strong>Order #{{ $order->id }}</strong>
+                                    @if($groupShopCount > 1)
+                                        <p class="order-group-meta">{{ $groupShopCount }} shop orders from one checkout</p>
+                                    @endif
                                 </div>
                             </div>
 
@@ -78,11 +77,11 @@
 
                                     <div class="order-product-info">
                                         <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
-                                        <p>Sold by: {{ $item->product->user->name ?? 'LocalLift Seller' }}</p>
+                                        <p>Shop: {{ $order->shopDisplayName() }}</p>
                                         <p>Date: {{ $order->created_at->format('M d, Y') }}</p>
                                         <p>Quantity: {{ $item->quantity }}</p>
 
-                                        @if($order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED && $item->product)
+                                        @if($order->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED && $item->product)
                                             <div class="order-item-actions">
                                                 @if(!$item->review)
                                                     <a href="{{ route('products.show', $item->product) }}?review_order_item={{ $item->id }}#product-reviews"
@@ -111,7 +110,7 @@
 
                             <div class="order-actions">
                                 <a href="{{ route('buyer.orders.show', $order) }}" class="order-btn secondary-btn">View
-                                    Order</a>
+                                    Summary</a>
 
                                 @if($order->canBeCancelled())
                                     <button type="button" class="order-btn secondary-btn open-cancel-order"
@@ -126,7 +125,7 @@
                                         @method('PATCH')
                                         <button type="submit" class="order-btn primary-btn">Order Received</button>
                                     </form>
-                                @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_DELIVERED, \App\Models\Order::SHIPPING_CANCELLED], true))
+                                @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_COMPLETED, \App\Models\Order::SHIPPING_CANCELLED], true))
                                     @if($hasRateableItems)
                                         <a href="{{ route('buyer.orders.show', $order) }}#rate-products"
                                             class="order-btn secondary-btn">

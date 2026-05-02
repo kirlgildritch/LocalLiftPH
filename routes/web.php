@@ -88,6 +88,7 @@ Route::middleware('seller')->group(function () {
     Route::get('/manage-products', [ProductController::class, 'index'])->name('seller.products.index');
     Route::get('/seller/products/{product}/edit', [ProductController::class, 'edit'])->name('seller.products.edit');
     Route::patch('/seller/products/{product}', [ProductController::class, 'update'])->name('seller.products.update');
+    Route::delete('/seller/products/{product}', [ProductController::class, 'destroy'])->name('seller.products.destroy');
     Route::get('/seller/products/{product}/reviews', [ProductController::class, 'reviews'])->name('seller.products.reviews');
 
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
@@ -126,12 +127,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/products', [ProductApprovalController::class, 'index'])->name('products');
+    Route::patch('/products/bulk', [ProductApprovalController::class, 'bulkUpdate'])->name('products.bulk');
     Route::patch('/products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('products.approve');
     Route::patch('/products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('products.reject');
     Route::get('/sellers', [SellerReviewController::class, 'index'])->name('sellers');
     Route::patch('/sellers/{seller}/status', [SellerReviewController::class, 'updateStatus'])->name('sellers.status');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders');
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports');
+    Route::patch('/reports/{report}/action', [AdminReportController::class, 'action'])->name('reports.action');
     Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
 });
 Route::middleware('buyer')->group(function () {

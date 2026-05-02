@@ -6,164 +6,192 @@
     <section class="orders-page">
         <div class="container">
             @php
-                $hasRateableItems = $order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED
-                    && $order->items->contains(fn ($item) => $item->product && !$item->review);
+                $groupPlacedAt = $groupOrders->sortBy('created_at')->first()?->created_at;
             @endphp
             <div class="checkout-breadcrumb">
                 <a href="{{ route('home') }}">Home</a>
                 <span>&gt;</span>
                 <a href="{{ route('buyer.orders') }}">My Orders</a>
                 <span>&gt;</span>
-                <span>Order #{{ $order->id }}</span>
+                <span>Checkout Summary</span>
             </div>
 
             <div class="orders-toolbar panel">
                 <div class="toolbar-copy">
                     <span class="toolbar-label">Details</span>
-                    <h2>Order #{{ $order->id }}</h2>
+                    <h2>
+                        @if($groupSummary['shops'] > 1)
+                            Checkout Summary
+                        @else
+                            Order #{{ $order->id }}
+                        @endif
+                    </h2>
+                    @if($groupSummary['shops'] > 1)
+                        <p class="order-group-meta">Grouped summary for {{ $groupSummary['shops'] }} shop orders placed in one checkout.</p>
+                    @endif
                 </div>
 
-                <div class="order-status {{ $order->shippingToneClass() }}">
-                    {{ $order->shippingStatusLabel() }}
+                <div class="order-actions">
+                    <a href="{{ route('buyer.orders') }}" class="order-btn secondary-btn">Back to Orders</a>
                 </div>
             </div>
 
-            @include('buyer.partials.order-progress', ['order' => $order])
+            @if($groupOrders->count() === 1)
+                @include('buyer.partials.order-progress', ['order' => $order])
+            @endif
 
             <div class="order-detail-grid">
-                @php
-                    $orderSubtotal = $order->items->sum(fn ($item) => $item->price * $item->quantity);
-                    $orderShipping = $order->shipping_fee ?? $order->items->sum(fn ($item) => ($item->shipping_fee ?? 0) * $item->quantity);
-                @endphp
                 <div class="panel detail-summary-card">
                     <div class="detail-summary-grid">
                         <div>
                             <span class="toolbar-label">Placed On</span>
-                            <p>{{ $order->created_at->format('M d, Y h:i A') }}</p>
+                            <p>{{ $groupPlacedAt?->format('M d, Y h:i A') }}</p>
                         </div>
                         <div>
-                            <span class="toolbar-label">Shipping Status</span>
-                            <p>{{ $order->shippingStatusLabel() }}</p>
+                            <span class="toolbar-label">Shops</span>
+                            <p>{{ $groupSummary['shops'] }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Items</span>
-                            <p>{{ $order->items->sum('quantity') }}</p>
+                            <p>{{ $groupSummary['items'] }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Subtotal</span>
-                            <p>&#8369; {{ number_format($orderSubtotal, 2) }}</p>
+                            <p>&#8369; {{ number_format($groupSummary['subtotal'], 2) }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Shipping</span>
-                            <p>&#8369; {{ number_format($orderShipping, 2) }}</p>
+                            <p>&#8369; {{ number_format($groupSummary['shipping'], 2) }}</p>
                         </div>
                         <div>
                             <span class="toolbar-label">Total</span>
-                            <p>&#8369; {{ number_format($order->total_price, 2) }}</p>
+                            <p>&#8369; {{ number_format($groupSummary['total'], 2) }}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="orders-list" id="rate-products">
-                <article class="order-card panel">
-                    <div class="order-card-top">
-                        <div class="shop-info">
-                            <i class="fa-solid fa-box-open"></i>
-                            <div>
-                                <span class="toolbar-label">Items</span>
-                                <strong>{{ $order->items->count() }} product{{ $order->items->count() !== 1 ? 's' : '' }}</strong>
+                @foreach($groupOrders as $shopOrder)
+                    @php
+                        $shopHasRateableItems = $shopOrder->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED
+                            && $shopOrder->items->contains(fn ($item) => $item->product && !$item->review);
+                        $shopSubtotal = $shopOrder->subtotalAmount();
+                    @endphp
+                    <article class="order-card panel">
+                        <div class="order-card-top">
+                            <div class="shop-info">
+                                <i class="fa-solid fa-store"></i>
+                                <div>
+                                    <span class="toolbar-label">{{ $shopOrder->shopDisplayName() }}</span>
+                                    <strong>Order #{{ $shopOrder->id }}</strong>
+                                </div>
+                            </div>
+
+                            <div class="order-status {{ $shopOrder->shippingToneClass() }}">
+                                {{ $shopOrder->shippingStatusLabel() }}
                             </div>
                         </div>
-                    </div>
 
-                    <div class="order-items">
-                        @foreach($order->items as $item)
-                            <div class="order-card-body">
-                                <img
-                                    src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
-                                    alt="{{ $item->product->name ?? 'Product' }}"
-                                    class="order-product-img"
-                                >
-
+                        @if($groupOrders->count() > 1)
+                            <div class="order-card-body order-card-body--summary">
                                 <div class="order-product-info">
-                                    <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
-                                    <p>Sold by: {{ $item->product->user?->sellerProfile?->store_name ?? $item->product->user?->name ?? 'LocalLift Seller' }}</p>
-                                    <p>Quantity: {{ $item->quantity }}</p>
-                                    <p>Unit Price: &#8369; {{ number_format($item->price, 2) }}</p>
-
-                                    @if($order->shippingStatus() === \App\Models\Order::SHIPPING_DELIVERED && $item->product)
-                                        <div class="order-item-actions">
-                                            @if(!$item->review)
-                                                <a href="{{ route('products.show', $item->product) }}?review_order_item={{ $item->id }}#product-reviews"
-                                                    class="order-btn secondary-btn">
-                                                    Rate Product
-                                                </a>
-                                            @else
-                                                <span class="order-btn secondary-btn is-static">Reviewed</span>
-                                            @endif
-                                        </div>
-                                    @endif
+                                    <p>Date: {{ $shopOrder->created_at->format('M d, Y h:i A') }}</p>
+                                    <p>Items: {{ $shopOrder->itemCount() }}</p>
+                                    <p>Shipping Fee: &#8369; {{ number_format($shopOrder->shipping_fee, 2) }}</p>
                                 </div>
 
                                 <div class="order-product-price">
-                                    &#8369; {{ number_format($item->price * $item->quantity, 2) }}
+                                    &#8369; {{ number_format($shopOrder->total_price, 2) }}
                                 </div>
                             </div>
-                        @endforeach
-                    </div>
+                        @endif
 
-                    <div class="order-card-footer">
-                        <div class="total-text">
-                            <div>
-                                <span>Subtotal</span>
-                                <strong>&#8369; {{ number_format($orderSubtotal, 2) }}</strong>
-                            </div>
-                            <div>
-                                <span>Shipping</span>
-                                <strong>&#8369; {{ number_format($orderShipping, 2) }}</strong>
-                            </div>
-                            <div>
-                                <span>Order Total</span>
-                                <strong>&#8369; {{ number_format($order->total_price, 2) }}</strong>
-                            </div>
+                        <div class="order-items">
+                            @foreach($shopOrder->items as $item)
+                                <div class="order-card-body">
+                                    <img
+                                        src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
+                                        alt="{{ $item->product->name ?? 'Product' }}"
+                                        class="order-product-img"
+                                    >
+
+                                    <div class="order-product-info">
+                                        <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
+                                        <p>Quantity: {{ $item->quantity }}</p>
+                                        <p>Unit Price: &#8369; {{ number_format($item->price, 2) }}</p>
+
+                                        @if($shopOrder->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED && $item->product)
+                                            <div class="order-item-actions">
+                                                @if(!$item->review)
+                                                    <a href="{{ route('products.show', $item->product) }}?review_order_item={{ $item->id }}#product-reviews"
+                                                        class="order-btn secondary-btn">
+                                                        Rate Product
+                                                    </a>
+                                                @else
+                                                    <span class="order-btn secondary-btn is-static">Reviewed</span>
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="order-product-price">
+                                        &#8369; {{ number_format($item->price * $item->quantity, 2) }}
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
 
-                        <div class="order-actions">
-                            <a href="{{ route('buyer.orders') }}" class="order-btn secondary-btn">Back to Orders</a>
+                        <div class="order-card-footer">
+                            <div class="total-text">
+                                <div>
+                                    <span>Subtotal</span>
+                                    <strong>&#8369; {{ number_format($shopSubtotal, 2) }}</strong>
+                                </div>
+                                <div>
+                                    <span>Shipping</span>
+                                    <strong>&#8369; {{ number_format($shopOrder->shipping_fee, 2) }}</strong>
+                                </div>
+                                <div>
+                                    <span>Order Total</span>
+                                    <strong>&#8369; {{ number_format($shopOrder->total_price, 2) }}</strong>
+                                </div>
+                            </div>
 
-                            @if($order->canBeCancelled())
-                                <button
-                                    type="button"
-                                    class="order-btn danger-btn open-cancel-order"
-                                    data-order-id="{{ $order->id }}"
-                                    data-order-action="{{ route('buyer.orders.cancel', $order) }}"
-                                >
-                                    Cancel Order
-                                </button>
-                            @elseif($order->canConfirmReceipt())
-                                <form action="{{ route('buyer.orders.received', $order) }}" method="POST" style="display: inline;">
-                                    @csrf
-                                    @method('PATCH')
-                                    <button type="submit" class="order-btn primary-btn">
-                                        Order Received
+                            <div class="order-actions">
+                                @if($shopOrder->canBeCancelled())
+                                    <button
+                                        type="button"
+                                        class="order-btn danger-btn open-cancel-order"
+                                        data-order-id="{{ $shopOrder->id }}"
+                                        data-order-action="{{ route('buyer.orders.cancel', $shopOrder) }}"
+                                    >
+                                        Cancel Order
                                     </button>
-                                </form>
-                            @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_DELIVERED, \App\Models\Order::SHIPPING_CANCELLED], true))
-                                @if($hasRateableItems)
-                                    <span class="order-btn secondary-btn is-static">Choose an item above to rate</span>
+                                @elseif($shopOrder->canConfirmReceipt())
+                                    <form action="{{ route('buyer.orders.received', $shopOrder) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="order-btn primary-btn">
+                                            Order Received
+                                        </button>
+                                    </form>
+                                @elseif(in_array($shopOrder->shippingStatus(), [\App\Models\Order::SHIPPING_COMPLETED, \App\Models\Order::SHIPPING_CANCELLED], true))
+                                    @if($shopHasRateableItems)
+                                        <span class="order-btn secondary-btn is-static">Choose an item above to rate</span>
+                                    @endif
+
+                                    <form action="{{ route('buyer.orders.buyAgain', $shopOrder) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        <button type="submit" class="order-btn primary-btn">
+                                            {{ $shopOrder->shippingStatus() === \App\Models\Order::SHIPPING_CANCELLED ? 'Reorder' : 'Buy Again' }}
+                                        </button>
+                                    </form>
                                 @endif
-
-                                <form action="{{ route('buyer.orders.buyAgain', $order) }}" method="POST" style="display: inline;">
-                                    @csrf
-                                    <button type="submit" class="order-btn primary-btn">
-                                        {{ $order->shippingStatus() === \App\Models\Order::SHIPPING_CANCELLED ? 'Reorder' : 'Buy Again' }}
-                                    </button>
-                                </form>
-                            @endif
+                            </div>
                         </div>
-                    </div>
-                </article>
+                    </article>
+                @endforeach
             </div>
         </div>
     </section>

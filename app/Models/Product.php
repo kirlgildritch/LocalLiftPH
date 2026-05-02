@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\User;
 use App\Models\Cart;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\OrderItem;
 
 class Product extends Model
 {
@@ -31,6 +32,7 @@ class Product extends Model
         'shipping_fee',
         'image',
         'is_active',
+        'rejection_reason',
         'status', // pending, approved, rejected
     ];
 
@@ -54,6 +56,11 @@ class Product extends Model
         return $this->hasMany(Review::class);
     }
 
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class);
@@ -69,7 +76,9 @@ class Product extends Model
         return $query->approved()
             ->where('is_active', 1)
             ->whereHas('user.sellerProfile', function (Builder $sellerQuery) {
-                $sellerQuery->where('application_status', Seller::STATUS_APPROVED);
+                $sellerQuery
+                    ->where('application_status', Seller::STATUS_APPROVED)
+                    ->whereNull('suspended_at');
             });
     }
     public function scopeWithRatings($query)

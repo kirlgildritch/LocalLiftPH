@@ -16,7 +16,8 @@
     @if(empty($disableFloatingChatWidget))
         <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
     @endif
-    <link rel="icon" href="{{ asset('assets/image/Logo.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
+    @vite(['resources/js/app.js'])
     <style>
         html,
         body {

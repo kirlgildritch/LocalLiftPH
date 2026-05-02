@@ -73,18 +73,34 @@ textarea {
 
 .sidebar__brand {
     display: flex;
-    gap: 0.95rem;
+    justify-content: space-between;
     align-items: center;
 }
 
+.sidebar__brand-copy {
+    display: flex;
+    gap: 0.95rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.sidebar__logo {
+    width: 68px;
+    min-width: 68px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
 .sidebar__logo img{
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.95rem;
-    background: rgba(255, 255, 255, 0.12);
-    display: grid;
-    place-items: center;
-    font-size: 1.1rem;
+    width: 68px;
+    height: 52px;
+    object-fit: contain;
+    display: block;
+    filter:
+        drop-shadow(0 8px 10px rgba(40, 140, 255, 0.28))
+        drop-shadow(0 14px 22px rgba(16, 98, 255, 0.22));
 }
 
 
@@ -112,6 +128,23 @@ textarea {
 
 .sidebar__brand h1 {
     font-size: 1.05rem;
+}
+
+.sidebar__close {
+    display: none;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.84);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.sidebar__close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
 }
 
 .sidebar__nav {
@@ -1542,6 +1575,20 @@ textarea {
         grid-template-columns: 1fr;
     }
 
+    .sidebar__brand-copy {
+        gap: 0.7rem;
+    }
+
+    .sidebar__logo {
+        width: 56px;
+        min-width: 56px;
+    }
+
+    .sidebar__logo img {
+        width: 56px;
+        height: 44px;
+    }
+
     .sidebar {
         position: fixed;
         inset: 0 auto 0 0;
@@ -1566,6 +1613,11 @@ textarea {
 
     .topbar__note {
         display: none;
+    }
+
+    .sidebar__close {
+        display: inline-grid;
+        place-items: center;
     }
 }
 

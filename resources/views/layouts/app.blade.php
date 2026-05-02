@@ -17,7 +17,8 @@
         <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
     @endif
     <link rel="stylesheet" href="{{ asset('assets/css/helpbot.css') }}">
-    <link rel="icon" sizes="32x32" href="{{ asset('assets/image/Logo.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
+    @vite(['resources/js/app.js'])
 </head>
 
 <body>

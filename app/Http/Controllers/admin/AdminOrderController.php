@@ -14,7 +14,8 @@ class AdminOrderController extends Controller
 
         $orders = Order::with(['user', 'items.product.user'])
             ->latest()
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.orders', compact('orders'));
     }

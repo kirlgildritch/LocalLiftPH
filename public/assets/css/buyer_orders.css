@@ -130,6 +130,13 @@
   border-bottom: 1px solid rgba(187, 222, 251, 0.1);
 }
 
+.order-group-meta {
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .shop-info {
   display: flex;
   align-items: center;
@@ -185,6 +192,10 @@
 
 .order-card-body:last-child {
   border-bottom: none;
+}
+
+.order-card-body--summary {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .order-product-img {

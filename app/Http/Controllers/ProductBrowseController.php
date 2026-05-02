@@ -81,7 +81,8 @@ class ProductBrowseController extends Controller
         ])
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
-                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
+                    ->whereNull('suspended_at');
             })
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nestedQuery) use ($search) {
@@ -126,7 +127,8 @@ class ProductBrowseController extends Controller
         $shops = User::query()
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
-                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
+                    ->whereNull('suspended_at');
             })
             ->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
@@ -179,7 +181,8 @@ class ProductBrowseController extends Controller
         abort_if(
             $product->status !== Product::STATUS_APPROVED
             || !$product->is_active
-            || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED,
+            || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
+            || $product->user?->sellerProfile?->suspended_at,
             404
         );
 
@@ -200,7 +203,7 @@ class ProductBrowseController extends Controller
                 ->whereDoesntHave('review')
                 ->whereHas('order', function ($query) {
                     $query->where('user_id', Auth::id())
-                        ->where('shipping_status', Order::SHIPPING_DELIVERED);
+                        ->where('shipping_status', Order::SHIPPING_COMPLETED);
                 })
                 ->latest()
                 ->get();

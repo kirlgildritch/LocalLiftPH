@@ -143,6 +143,7 @@
                                                 @if(!$ownsProduct)
                                                     <form action="{{ route('messages.start', $product->user) }}" method="POST" data-chat-start-form>
                                                         @csrf
+                                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
                                                         <button type="submit" class="action-btn secondary-btn full-btn">Message Seller</button>
                                                     </form>
                                                 @else
@@ -201,11 +202,11 @@
                                                 <div class="review-form-header">
                                                     <div>
                                                         <strong>Leave a review</strong>
-                                                        <p>Only buyers with delivered purchases can rate this product.</p>
+                                                        <p>Only buyers with completed purchases can rate this product.</p>
                                                     </div>
 
                                                     @if($reviewableOrderItems->count() > 1)
-                                                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} delivered purchases
+                                                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} completed purchases
                                                             eligible</span>
                                                     @endif
                                                 </div>

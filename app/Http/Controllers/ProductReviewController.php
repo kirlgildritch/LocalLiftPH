@@ -26,14 +26,14 @@ class ProductReviewController extends Controller
             ->whereDoesntHave('review')
             ->whereHas('order', function ($query) {
                 $query->where('user_id', Auth::id())
-                    ->where('shipping_status', Order::SHIPPING_DELIVERED);
+                    ->where('shipping_status', Order::SHIPPING_COMPLETED);
             })
             ->first();
 
         if (! $orderItem) {
             return redirect()
                 ->route('products.show', $product)
-                ->with('error', 'You can only review products from your delivered purchases, once per order item.');
+                ->with('error', 'You can only review products from your completed purchases, once per order item.');
         }
 
         Review::create([

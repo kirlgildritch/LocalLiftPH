@@ -12,7 +12,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
-    <link rel="icon" sizes="32x32" href="{{ asset('assets/image/Logo.png') }}">
+    <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
 </head>
 
 <body>

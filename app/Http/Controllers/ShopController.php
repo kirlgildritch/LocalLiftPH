@@ -32,7 +32,8 @@ class ShopController extends Controller
             ])
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
-                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
+                    ->whereNull('suspended_at');
             })
             ->whereHas('products', function ($query) use ($categorySlug) {
                 $query->visibleToBuyers()
@@ -55,7 +56,9 @@ class ShopController extends Controller
 
     public function show(User $user)
     {
-        if (! $user->isSeller() || $user->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED) {
+        if (! $user->isSeller()
+            || $user->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
+            || $user->sellerProfile?->suspended_at) {
             abort(404);
         }
 

@@ -83,9 +83,10 @@
                             @if($reviews->hasPages())
                                 <div class="seller-review-pagination">
                                     @if($reviews->onFirstPage())
-                                        <span class="table-action secondary is-disabled">Previous</span>
+                                        <span class="table-action secondary seller-review-pagination-button is-disabled">Previous</span>
                                     @else
-                                        <a href="{{ $reviews->previousPageUrl() }}" class="table-action secondary">Previous</a>
+                                        <a href="{{ $reviews->previousPageUrl() }}"
+                                            class="table-action secondary seller-review-pagination-button">Previous</a>
                                     @endif
 
                                     <span class="seller-review-pagination-meta">
@@ -93,9 +94,10 @@
                                     </span>
 
                                     @if($reviews->hasMorePages())
-                                        <a href="{{ $reviews->nextPageUrl() }}" class="table-action secondary">Next</a>
+                                        <a href="{{ $reviews->nextPageUrl() }}"
+                                            class="table-action secondary seller-review-pagination-button">Next</a>
                                     @else
-                                        <span class="table-action secondary is-disabled">Next</span>
+                                        <span class="table-action secondary seller-review-pagination-button is-disabled">Next</span>
                                     @endif
                                 </div>
                             @endif
@@ -245,16 +247,38 @@
         }
 
         .seller-review-pagination {
-            display: flex;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
             align-items: center;
-            justify-content: center;
             gap: 14px;
-            flex-wrap: wrap;
+            margin-top: 4px;
         }
 
         .seller-review-pagination-meta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 18px;
+            border: 1px solid rgba(187, 222, 251, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.03);
             color: #8fa7c4;
             font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .seller-review-pagination-button {
+            min-width: 118px;
+        }
+
+        .seller-review-pagination > :first-child {
+            justify-self: start;
+        }
+
+        .seller-review-pagination > :last-child {
+            justify-self: end;
         }
 
         .is-disabled {
@@ -281,6 +305,20 @@
 
             .seller-review-product-main {
                 align-items: flex-start;
+            }
+
+            .seller-review-pagination {
+                grid-template-columns: 1fr;
+            }
+
+            .seller-review-pagination-button,
+            .seller-review-pagination > :first-child,
+            .seller-review-pagination > :last-child {
+                justify-self: stretch;
+            }
+
+            .seller-review-pagination-button {
+                width: 100%;
             }
         }
     </style>

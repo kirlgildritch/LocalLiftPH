@@ -164,19 +164,28 @@ footer {
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+ 
   grid-area: logo;
   justify-self: start;
 }
 
+.logo-icon {
+  width: 68px;
+  min-width: 68px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .logo-icon img{
-  width: 52px;
+  width: 68px;
   height: 52px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  
+  object-fit: contain;
+  display: block;
+  filter:
+    drop-shadow(0 8px 10px rgba(40, 140, 255, 0.28))
+    drop-shadow(0 14px 22px rgba(16, 98, 255, 0.22));
 }
 
 
@@ -1536,10 +1545,14 @@ body.report-modal-open {
     gap: 9px;
   }
 
+  .logo-icon {
+    width: 50px;
+    min-width: 50px;
+  }
+
   .logo-icon img {
-    width: 44px;
-    height: 44px;
-    border-radius: 11px;
+    width: 50px;
+    height: 36px;
   }
 
   .logo-text {

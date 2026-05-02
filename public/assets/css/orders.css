@@ -47,3 +47,59 @@
 .seller-feedback.error-message {
   color: #ffc0cb;
 }
+
+.seller-orders-pagination {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.seller-orders-pagination-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(187, 222, 251, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #8fa7c4;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.seller-orders-pagination-button {
+  min-width: 118px;
+}
+
+.seller-orders-pagination > :first-child {
+  justify-self: start;
+}
+
+.seller-orders-pagination > :last-child {
+  justify-self: end;
+}
+
+.seller-orders-pagination .is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .seller-orders-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-orders-pagination-button,
+  .seller-orders-pagination > :first-child,
+  .seller-orders-pagination > :last-child {
+    justify-self: stretch;
+  }
+
+  .seller-orders-pagination-button {
+    width: 100%;
+  }
+}

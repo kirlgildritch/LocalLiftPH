@@ -16,12 +16,11 @@ class SellerOrderController extends Controller
     {
         $seller = Auth::guard('seller')->user();
 
-        $orders = Order::with(['user', 'items.product'])
-            ->whereHas('items.product', function ($query) use ($seller) {
-                $query->where('user_id', $seller->id);
-            })
+        $orders = Order::with(['user', 'seller.sellerProfile', 'items.product'])
+            ->where('seller_id', $seller->id)
             ->latest()
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('seller.orders', compact('orders'));
     }

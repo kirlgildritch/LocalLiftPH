@@ -18,16 +18,15 @@ class OrderController extends Controller
             Order::SHIPPING_PENDING,
             Order::SHIPPING_TO_SHIP,
             Order::SHIPPING_SHIPPED,
-            Order::SHIPPING_OUT_FOR_DELIVERY,
-            Order::SHIPPING_DELIVERED,
+            Order::SHIPPING_COMPLETED,
             Order::SHIPPING_CANCELLED,
         ];
 
-        if (!in_array($currentStatus, $allowedStatuses, true)) {
+        if (! in_array($currentStatus, $allowedStatuses, true)) {
             $currentStatus = 'all';
         }
 
-        $orders = Order::with(['items.product.user.sellerProfile', 'items.review', 'cancellation'])
+        $orders = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.review', 'cancellation'])
             ->where('user_id', Auth::id())
             ->when($currentStatus !== 'all', function ($query) use ($currentStatus) {
                 $query->where('shipping_status', $currentStatus);
@@ -41,16 +40,45 @@ class OrderController extends Controller
             ->groupBy('shipping_status')
             ->pluck('count', 'shipping_status');
 
-        return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts'));
+        $checkoutGroupCounts = Order::query()
+            ->where('user_id', Auth::id())
+            ->get(['id', 'checkout_group'])
+            ->groupBy(fn (Order $order) => $order->checkoutGroupKey())
+            ->map(fn ($group) => $group->count());
+
+        return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts', 'checkoutGroupCounts'));
     }
 
     public function show(Order $order)
     {
         $this->authorize('view', $order);
 
-        $order->load(['items.product.user.sellerProfile', 'items.review', 'cancellation']);
+        $groupOrdersQuery = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.review', 'cancellation'])
+            ->where('user_id', Auth::id());
 
-        return view('buyer.order-show', compact('order'));
+        if ($order->checkout_group) {
+            $groupOrdersQuery->where('checkout_group', $order->checkout_group);
+        } else {
+            $groupOrdersQuery->where('id', $order->id);
+        }
+
+        $groupOrders = $groupOrdersQuery
+            ->latest('id')
+            ->get();
+
+        $groupSummary = [
+            'items' => (int) $groupOrders->sum(fn (Order $groupOrder) => $groupOrder->itemCount()),
+            'subtotal' => (float) $groupOrders->sum(fn (Order $groupOrder) => $groupOrder->subtotalAmount()),
+            'shipping' => (float) $groupOrders->sum(fn (Order $groupOrder) => (float) $groupOrder->shipping_fee),
+            'total' => (float) $groupOrders->sum(fn (Order $groupOrder) => (float) $groupOrder->total_price),
+            'shops' => (int) $groupOrders->count(),
+        ];
+
+        return view('buyer.order-show', [
+            'order' => $order,
+            'groupOrders' => $groupOrders,
+            'groupSummary' => $groupSummary,
+        ]);
     }
 
     public function buyAgain(Order $order)
@@ -60,7 +88,7 @@ class OrderController extends Controller
         $order->load(['items.product']);
 
         foreach ($order->items as $item) {
-            if (!$item->product || !$item->product->is_active) {
+            if (! $item->product || ! $item->product->is_active) {
                 continue;
             }
 
@@ -84,7 +112,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        if (!$order->canBeCancelled()) {
+        if (! $order->canBeCancelled()) {
             return redirect()
                 ->route('buyer.orders.show', $order)
                 ->with('error', 'Only orders before shipment can be cancelled.');
@@ -110,7 +138,7 @@ class OrderController extends Controller
                 ->withInput();
         }
 
-        if (!$selectedReasons->contains('Other')) {
+        if (! $selectedReasons->contains('Other')) {
             $otherReason = null;
         }
 
@@ -138,7 +166,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        if (!$order->canConfirmReceipt()) {
+        if (! $order->canConfirmReceipt()) {
             return redirect()
                 ->route('buyer.orders.show', $order)
                 ->with('error', 'This order is not ready for receipt confirmation.');
@@ -146,6 +174,7 @@ class OrderController extends Controller
 
         $order->update([
             'status' => Order::STATUS_COMPLETED,
+            'shipping_status' => Order::SHIPPING_COMPLETED,
         ]);
 
         return redirect()

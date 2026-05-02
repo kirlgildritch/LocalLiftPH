@@ -24,8 +24,76 @@
   color: #79b9ff;
 }
 
+.earnings-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.earnings-filters label {
+  display: grid;
+  gap: 7px;
+}
+
+.earnings-filters span {
+  color: #bbdefb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.earnings-filters select,
+.earnings-filters input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  outline: none;
+}
+
+.earnings-filter-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.table-action.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #bbdefb;
+  text-decoration: none;
+}
+
+.earnings-product-cell {
+  min-width: 220px;
+}
+
+.earnings-negative-text {
+  color: #ffc0cb;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .earnings-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .earnings-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .earnings-filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .earnings-stats,
+  .earnings-filters {
     grid-template-columns: 1fr;
   }
 }

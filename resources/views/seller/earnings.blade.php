@@ -2,6 +2,7 @@
 
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/earnings.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/orders.css') }}">
 
 <section class="dashboard-wrapper">
     <div class="container">
@@ -20,35 +21,103 @@
                     <div class="earnings-stats">
                         <article class="mini-stat panel">
                             <span>Total Earnings</span>
-                            <strong>&#8369; {{ number_format($totalEarnings, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($stats['total_earnings'] ?? 0, 2) }}</strong>
+                        </article>
+
+                        <article class="mini-stat panel">
+                            <span>Pending Earnings</span>
+                            <strong class="highlight">&#8369; {{ number_format($stats['pending_earnings'] ?? 0, 2) }}</strong>
+                        </article>
+
+                        <article class="mini-stat panel">
+                            <span>Today</span>
+                            <strong>&#8369; {{ number_format($stats['today_earnings'] ?? 0, 2) }}</strong>
+                        </article>
+
+                        <article class="mini-stat panel">
+                            <span>This Week</span>
+                            <strong>&#8369; {{ number_format($stats['weekly_earnings'] ?? 0, 2) }}</strong>
                         </article>
 
                         <article class="mini-stat panel">
                             <span>This Month</span>
-                            <strong>&#8369; {{ number_format($monthlyEarnings, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($stats['monthly_earnings'] ?? 0, 2) }}</strong>
                         </article>
 
                         <article class="mini-stat panel">
-                            <span>Pending Payout</span>
-                            <strong class="highlight">&#8369; {{ number_format($pendingPayout, 2) }}</strong>
+                            <span>Overall Earnings</span>
+                            <strong>&#8369; {{ number_format($stats['overall_earnings'] ?? 0, 2) }}</strong>
                         </article>
                     </div>
+
+                    <form method="GET" class="earnings-filters panel">
+                        <label>
+                            <span>Status</span>
+                            <select name="status">
+                                @foreach($statusOptions as $value => $label)
+                                    <option value="{{ $value }}" {{ ($filters['status'] ?? 'all') === $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </label>
+
+                        <label>
+                            <span>Month</span>
+                            <input type="month" name="month" value="{{ $filters['month'] ?? '' }}">
+                        </label>
+
+                        <label>
+                            <span>From</span>
+                            <input type="date" name="from" value="{{ $filters['from'] ?? '' }}">
+                        </label>
+
+                        <label>
+                            <span>To</span>
+                            <input type="date" name="to" value="{{ $filters['to'] ?? '' }}">
+                        </label>
+
+                        <div class="earnings-filter-actions">
+                            <button type="submit" class="table-action secondary">Apply</button>
+                            <a href="{{ route('seller.earnings') }}" class="table-action ghost">Reset</a>
+                        </div>
+                    </form>
 
                     <div class="table-panel">
                         <table class="seller-table">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
                                     <th>Order ID</th>
-                                    <th>Customer</th>
+                                    <th>Buyer</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
                                     <th>Amount</th>
                                     <th>Status</th>
+                                    <th>Date</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td colspan="5" class="empty-text">No earnings records yet.</td>
-                                </tr>
+                                @forelse($historyOrders as $order)
+                                    <tr>
+                                        <td>#{{ $order['id'] }}</td>
+                                        <td>{{ $order['buyer_name'] }}</td>
+                                        <td class="earnings-product-cell">{{ $order['product_summary'] }}</td>
+                                        <td>{{ $order['quantity'] }}</td>
+                                        <td class="{{ $order['is_cancelled'] ? 'earnings-negative-text' : '' }}">
+                                            {{ $order['is_cancelled'] ? '-' : '' }}&#8369; {{ number_format($order['total'], 2) }}
+                                        </td>
+                                        <td>
+                                            <span class="status-chip {{ $order['status_tone'] }}">
+                                                {{ $order['status_label'] }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $order['date_label'] }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="7" class="empty-text">No earnings records found.</td>
+                                    </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
