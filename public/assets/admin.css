@@ -217,11 +217,173 @@ textarea {
     align-items: center;
 }
 
-.topbar__note {
+.notification-dropdown {
+    position: relative;
+}
+
+.notification-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 0.9rem;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: 0.18s ease;
+}
+
+.notification-btn:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-soft);
+}
+
+.notification-btn.has-unread {
+    border-color: rgba(59, 111, 214, 0.34);
+    box-shadow: 0 0 0 4px rgba(59, 111, 214, 0.08);
+}
+
+.notification-btn.is-pulsing {
+    animation: adminNotificationPulse 0.55s ease;
+}
+
+.notification-btn i {
+    font-size: 1.05rem;
+}
+
+.notif-badge {
+    position: absolute;
+    top: -0.25rem;
+    right: -0.2rem;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    padding: 0 0.25rem;
+    border: 2px solid var(--surface);
+    border-radius: 999px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.notification-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(340px, calc(100vw - 40px));
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    background: var(--surface);
+    box-shadow: 0 20px 44px rgba(20, 35, 65, 0.18);
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: 0.25s ease;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.notification-dropdown:hover .notification-menu,
+.notification-dropdown.is-hover-open .notification-menu,
+.notification-dropdown.is-open .notification-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.notification-header,
+.notification-footer,
+.notification-item {
+    padding: 0.9rem 1rem;
+}
+
+.notification-header,
+.notification-item {
+    border-bottom: 1px solid var(--border);
+}
+
+.notification-header h4,
+.notif-content p {
+    margin: 0;
+}
+
+.notification-header__meta {
+    margin: 0.35rem 0 0;
     color: var(--muted);
-    max-width: 26rem;
-    text-align: right;
-    font-size: 0.95rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.notification-item {
+    display: flex;
+    gap: 0.75rem;
+    color: inherit;
+}
+
+.notification-item.unread {
+    background: var(--primary-soft);
+}
+
+.notif-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 999px;
+    background: var(--primary-soft);
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.notif-content {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.notif-content strong {
+    color: var(--text);
+}
+
+.notif-content span,
+.notif-content small {
+    color: var(--muted);
+}
+
+.notification-footer a {
+    display: inline-flex;
+    align-items: center;
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.notification-item:hover,
+.notification-footer a:hover {
+    background: var(--surface-soft);
+}
+
+.notification-btn[disabled],
+.notification-btn-action[disabled],
+.notification-icon-button[disabled] {
+    cursor: not-allowed;
+    opacity: 0.62;
+    box-shadow: none;
+}
+
+.notification-btn-action.is-busy,
+.notification-icon-button.is-busy {
+    opacity: 0.78;
 }
 
 .topbar__menu {
@@ -272,6 +434,23 @@ textarea {
     background: var(--primary);
     color: #fff;
     font-size: 0.8rem;
+}
+
+@keyframes adminNotificationPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(59, 111, 214, 0.24);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 8px rgba(59, 111, 214, 0.12);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(59, 111, 214, 0);
+    }
 }
 
 .page {
@@ -1653,6 +1832,11 @@ textarea {
         justify-content: space-between;
     }
 
+    .notification-menu {
+        right: 0;
+        left: auto;
+    }
+
     .search-box,
     .search-box--grow {
         width: 100%;
@@ -1750,6 +1934,15 @@ textarea {
 }
 
 @media (max-width: 640px) {
+    .notification-menu {
+        position: fixed;
+        top: 84px;
+        left: 14px;
+        right: 14px;
+        width: auto;
+        max-width: none;
+    }
+
     .toast-message {
         top: 14px;
         right: 14px;

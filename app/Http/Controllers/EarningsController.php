@@ -33,7 +33,7 @@ class EarningsController extends Controller
 
     protected function parseMonthRange(?string $month): ?array
     {
-        if (! filled($month)) {
+        if (!filled($month)) {
             return null;
         }
 
@@ -49,22 +49,22 @@ class EarningsController extends Controller
     public function index(Request $request): View
     {
         $sellerId = (int) (Auth::guard('seller')->id() ?? Auth::id());
-        $status = (string) $request->string('status', 'all');
+        $earningStatus = (string) $request->string('status', 'all');
         $from = $request->input('from');
         $to = $request->input('to');
         $month = $request->input('month');
 
         $allowedStatuses = [
             'all',
-            Order::SHIPPING_PENDING,
-            Order::SHIPPING_TO_SHIP,
-            Order::SHIPPING_SHIPPED,
-            Order::SHIPPING_COMPLETED,
-            Order::SHIPPING_CANCELLED,
+            Order::EARNING_PENDING,
+            Order::EARNING_ON_HOLD,
+            Order::EARNING_AVAILABLE,
+            Order::EARNING_PAID_OUT,
+            Order::EARNING_REVERSED,
         ];
 
-        if (! in_array($status, $allowedStatuses, true)) {
-            $status = 'all';
+        if (!in_array($earningStatus, $allowedStatuses, true)) {
+            $earningStatus = 'all';
         }
 
         $baseOrderQuery = Order::with(['user', 'items.product'])
@@ -72,8 +72,15 @@ class EarningsController extends Controller
             ->latest();
 
         $allOrders = (clone $baseOrderQuery)->get();
-        $completedOrders = $allOrders->filter(fn (Order $order) => $order->isCompleted() && ! $order->isCancelled());
-        $pendingOrders = $allOrders->filter(fn (Order $order) => ! $order->isCompleted() && ! $order->isCancelled());
+
+        $pendingOrders = $allOrders->filter(fn(Order $order) => in_array($order->seller_earning_status, [
+            Order::EARNING_PENDING,
+            Order::EARNING_ON_HOLD,
+        ], true));
+
+        $availableOrders = $allOrders->filter(fn(Order $order) => $order->seller_earning_status === Order::EARNING_AVAILABLE);
+        $paidOutOrders = $allOrders->filter(fn(Order $order) => $order->seller_earning_status === Order::EARNING_PAID_OUT);
+        $reversedOrders = $allOrders->filter(fn(Order $order) => $order->seller_earning_status === Order::EARNING_REVERSED);
 
         $todayStart = now()->startOfDay();
         $todayEnd = now()->endOfDay();
@@ -82,15 +89,15 @@ class EarningsController extends Controller
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
 
-        $completedWithinRange = fn (Carbon $start, Carbon $end) => $completedOrders
-            ->filter(fn (Order $order) => $order->updated_at && $order->updated_at->betweenIncluded($start, $end))
-            ->sum(fn (Order $order) => $this->sellerOrderTotal($order));
+        $availableWithinRange = fn(Carbon $start, Carbon $end) => $availableOrders
+            ->filter(fn(Order $order) => $order->paid_at && $order->paid_at->betweenIncluded($start, $end))
+            ->sum(fn(Order $order) => $this->sellerOrderTotal($order));
 
         $monthRange = $this->parseMonthRange($month);
 
         $historyOrders = (clone $baseOrderQuery)
-            ->when($status !== 'all', function ($query) use ($status) {
-                $query->where('shipping_status', $status);
+            ->when($earningStatus !== 'all', function ($query) use ($earningStatus) {
+                $query->where('seller_earning_status', $earningStatus);
             })
             ->when($monthRange, function ($query) use ($monthRange) {
                 $query->whereBetween('created_at', $monthRange);
@@ -109,40 +116,49 @@ class EarningsController extends Controller
                     'product_summary' => $this->orderProductSummary($order),
                     'quantity' => $order->itemCount(),
                     'total' => $this->sellerOrderTotal($order),
-                    'status_label' => $order->shippingStatusLabel(),
-                    'status_tone' => $order->shippingToneClass(),
+                    'shipping_status_label' => $order->shippingStatusLabel(),
+                    'shipping_status_tone' => $order->shippingToneClass(),
+                    'payment_status_label' => $order->paymentStatusLabel(),
+                    'payment_status_tone' => $order->paymentToneClass(),
+                    'earning_status_label' => $order->earningStatusLabel(),
+                    'earning_status_tone' => $order->earningToneClass(),
                     'date_label' => $order->created_at?->format('M d, Y h:i A') ?? 'N/A',
-                    'is_cancelled' => $order->isCancelled(),
+                    'is_reversed' => $order->seller_earning_status === Order::EARNING_REVERSED,
                 ];
             });
 
         $stats = [
-            'total_earnings' => (float) $completedOrders->sum(fn (Order $order) => $this->sellerOrderTotal($order)),
-            'pending_earnings' => (float) $pendingOrders->sum(fn (Order $order) => $this->sellerOrderTotal($order)),
-            'today_earnings' => (float) $completedWithinRange($todayStart, $todayEnd),
-            'weekly_earnings' => (float) $completedWithinRange($weekStart, $weekEnd),
-            'monthly_earnings' => (float) $completedWithinRange($monthStart, $monthEnd),
+            'pending_earnings' => (float) $pendingOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'available_earnings' => (float) $availableOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'paid_out_earnings' => (float) $paidOutOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'reversed_earnings' => (float) $reversedOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'today_earnings' => (float) $availableWithinRange($todayStart, $todayEnd),
+            'weekly_earnings' => (float) $availableWithinRange($weekStart, $weekEnd),
+            'monthly_earnings' => (float) $availableWithinRange($monthStart, $monthEnd),
             'overall_earnings' => (float) $allOrders
-                ->reject(fn (Order $order) => $order->isCancelled())
-                ->sum(fn (Order $order) => $this->sellerOrderTotal($order)),
+                ->filter(fn(Order $order) => in_array($order->seller_earning_status, [
+                    Order::EARNING_AVAILABLE,
+                    Order::EARNING_PAID_OUT,
+                ], true))
+                ->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
         ];
 
         return view('seller.earnings', [
             'stats' => $stats,
             'historyOrders' => $historyOrders,
             'filters' => [
-                'status' => $status,
+                'status' => $earningStatus,
                 'from' => $from,
                 'to' => $to,
                 'month' => $month,
             ],
             'statusOptions' => [
-                'all' => 'All Statuses',
-                Order::SHIPPING_PENDING => 'Pending',
-                Order::SHIPPING_TO_SHIP => 'To Ship',
-                Order::SHIPPING_SHIPPED => 'Shipped',
-                Order::SHIPPING_COMPLETED => 'Completed',
-                Order::SHIPPING_CANCELLED => 'Cancelled',
+                'all' => 'All Earning Statuses',
+                Order::EARNING_PENDING => 'Pending',
+                Order::EARNING_ON_HOLD => 'On Hold',
+                Order::EARNING_AVAILABLE => 'Available',
+                Order::EARNING_PAID_OUT => 'Paid Out',
+                Order::EARNING_REVERSED => 'Reversed',
             ],
         ]);
     }

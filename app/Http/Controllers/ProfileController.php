@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Notifications\AdminActivityNotification;
 use Illuminate\Support\Facades\Hash;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
@@ -52,6 +54,7 @@ class ProfileController extends Controller
 
     $validated = $request->validated();
     $originalEmail = $user->email;
+    $changedFields = [];
 
     // Check current password first before changing anything
     if ($request->filled('password')) {
@@ -62,9 +65,18 @@ class ProfileController extends Controller
         }
 
         $user->password = Hash::make($request->password);
+        $changedFields[] = 'password';
     }
 
     // Update only basic fields
+    if (($validated['name'] ?? null) !== $user->name) {
+        $changedFields[] = 'name';
+    }
+
+    if (($validated['email'] ?? null) !== $originalEmail) {
+        $changedFields[] = 'email';
+    }
+
     $user->name = $validated['name'];
     $user->email = $validated['email'];
 
@@ -84,6 +96,7 @@ class ProfileController extends Controller
         }
 
         $user->profile_image = $imagePath;
+        $changedFields[] = 'profile image';
     }
 
     if ($originalEmail !== $validated['email']) {
@@ -91,6 +104,17 @@ class ProfileController extends Controller
     }
 
     $user->save();
+
+    if ($changedFields !== []) {
+        $this->notifyAdmins(
+            new AdminActivityNotification(
+                'seller_review',
+                'Seller profile updated',
+                ($user->name ?? 'A seller') . ' updated their seller profile: ' . $this->formatFieldList($changedFields) . '.',
+                'admin.sellers',
+            )
+        );
+    }
 
     return Redirect::route('seller.profile')->with('success', 'Profile updated successfully.');
 }
@@ -172,6 +196,40 @@ public function buyerUpdate(Request $request)
     $user->save();
 
     return back()->with('success', 'Profile updated successfully.');
+    }
+
+    private function notifyAdmins(AdminActivityNotification $notification): void
+    {
+        User::query()
+            ->where(function ($query) {
+                $query->where('is_admin', true)
+                    ->orWhere('role', 'admin');
+            })
+            ->get()
+            ->each
+            ->notify($notification);
+    }
+
+    private function formatFieldList(array $fields): string
+    {
+        $fields = array_values(array_unique($fields));
+        $count = count($fields);
+
+        if ($count === 0) {
+            return 'details';
+        }
+
+        if ($count === 1) {
+            return $fields[0];
+        }
+
+        if ($count === 2) {
+            return $fields[0] . ' and ' . $fields[1];
+        }
+
+        $lastField = array_pop($fields);
+
+        return implode(', ', $fields) . ', and ' . $lastField;
     }
 
 }

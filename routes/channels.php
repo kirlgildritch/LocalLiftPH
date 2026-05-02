@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Conversation;
+use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('chat.conversation.{conversationId}', function ($user, int $conversationId) {
@@ -30,4 +31,8 @@ Broadcast::channel('chat.presence.{conversationId}', function ($user, int $conve
         'id' => $user->id,
         'name' => $user->name,
     ];
+});
+
+Broadcast::channel('App.Models.User.{id}', function ($user, int $id) {
+    return (int) $user->id === $id;
 });

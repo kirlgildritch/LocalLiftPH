@@ -129,18 +129,19 @@ a {
   position: relative;
 }
 
-.seller-search i {
+.seller-search__icon {
   position: absolute;
   top: 50%;
   left: 18px;
   transform: translateY(-50%);
   color: #42a5f5;
+  pointer-events: none;
 }
 
 .seller-search input {
   width: 100%;
   min-height: 54px;
-  padding: 0 18px 0 48px;
+  padding: 0 96px 0 48px;
   border: 1px solid rgba(187, 222, 251, 0.14);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.04);
@@ -155,6 +156,84 @@ a {
 .seller-search input:focus {
   border-color: rgba(66, 165, 245, 0.42);
   box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.14);
+}
+
+.seller-search__clear,
+.seller-search__submit {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #8fa7c4;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s ease, opacity 0.18s ease;
+}
+
+.seller-search__clear {
+  right: 52px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+.seller-search__submit {
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  color: #42a5f5;
+}
+
+.seller-search__clear:hover,
+.seller-search__submit:hover {
+  color: #f5f9ff;
+}
+
+.seller-search__clear.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.seller-search-suggestions {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: none;
+  overflow: hidden;
+  border: 1px solid rgba(187, 222, 251, 0.14);
+  border-radius: 18px;
+  background: rgba(10, 20, 34, 0.98);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.34);
+}
+
+.seller-suggestion-item {
+  padding: 12px 16px;
+  color: #f5f9ff;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.seller-suggestion-item:hover {
+  background: rgba(66, 165, 245, 0.12);
+}
+
+.seller-suggestion-item.is-active {
+  background: rgba(66, 165, 245, 0.18);
+}
+
+.seller-suggestion-item.is-empty {
+  color: #8fa7c4;
+  cursor: default;
+}
+
+.seller-suggestion-item.is-empty:hover {
+  background: transparent;
 }
 
 .seller-header-actions {

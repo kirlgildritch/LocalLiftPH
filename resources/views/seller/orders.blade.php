@@ -17,7 +17,6 @@
                             </div>
                         </div>
 
-
                         <div class="table-panel">
                             <table class="seller-table">
                                 <thead>
@@ -25,6 +24,9 @@
                                         <th>Order ID</th>
                                         <th>Customer</th>
                                         <th>Shipping Status</th>
+                                        <th>Payment Method</th>
+                                        <th>Payment Status</th>
+                                        <th>Earning Status</th>
                                         <th>Total</th>
                                         <th>Action</th>
                                     </tr>
@@ -41,6 +43,17 @@
                                             <td>
                                                 <span class="status-chip {{ $order->shippingToneClass() }}">
                                                     {{ $order->shippingStatusLabel() }}
+                                                </span>
+                                            </td>
+                                            <td>{{ $order->paymentMethodLabel() }}</td>
+                                            <td>
+                                                <span class="status-chip {{ $order->paymentToneClass() }}">
+                                                    {{ $order->paymentStatusLabel() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="status-chip {{ $order->earningToneClass() }}">
+                                                    {{ $order->earningStatusLabel() }}
                                                 </span>
                                             </td>
                                             <td>&#8369; {{ number_format($order->total_price ?? 0, 2) }}</td>
@@ -67,7 +80,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="empty-text">No orders found.</td>
+                                            <td colspan="8" class="empty-text">No orders found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

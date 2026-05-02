@@ -11,7 +11,9 @@ class UseBroadcastAuthGuard
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::guard('seller')->check()) {
+        if (Auth::guard('admin')->check()) {
+            Auth::shouldUse('admin');
+        } elseif (Auth::guard('seller')->check()) {
             Auth::shouldUse('seller');
         } elseif (Auth::guard('web')->check()) {
             Auth::shouldUse('web');

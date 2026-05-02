@@ -15,10 +15,30 @@
                 </span>
             </a>
 
-            <form class="seller-search" action="#" method="GET">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" placeholder="Search products, orders, and seller tools..."
-                    aria-label="Search seller dashboard">
+            <form class="seller-search" action="{{ route('seller.search') }}" method="GET">
+                <i class="fa-solid fa-magnifying-glass seller-search__icon"></i>
+                <input
+                    type="text"
+                    id="sellerSearchInput"
+                    name="q"
+                    value="{{ request('q') }}"
+                    placeholder="Search products, orders, messages, and tools..."
+                    aria-label="Search seller dashboard"
+                    autocomplete="off"
+                >
+                <button
+                    type="button"
+                    id="sellerSearchClearButton"
+                    class="seller-search__clear is-hidden"
+                    title="Clear search"
+                    aria-label="Clear search"
+                >
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <button type="submit" class="seller-search__submit" title="Search" aria-label="Search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </button>
+                <div id="sellerSearchSuggestions" class="seller-search-suggestions"></div>
             </form>
 
             <div class="seller-header-actions">
@@ -93,6 +113,188 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.getElementById('sellerSearchInput');
+        const searchClearButton = document.getElementById('sellerSearchClearButton');
+        const suggestionsBox = document.getElementById('sellerSearchSuggestions');
+        let activeRequestController = null;
+        let activeSuggestionIndex = -1;
+
+        if (searchInput && searchClearButton && suggestionsBox) {
+            const hideSuggestions = () => {
+                suggestionsBox.innerHTML = '';
+                suggestionsBox.style.display = 'none';
+                activeSuggestionIndex = -1;
+            };
+
+            const syncClearButton = () => {
+                const hasValue = searchInput.value.trim().length > 0;
+                searchClearButton.classList.toggle('is-hidden', !hasValue);
+            };
+
+            const getSelectableSuggestions = () => Array.from(
+                suggestionsBox.querySelectorAll('.seller-suggestion-item:not(.is-empty)')
+            );
+
+            const highlightSuggestion = (nextIndex) => {
+                const items = getSelectableSuggestions();
+
+                if (!items.length) {
+                    activeSuggestionIndex = -1;
+                    return;
+                }
+
+                activeSuggestionIndex = Math.max(0, Math.min(nextIndex, items.length - 1));
+
+                items.forEach((item, index) => {
+                    item.classList.toggle('is-active', index === activeSuggestionIndex);
+                });
+            };
+
+            const chooseSuggestion = (item) => {
+                if (!item) {
+                    return;
+                }
+
+                searchInput.value = item.dataset.suggestionLabel || item.textContent;
+                syncClearButton();
+                hideSuggestions();
+                searchInput.form.submit();
+            };
+
+            const escapeHtml = (value) => String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+            const renderSuggestions = (suggestions) => {
+                if (!suggestions.length) {
+                    hideSuggestions();
+                    return;
+                }
+
+                suggestionsBox.innerHTML = suggestions.map((item) => {
+                    const label = escapeHtml(item.label);
+
+                    if (item.selectable === false) {
+                        return `<div class="seller-suggestion-item is-empty">${label}</div>`;
+                    }
+
+                    return `<div class="seller-suggestion-item" data-suggestion-label="${label}">${label}</div>`;
+                }).join('');
+
+                suggestionsBox.style.display = 'block';
+
+                suggestionsBox.querySelectorAll('.seller-suggestion-item').forEach((item) => {
+                    if (item.classList.contains('is-empty')) {
+                        return;
+                    }
+
+                    item.addEventListener('mouseenter', function () {
+                        const items = getSelectableSuggestions();
+                        highlightSuggestion(items.indexOf(this));
+                    });
+
+                    item.addEventListener('click', function () {
+                        chooseSuggestion(this);
+                    });
+                });
+
+                activeSuggestionIndex = -1;
+            };
+
+            searchInput.addEventListener('input', function () {
+                const query = this.value.trim();
+
+                syncClearButton();
+
+                if (activeRequestController) {
+                    activeRequestController.abort();
+                    activeRequestController = null;
+                }
+
+                if (query.length < 1) {
+                    hideSuggestions();
+                    return;
+                }
+
+                activeRequestController = new AbortController();
+
+                fetch(@json(route('seller.search.suggestions')) + `?q=${encodeURIComponent(query)}`, {
+                    signal: activeRequestController.signal,
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`Suggestion request failed with status ${response.status}`);
+                        }
+
+                        return response.json();
+                    })
+                    .then((suggestions) => {
+                        renderSuggestions(Array.isArray(suggestions) ? suggestions : []);
+                    })
+                    .catch((error) => {
+                        if (error.name !== 'AbortError') {
+                            console.error(error);
+                            hideSuggestions();
+                        }
+                    })
+                    .finally(() => {
+                        activeRequestController = null;
+                    });
+            });
+
+            searchInput.addEventListener('keydown', function (event) {
+                const items = getSelectableSuggestions();
+                const suggestionsVisible = suggestionsBox.style.display === 'block' && items.length > 0;
+
+                if (event.key === 'Escape') {
+                    hideSuggestions();
+                    return;
+                }
+
+                if (!suggestionsVisible) {
+                    return;
+                }
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    highlightSuggestion(activeSuggestionIndex + 1);
+                    return;
+                }
+
+                if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    highlightSuggestion(activeSuggestionIndex <= 0 ? items.length - 1 : activeSuggestionIndex - 1);
+                    return;
+                }
+
+                if (event.key === 'Enter' && activeSuggestionIndex >= 0) {
+                    event.preventDefault();
+                    chooseSuggestion(items[activeSuggestionIndex]);
+                }
+            });
+
+            searchClearButton.addEventListener('click', function () {
+                searchInput.value = '';
+                syncClearButton();
+                hideSuggestions();
+                window.location.assign(searchInput.form.action);
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!searchInput.contains(event.target) && !suggestionsBox.contains(event.target)) {
+                    hideSuggestions();
+                }
+            });
+
+            syncClearButton();
+        }
+
         const menuToggle = document.getElementById('sellerMenuToggle');
         const sidebars = document.querySelectorAll('.sidebar');
         const body = document.body;

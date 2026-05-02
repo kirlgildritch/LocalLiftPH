@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Seller;
 use App\Models\SellerDocumentRequest;
+use App\Models\User;
+use App\Notifications\AdminActivityNotification;
 use App\Notifications\SellerModerationNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -150,9 +152,35 @@ class SellerDashboardController extends Controller
             ])->save();
         });
 
+        $seller = Seller::with('latestDocumentRequest')->where('user_id', $user->id)->first();
+        $isResubmission = $latestDocumentRequest?->status === SellerDocumentRequest::STATUS_PENDING;
+
+        $this->notifyAdmins(
+            new AdminActivityNotification(
+                'seller_review',
+                $isResubmission ? 'Seller documents resubmitted' : 'New seller application',
+                $isResubmission
+                    ? (($seller?->store_name ?: $validated['full_name']) . ' uploaded the requested verification documents.')
+                    : (($seller?->store_name ?: $validated['full_name']) . ' submitted a seller application for review.'),
+                'admin.sellers',
+            )
+        );
+
         return redirect()
             ->route('seller.dashboard')
             ->with('success', 'Application submitted. Your Seller Center access is pending admin review.');
+    }
+
+    private function notifyAdmins(AdminActivityNotification $notification): void
+    {
+        User::query()
+            ->where(function ($query) {
+                $query->where('is_admin', true)
+                    ->orWhere('role', 'admin');
+            })
+            ->get()
+            ->each
+            ->notify($notification);
     }
 
     private function resolveDashboardState(Request $request, ?Seller $seller, ?SellerDocumentRequest $latestDocumentRequest): string

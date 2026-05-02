@@ -15,11 +15,13 @@
 
         .dashboard-section-grid {
             grid-template-columns: 1.5fr 1fr;
+            align-items: start;
         }
 
         .dashboard-mini-grid {
             grid-template-columns: repeat(4, minmax(0, 1fr));
             padding: 1rem 1.25rem 1.25rem;
+            align-items: stretch;
         }
 
         .dashboard-mini-card {
@@ -29,6 +31,8 @@
             background: var(--surface-soft);
             display: grid;
             gap: 0.45rem;
+            height: 100%;
+            align-content: start;
         }
 
         .dashboard-mini-card strong {
@@ -171,6 +175,11 @@
             font-size: 0.94rem;
         }
 
+        .admin-dashboard-summary .summary-card,
+        .dashboard-overview-card {
+            height: 100%;
+        }
+
         @media (max-width: 1200px) {
             .dashboard-mini-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -178,6 +187,100 @@
 
             .dashboard-section-grid {
                 grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 1024px) and (max-width: 1440px) {
+            .page {
+                padding: 1.35rem;
+            }
+
+            .page-stack {
+                gap: 1.25rem;
+            }
+
+            .admin-dashboard-summary {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 0.9rem;
+            }
+
+            .admin-dashboard-summary .summary-card {
+                min-height: 112px;
+                padding: 0.95rem 1.05rem;
+                display: grid;
+                align-content: space-between;
+            }
+
+            .admin-dashboard-summary .summary-card__label {
+                margin-bottom: 0.4rem;
+                font-size: 0.88rem;
+                line-height: 1.35;
+            }
+
+            .admin-dashboard-summary .summary-card__value {
+                display: grid;
+                gap: 0.35rem;
+                align-items: start;
+            }
+
+            .admin-dashboard-summary .summary-card__value strong {
+                font-size: clamp(2rem, 1.8vw, 2.45rem);
+                line-height: 0.96;
+                overflow-wrap: anywhere;
+            }
+
+            .admin-dashboard-summary .summary-card__value span {
+                padding-bottom: 0;
+                font-size: 0.86rem;
+                line-height: 1.35;
+            }
+
+            .admin-dashboard-sections {
+                grid-template-columns: minmax(0, 1.22fr) minmax(0, 1.02fr);
+                gap: 1rem;
+            }
+
+            .admin-dashboard-sections > .stack {
+                gap: 1rem;
+            }
+
+            .dashboard-overview-card {
+                display: grid;
+                grid-template-rows: auto 1fr;
+            }
+
+            .dashboard-overview-card .section-card__header {
+                padding: 0.95rem 1.1rem;
+            }
+
+            .dashboard-overview-card .dashboard-mini-grid {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 0.85rem;
+                padding: 1rem 1.1rem 1.1rem;
+            }
+
+            .dashboard-overview-card .dashboard-mini-card {
+                min-height: 148px;
+                padding: 0.95rem 0.85rem;
+                gap: 0.4rem;
+                align-content: space-between;
+            }
+
+            .dashboard-overview-card .dashboard-mini-card span {
+                font-size: 0.84rem;
+                line-height: 1.28;
+                text-wrap: balance;
+            }
+
+            .dashboard-overview-card .dashboard-mini-card strong {
+                font-size: clamp(1.7rem, 1.65vw, 2.05rem);
+                line-height: 0.98;
+                overflow-wrap: anywhere;
+            }
+
+            .dashboard-overview-card .dashboard-mini-card small {
+                font-size: 0.78rem;
+                line-height: 1.28;
             }
         }
 
@@ -197,7 +300,7 @@
 
 @section('content')
     <div class="page-stack">
-        <section class="summary-grid">
+        <section class="summary-grid admin-dashboard-summary">
             @foreach ($stats as $stat)
                 <article class="summary-card summary-card--{{ $stat['tone'] }}">
                     <p class="summary-card__label">{{ $stat['label'] }}</p>
@@ -215,9 +318,9 @@
             @endforeach
         </section>
 
-        <section class="dashboard-section-grid">
+        <section class="dashboard-section-grid admin-dashboard-sections">
             <div class="stack">
-                <article class="panel-card">
+                <article class="panel-card dashboard-overview-card dashboard-overview-card--users">
                     <div class="section-card__header">
                         <h3 class="section-title">Sales Overview</h3>
                     </div>
@@ -392,7 +495,7 @@
             </div>
 
             <div class="stack">
-                <article class="panel-card">
+                <article class="panel-card dashboard-overview-card">
                     <div class="section-card__header">
                         <h3 class="section-title">User Management</h3>
                     </div>

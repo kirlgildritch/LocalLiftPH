@@ -24,9 +24,9 @@ class CheckoutController extends Controller
         return $cartItems->filter(function ($item) {
             $product = $item->product;
 
-            return ! $product
+            return !$product
                 || $product->status !== \App\Models\Product::STATUS_APPROVED
-                || ! $product->is_active
+                || !$product->is_active
                 || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
                 || (int) $product->stock < (int) $item->quantity;
         });
@@ -56,8 +56,8 @@ class CheckoutController extends Controller
     protected function groupedCartItemsBySeller(Collection $cartItems): Collection
     {
         return $cartItems
-            ->filter(fn ($item) => $item->product && $item->product->user_id)
-            ->groupBy(fn ($item) => (int) $item->product->user_id)
+            ->filter(fn($item) => $item->product && $item->product->user_id)
+            ->groupBy(fn($item) => (int) $item->product->user_id)
             ->sortKeys();
     }
 
@@ -69,7 +69,7 @@ class CheckoutController extends Controller
         ]);
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->filter()
             ->unique()
             ->values();
@@ -124,7 +124,7 @@ class CheckoutController extends Controller
         ]);
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->filter()
             ->unique()
             ->values();
@@ -173,6 +173,9 @@ class CheckoutController extends Controller
                     'total_price' => $totals['total'],
                     'status' => Order::STATUS_PENDING,
                     'shipping_status' => Order::SHIPPING_PENDING,
+                    'payment_method' => Order::PAYMENT_METHOD_COD,
+                    'payment_status' => Order::PAYMENT_PENDING,
+                    'seller_earning_status' => Order::EARNING_PENDING,
                 ]);
 
                 foreach ($sellerCartItems as $item) {

@@ -25,6 +25,18 @@ class Order extends Model
     public const SHIPPING_DELIVERED = 'delivered';
     public const SHIPPING_CANCELLED = 'cancelled';
 
+    public const PAYMENT_METHOD_COD = 'cod';
+
+    public const PAYMENT_PENDING = 'pending';
+    public const PAYMENT_PAID = 'paid';
+    public const PAYMENT_CANCELLED = 'cancelled';
+
+    public const EARNING_PENDING = 'pending';
+    public const EARNING_ON_HOLD = 'on_hold';
+    public const EARNING_AVAILABLE = 'available';
+    public const EARNING_PAID_OUT = 'paid_out';
+    public const EARNING_REVERSED = 'reversed';
+
     protected $fillable = [
         'user_id',
         'seller_id',
@@ -33,6 +45,16 @@ class Order extends Model
         'total_price',
         'status',
         'shipping_status',
+        'payment_method',
+        'payment_status',
+        'paid_at',
+        'seller_earning_status',
+        'seller_released_at',
+    ];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
+        'seller_released_at' => 'datetime',
     ];
 
     public function user()
@@ -77,6 +99,26 @@ class Order extends Model
         ];
     }
 
+    public static function paymentStatuses(): array
+    {
+        return [
+            self::PAYMENT_PENDING => 'Pending',
+            self::PAYMENT_PAID => 'Paid',
+            self::PAYMENT_CANCELLED => 'Cancelled',
+        ];
+    }
+
+    public static function earningStatuses(): array
+    {
+        return [
+            self::EARNING_PENDING => 'Pending',
+            self::EARNING_ON_HOLD => 'On Hold',
+            self::EARNING_AVAILABLE => 'Available',
+            self::EARNING_PAID_OUT => 'Paid Out',
+            self::EARNING_REVERSED => 'Cancelled',
+        ];
+    }
+
     public function statusLabel(): string
     {
         return static::legacyStatusLabel($this->status);
@@ -110,6 +152,55 @@ class Order extends Model
         };
     }
 
+    public function paymentMethodLabel(): string
+    {
+        return match ($this->payment_method ?? self::PAYMENT_METHOD_COD) {
+            self::PAYMENT_METHOD_COD => 'Cash on Delivery',
+            default => strtoupper(str_replace('_', ' ', (string) $this->payment_method)),
+        };
+    }
+
+    public function paymentStatusLabel(): string
+    {
+        return static::paymentStatuses()[$this->payment_status ?? self::PAYMENT_PENDING]
+            ?? ucfirst(str_replace('_', ' ', (string) $this->payment_status));
+    }
+
+    public function paymentToneClass(): string
+    {
+        return match ($this->payment_status ?? self::PAYMENT_PENDING) {
+            self::PAYMENT_PAID => 'delivered',
+            self::PAYMENT_CANCELLED => 'cancelled',
+            default => 'processing',
+        };
+    }
+
+    public function earningStatusLabel(): string
+    {
+        return static::earningStatuses()[$this->seller_earning_status ?? self::EARNING_PENDING]
+            ?? ucfirst(str_replace('_', ' ', (string) $this->seller_earning_status));
+    }
+
+    public function earningToneClass(): string
+    {
+        return match ($this->seller_earning_status ?? self::EARNING_PENDING) {
+            self::EARNING_AVAILABLE, self::EARNING_PAID_OUT => 'delivered',
+            self::EARNING_REVERSED => 'cancelled',
+            self::EARNING_ON_HOLD => 'shipped',
+            default => 'processing',
+        };
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->payment_status === self::PAYMENT_PAID;
+    }
+
+    public function isEarningAvailable(): bool
+    {
+        return $this->seller_earning_status === self::EARNING_AVAILABLE;
+    }
+
     public function isCancelled(): bool
     {
         return $this->shippingStatus() === self::SHIPPING_CANCELLED;
@@ -140,7 +231,7 @@ class Order extends Model
         return [
             self::SHIPPING_PENDING => [self::SHIPPING_TO_SHIP, self::SHIPPING_CANCELLED],
             self::SHIPPING_TO_SHIP => [self::SHIPPING_SHIPPED, self::SHIPPING_CANCELLED],
-            self::SHIPPING_SHIPPED => [self::SHIPPING_COMPLETED, self::SHIPPING_CANCELLED],
+            self::SHIPPING_SHIPPED => [self::SHIPPING_COMPLETED],
             self::SHIPPING_COMPLETED => [],
             self::SHIPPING_CANCELLED => [],
         ];

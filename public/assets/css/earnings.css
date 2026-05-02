@@ -97,3 +97,105 @@
     grid-template-columns: 1fr;
   }
 }
+/* public/assets/css/earnings.css */
+
+/* Fix table alignment + spacing */
+.seller-table td,
+.seller-table th {
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* Fix amount column wrapping issue */
+.seller-table td:nth-child(5) {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* Fix negative amount layout */
+.earnings-negative-text {
+  color: #ff6b6b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Ensure proper spacing between symbol and number */
+.seller-table td:nth-child(5)::first-letter {
+  margin-right: 2px;
+}
+
+/* Fix badge spacing */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Prevent column collapse */
+.seller-table {
+  table-layout: auto;
+  width: 100%;
+}
+
+/* Fix row height consistency */
+.seller-table tr {
+  height: 70px;
+}
+
+/* Fix long product names */
+.earnings-product-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Improve mobile responsiveness */
+@media (max-width: 768px) {
+  .seller-table {
+    font-size: 12px;
+  }
+
+  .seller-table td,
+  .seller-table th {
+    padding: 8px;
+  }
+
+  .earnings-product-cell {
+    max-width: 120px;
+  }
+}
+/* public/assets/css/earnings.css */
+
+/* Enable horizontal scroll */
+.table-panel {
+  overflow-x: auto;
+}
+
+/* Ensure table expands */
+.seller-table {
+  min-width: 1100px;
+  /* adjust if needed */
+  width: 100%;
+  table-layout: auto;
+}
+
+/* Prevent text breaking */
+.seller-table th,
+.seller-table td {
+  white-space: nowrap;
+}
+
+/* Optional: smoother scrolling */
+.table-panel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}

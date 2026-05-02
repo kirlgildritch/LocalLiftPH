@@ -22,7 +22,7 @@ class OrderController extends Controller
             Order::SHIPPING_CANCELLED,
         ];
 
-        if (! in_array($currentStatus, $allowedStatuses, true)) {
+        if (!in_array($currentStatus, $allowedStatuses, true)) {
             $currentStatus = 'all';
         }
 
@@ -43,8 +43,8 @@ class OrderController extends Controller
         $checkoutGroupCounts = Order::query()
             ->where('user_id', Auth::id())
             ->get(['id', 'checkout_group'])
-            ->groupBy(fn (Order $order) => $order->checkoutGroupKey())
-            ->map(fn ($group) => $group->count());
+            ->groupBy(fn(Order $order) => $order->checkoutGroupKey())
+            ->map(fn($group) => $group->count());
 
         return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts', 'checkoutGroupCounts'));
     }
@@ -67,10 +67,10 @@ class OrderController extends Controller
             ->get();
 
         $groupSummary = [
-            'items' => (int) $groupOrders->sum(fn (Order $groupOrder) => $groupOrder->itemCount()),
-            'subtotal' => (float) $groupOrders->sum(fn (Order $groupOrder) => $groupOrder->subtotalAmount()),
-            'shipping' => (float) $groupOrders->sum(fn (Order $groupOrder) => (float) $groupOrder->shipping_fee),
-            'total' => (float) $groupOrders->sum(fn (Order $groupOrder) => (float) $groupOrder->total_price),
+            'items' => (int) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->itemCount()),
+            'subtotal' => (float) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->subtotalAmount()),
+            'shipping' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->shipping_fee),
+            'total' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->total_price),
             'shops' => (int) $groupOrders->count(),
         ];
 
@@ -88,7 +88,7 @@ class OrderController extends Controller
         $order->load(['items.product']);
 
         foreach ($order->items as $item) {
-            if (! $item->product || ! $item->product->is_active) {
+            if (!$item->product || !$item->product->is_active) {
                 continue;
             }
 
@@ -112,7 +112,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        if (! $order->canBeCancelled()) {
+        if (!$order->canBeCancelled()) {
             return redirect()
                 ->route('buyer.orders.show', $order)
                 ->with('error', 'Only orders before shipment can be cancelled.');
@@ -138,7 +138,7 @@ class OrderController extends Controller
                 ->withInput();
         }
 
-        if (! $selectedReasons->contains('Other')) {
+        if (!$selectedReasons->contains('Other')) {
             $otherReason = null;
         }
 
@@ -155,6 +155,8 @@ class OrderController extends Controller
         $order->update([
             'status' => Order::STATUS_CANCELLED,
             'shipping_status' => Order::SHIPPING_CANCELLED,
+            'payment_status' => Order::PAYMENT_CANCELLED,
+            'seller_earning_status' => Order::EARNING_REVERSED,
         ]);
 
         return redirect()
@@ -166,7 +168,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        if (! $order->canConfirmReceipt()) {
+        if (!$order->canConfirmReceipt()) {
             return redirect()
                 ->route('buyer.orders.show', $order)
                 ->with('error', 'This order is not ready for receipt confirmation.');
@@ -175,6 +177,9 @@ class OrderController extends Controller
         $order->update([
             'status' => Order::STATUS_COMPLETED,
             'shipping_status' => Order::SHIPPING_COMPLETED,
+            'payment_status' => Order::PAYMENT_PAID,
+            'paid_at' => now(),
+            'seller_earning_status' => Order::EARNING_AVAILABLE,
         ]);
 
         return redirect()

@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\Buyer\AddressController;
@@ -19,7 +20,9 @@ use App\Http\Controllers\Seller\SellerCenterEntryController;
 use App\Http\Controllers\Seller\SellerDashboardController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\SellerRegisteredUserController;
+use App\Http\Controllers\Seller\SellerSearchController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\ProductApprovalController;
@@ -94,6 +97,8 @@ Route::middleware('seller')->group(function () {
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
     Route::patch('/seller-orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus'])->name('seller.orders.shipping-status');
     Route::get('/seller-earnings', [EarningsController::class, 'index'])->name('seller.earnings');
+    Route::get('/seller-search', [SellerSearchController::class, 'index'])->name('seller.search');
+    Route::get('/seller-search/suggestions', [SellerSearchController::class, 'suggestions'])->name('seller.search.suggestions');
     Route::get('/seller-messages', [MessageController::class, 'index'])->name('seller.messages');
     Route::get('/seller-messages/{conversation}', [MessageController::class, 'show'])->name('seller.messages.show');
     Route::post('/seller-messages/{conversation}', [MessageController::class, 'store'])->name('seller.messages.store');
@@ -126,6 +131,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    Route::get('/notifications', [AdminNotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/feed', [AdminNotificationController::class, 'feed'])->name('notifications.feed');
+    Route::patch('/notifications/read-all', [AdminNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::delete('/notifications/clear-read', [AdminNotificationController::class, 'clearRead'])->name('notifications.clear-read');
+    Route::patch('/notifications/{notification}/read', [AdminNotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::delete('/notifications/{notification}', [AdminNotificationController::class, 'destroy'])->name('notifications.destroy');
+    Route::get('/notifications/{notification}/open', [AdminNotificationController::class, 'open'])->name('notifications.open');
+
     Route::get('/products', [ProductApprovalController::class, 'index'])->name('products');
     Route::patch('/products/bulk', [ProductApprovalController::class, 'bulkUpdate'])->name('products.bulk');
     Route::patch('/products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('products.approve');
@@ -137,6 +151,7 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('/reports/{report}/action', [AdminReportController::class, 'action'])->name('reports.action');
     Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
 });
+
 Route::middleware('buyer')->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{productId}', [CartController::class, 'store'])->name('cart.add');
@@ -173,5 +188,3 @@ Route::middleware('buyer')->group(function () {
 });
 
 require __DIR__ . '/auth.php';
-
-

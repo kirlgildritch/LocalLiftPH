@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Contracts\View\View;
 
 class SellerOrderController extends Controller
 {
@@ -45,10 +45,23 @@ class SellerOrderController extends Controller
             'shipping_status.in' => 'Invalid shipping status transition.',
         ]);
 
-        $order->update([
-            'shipping_status' => $validated['shipping_status'],
-            'status' => Order::legacyStatusForShipping($validated['shipping_status']),
-        ]);
+        $shippingStatus = $validated['shipping_status'];
+
+        $updates = [
+            'shipping_status' => $shippingStatus,
+            'status' => Order::legacyStatusForShipping($shippingStatus),
+        ];
+
+        if ($shippingStatus === Order::SHIPPING_SHIPPED) {
+            $updates['seller_earning_status'] = Order::EARNING_ON_HOLD;
+        }
+
+        if ($shippingStatus === Order::SHIPPING_CANCELLED) {
+            $updates['payment_status'] = Order::PAYMENT_CANCELLED;
+            $updates['seller_earning_status'] = Order::EARNING_REVERSED;
+        }
+
+        $order->update($updates);
 
         return redirect()
             ->route('seller.orders')
