@@ -97,6 +97,12 @@
                     <span>Orders</span>
                 </a>
 
+                <a class="sidebar__link {{ str_starts_with($currentRoute ?? '', 'admin.payouts') ? 'is-active' : '' }}"
+                    href="{{ route('admin.payouts') }}">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Payouts</span>
+                </a>
+
                 <a class="sidebar__link {{ $currentRoute === 'admin.reports' ? 'is-active' : '' }}"
                     href="{{ route('admin.reports') }}">
                     <i class="fa-solid fa-flag"></i>

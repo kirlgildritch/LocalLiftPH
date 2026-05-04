@@ -753,6 +753,26 @@ a {
   box-shadow: 0 14px 28px rgba(21, 101, 192, 0.22);
 }
 
+.page-action-btn.is-disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.earnings-page-actions form {
+  margin: 0;
+}
+
+.earnings-note {
+  margin: 0 0 18px;
+  color: #8fa7c4;
+  font-weight: 500;
+}
+
+.seller-payout-history {
+  margin-top: 18px;
+}
+
 .table-action.secondary {
   background: rgba(255, 255, 255, 0.04);
 }

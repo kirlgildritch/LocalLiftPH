@@ -57,10 +57,8 @@
                                 <i class="fa-solid fa-store"></i>
                                 <div>
                                     <span class="toolbar-label">{{ $order->shopDisplayName() }}</span>
-                                    <strong>Order #{{ $order->id }}</strong>
-                                    @if($groupShopCount > 1)
-                                        <p class="order-group-meta">{{ $groupShopCount }} shop orders from one checkout</p>
-                                    @endif
+
+
                                 </div>
                             </div>
 

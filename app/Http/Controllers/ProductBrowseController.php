@@ -82,7 +82,17 @@ class ProductBrowseController extends Controller
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
                 $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
-                    ->whereNull('suspended_at');
+                    ->whereNull('suspended_at')
+                    ->where(function ($statusQuery) {
+                        $statusQuery
+                            ->where('shop_status', \App\Models\Seller::SHOP_STATUS_OPEN)
+                            ->orWhereNull('shop_status')
+                            ->orWhere(function ($temporaryQuery) {
+                                $temporaryQuery
+                                    ->whereIn('shop_status', ['paused', \App\Models\Seller::SHOP_STATUS_TEMPORARILY_CLOSED])
+                                    ->whereDate('shop_status_until', '<', now()->toDateString());
+                            });
+                    });
             })
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nestedQuery) use ($search) {
@@ -128,7 +138,17 @@ class ProductBrowseController extends Controller
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
                 $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
-                    ->whereNull('suspended_at');
+                    ->whereNull('suspended_at')
+                    ->where(function ($statusQuery) {
+                        $statusQuery
+                            ->where('shop_status', \App\Models\Seller::SHOP_STATUS_OPEN)
+                            ->orWhereNull('shop_status')
+                            ->orWhere(function ($temporaryQuery) {
+                                $temporaryQuery
+                                    ->whereIn('shop_status', ['paused', \App\Models\Seller::SHOP_STATUS_TEMPORARILY_CLOSED])
+                                    ->whereDate('shop_status_until', '<', now()->toDateString());
+                            });
+                    });
             })
             ->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
@@ -182,7 +202,9 @@ class ProductBrowseController extends Controller
             $product->status !== Product::STATUS_APPROVED
             || !$product->is_active
             || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
-            || $product->user?->sellerProfile?->suspended_at,
+            || $product->user?->sellerProfile?->suspended_at
+            || ! $product->user?->sellerProfile?->isVisibleToBuyers()
+            || ((int) $product->stock <= 0 && (bool) ($product->user?->sellerProfile?->hide_out_of_stock ?? false)),
             404
         );
 

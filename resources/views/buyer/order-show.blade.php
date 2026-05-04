@@ -26,9 +26,7 @@
                             Order #{{ $order->id }}
                         @endif
                     </h2>
-                    @if($groupSummary['shops'] > 1)
-                        <p class="order-group-meta">Grouped summary for {{ $groupSummary['shops'] }} shop orders placed in one checkout.</p>
-                    @endif
+
                 </div>
 
                 <div class="order-actions">
@@ -75,7 +73,7 @@
                 @foreach($groupOrders as $shopOrder)
                     @php
                         $shopHasRateableItems = $shopOrder->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED
-                            && $shopOrder->items->contains(fn ($item) => $item->product && !$item->review);
+                            && $shopOrder->items->contains(fn($item) => $item->product && !$item->review);
                         $shopSubtotal = $shopOrder->subtotalAmount();
                     @endphp
                     <article class="order-card panel">
@@ -84,7 +82,7 @@
                                 <i class="fa-solid fa-store"></i>
                                 <div>
                                     <span class="toolbar-label">{{ $shopOrder->shopDisplayName() }}</span>
-                                    <strong>Order #{{ $shopOrder->id }}</strong>
+
                                 </div>
                             </div>
 
@@ -110,11 +108,8 @@
                         <div class="order-items">
                             @foreach($shopOrder->items as $item)
                                 <div class="order-card-body">
-                                    <img
-                                        src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
-                                        alt="{{ $item->product->name ?? 'Product' }}"
-                                        class="order-product-img"
-                                    >
+                                    <img src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
+                                        alt="{{ $item->product->name ?? 'Product' }}" class="order-product-img">
 
                                     <div class="order-product-info">
                                         <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
@@ -160,16 +155,14 @@
 
                             <div class="order-actions">
                                 @if($shopOrder->canBeCancelled())
-                                    <button
-                                        type="button"
-                                        class="order-btn danger-btn open-cancel-order"
+                                    <button type="button" class="order-btn danger-btn open-cancel-order"
                                         data-order-id="{{ $shopOrder->id }}"
-                                        data-order-action="{{ route('buyer.orders.cancel', $shopOrder) }}"
-                                    >
+                                        data-order-action="{{ route('buyer.orders.cancel', $shopOrder) }}">
                                         Cancel Order
                                     </button>
                                 @elseif($shopOrder->canConfirmReceipt())
-                                    <form action="{{ route('buyer.orders.received', $shopOrder) }}" method="POST" style="display: inline;">
+                                    <form action="{{ route('buyer.orders.received', $shopOrder) }}" method="POST"
+                                        style="display: inline;">
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit" class="order-btn primary-btn">
@@ -181,7 +174,8 @@
                                         <span class="order-btn secondary-btn is-static">Choose an item above to rate</span>
                                     @endif
 
-                                    <form action="{{ route('buyer.orders.buyAgain', $shopOrder) }}" method="POST" style="display: inline;">
+                                    <form action="{{ route('buyer.orders.buyAgain', $shopOrder) }}" method="POST"
+                                        style="display: inline;">
                                         @csrf
                                         <button type="submit" class="order-btn primary-btn">
                                             {{ $shopOrder->shippingStatus() === \App\Models\Order::SHIPPING_CANCELLED ? 'Reorder' : 'Buy Again' }}

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\Seller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -161,39 +163,68 @@ class CheckoutController extends Controller
         $checkoutGroup = (string) Str::uuid();
         $createdOrders = collect();
 
-        DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders) {
-            foreach ($groupedCartItems as $sellerId => $sellerCartItems) {
-                $totals = $this->calculateCartTotals($sellerCartItems);
+        try {
+            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders) {
+                $lockedProducts = Product::query()
+                    ->with('user.sellerProfile')
+                    ->whereIn('id', $cartItems->pluck('product_id')->filter()->unique()->values())
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
-                $order = Order::create([
-                    'user_id' => Auth::id(),
-                    'seller_id' => (int) $sellerId,
-                    'checkout_group' => $checkoutGroup,
-                    'shipping_fee' => $totals['shippingFee'],
-                    'total_price' => $totals['total'],
-                    'status' => Order::STATUS_PENDING,
-                    'shipping_status' => Order::SHIPPING_PENDING,
-                    'payment_method' => Order::PAYMENT_METHOD_COD,
-                    'payment_status' => Order::PAYMENT_PENDING,
-                    'seller_earning_status' => Order::EARNING_PENDING,
-                ]);
+                foreach ($groupedCartItems as $sellerId => $sellerCartItems) {
+                    $totals = $this->calculateCartTotals($sellerCartItems);
 
-                foreach ($sellerCartItems as $item) {
-                    $order->items()->create([
-                        'product_id' => $item->product->id,
-                        'quantity' => $item->quantity,
-                        'price' => $item->product->price,
-                        'shipping_fee' => $item->product->shipping_fee ?? 0,
+                    $order = Order::create([
+                        'user_id' => Auth::id(),
+                        'seller_id' => (int) $sellerId,
+                        'checkout_group' => $checkoutGroup,
+                        'shipping_fee' => $totals['shippingFee'],
+                        'total_price' => $totals['total'],
+                        'status' => Order::STATUS_PENDING,
+                        'shipping_status' => Order::SHIPPING_PENDING,
+                        'payment_method' => Order::PAYMENT_METHOD_COD,
+                        'payment_status' => Order::PAYMENT_PENDING,
+                        'seller_earning_status' => Order::EARNING_PENDING,
                     ]);
+
+                    foreach ($sellerCartItems as $item) {
+                        $product = $lockedProducts->get($item->product_id);
+
+                        if (
+                            ! $product
+                            || $product->status !== Product::STATUS_APPROVED
+                            || ! $product->is_active
+                            || $product->user?->sellerProfile?->application_status !== Seller::STATUS_APPROVED
+                            || (int) $product->stock < (int) $item->quantity
+                        ) {
+                            throw new \RuntimeException('One or more selected products are no longer available in the requested quantity.');
+                        }
+
+                        $order->items()->create([
+                            'product_id' => $product->id,
+                            'quantity' => $item->quantity,
+                            'price' => $product->price,
+                            'shipping_fee' => $product->shipping_fee ?? 0,
+                        ]);
+
+                        $product->decrement('stock', (int) $item->quantity);
+                    }
+
+                    $createdOrders->push($order);
                 }
 
-                $createdOrders->push($order);
-            }
-
-            Cart::where('user_id', Auth::id())
-                ->whereIn('id', $cartItems->pluck('id'))
-                ->delete();
-        });
+                Cart::query()
+                    ->where('user_id', Auth::id())
+                    ->whereIn('id', $cartItems->pluck('id'))
+                    ->delete();
+            });
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('cart.index')
+                ->with('error', $exception->getMessage())
+                ->with('selected_cart_item_ids', $selectedCartItemIds->all());
+        }
 
         $primaryOrder = $createdOrders->sortBy('id')->first();
 

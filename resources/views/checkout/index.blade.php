@@ -1,4 +1,5 @@
 @extends('layouts.app')
+@section('title', 'LocalLift PH - Checkout')
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/checkout.css') }}">
@@ -17,7 +18,7 @@
 
             <div class="checkout-layout">
                 <div class="checkout-main">
-                    <section class="checkout-card panel">
+                    <section class="checkout-card checkout-card--payment panel">
                         <div class="card-header">
                             <div class="step-title">
                                 <span class="step-number">1</span>
@@ -68,7 +69,7 @@
                                     <h3>Shipping Method</h3>
                                 </div>
                             </div>
-                            <span class="action-link">Choose</span>
+                            <span class="action-link">Auto</span>
                         </div>
 
                         <div class="card-body">
@@ -76,11 +77,6 @@
                                 <span class="step-number small">1</span>
                                 <strong>Product-Based Shipping</strong>
                             </div>
-
-                            <label class="radio-option">
-                                <input type="radio" name="shipping_method" checked disabled>
-                                <span>Shipping fee is based on the selected products in your order.</span>
-                            </label>
                         </div>
                     </section>
 
@@ -93,18 +89,13 @@
                                     <h3>Payment Information</h3>
                                 </div>
                             </div>
-                            <span class="action-link">Review</span>
                         </div>
 
-                        <div class="card-body">
-                            <div class="payment-option active">
+                        <div class="card-body checkout-card-body--compact">
+                            <div class="payment-option payment-option--compact active">
                                 <div class="payment-option-title">
                                     <span class="step-number small">4</span>
                                     <strong>Cash on Delivery</strong>
-                                </div>
-
-                                <div class="card-input-wrap">
-                                    <input type="text" value="Pay when order arrives" readonly>
                                 </div>
                             </div>
                         </div>
@@ -175,18 +166,13 @@
                             <strong>&#8369; {{ number_format($total, 2) }}</strong>
                         </div>
 
-                        <form action="{{ route('checkout.store') }}" method="POST">
+                        <form action="{{ route('checkout.store') }}" method="POST" data-enable-loading>
                             @csrf
                             @foreach(($selectedCartItemIds ?? collect()) as $selectedCartItemId)
                                 <input type="hidden" name="selected_cart_items[]" value="{{ $selectedCartItemId }}">
                             @endforeach
-                            <button type="submit" class="action-btn primary-btn full-btn">Place Order</button>
+                            <button type="submit" class="action-btn primary-btn full-btn" data-enable-loading data-loading-text="Placing Order...">Place Order</button>
                         </form>
-
-                        <div class="coupon-box">
-                            <input type="text" placeholder="Enter coupon code">
-                            <button type="button">Apply</button>
-                        </div>
                     </div>
                 </aside>
             </div>

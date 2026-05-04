@@ -65,7 +65,14 @@
                             }
                         @endphp
 
-                        <article class="cart-item" data-cart-item-id="{{ $item->id }}" data-subtotal="{{ $subtotal }}" data-shipping="{{ $shipping }}">
+                        <article
+                            class="cart-item"
+                            data-cart-item-id="{{ $item->id }}"
+                            data-subtotal="{{ $subtotal }}"
+                            data-shipping="{{ $shipping }}"
+                            data-unit-price="{{ (float) $item->product->price }}"
+                            data-unit-shipping="{{ (float) ($item->product->shipping_fee ?? 0) }}"
+                        >
                             <div class="item-select">
                                 <input
                                     type="checkbox"
@@ -90,26 +97,26 @@
 
                             <div class="item-quantity">
                                 <div class="qty-box">
-                                    <form action="{{ route('cart.update', $item->id) }}" method="POST">
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST" data-cart-quantity-form>
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="quantity" value="{{ max(1, $item->quantity - 1) }}">
+                                        <input type="hidden" name="quantity" value="{{ max(1, $item->quantity - 1) }}" data-cart-next-quantity="decrement">
                                         <button type="submit">-</button>
                                     </form>
 
-                                    <input type="text" value="{{ $item->quantity }}" readonly>
+                                    <input type="text" value="{{ $item->quantity }}" readonly data-cart-quantity-display>
 
-                                    <form action="{{ route('cart.update', $item->id) }}" method="POST">
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST" data-cart-quantity-form>
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="quantity" value="{{ $item->quantity + 1 }}">
+                                        <input type="hidden" name="quantity" value="{{ $item->quantity + 1 }}" data-cart-next-quantity="increment">
                                         <button type="submit">+</button>
                                     </form>
                                 </div>
                             </div>
 
                             <div class="item-subtotal">
-                                <strong>&#8369; {{ number_format($subtotal, 2) }}</strong>
+                                <strong data-cart-item-subtotal>&#8369; {{ number_format($subtotal, 2) }}</strong>
 
                                 <form action="{{ route('cart.remove', $item->id) }}" method="POST">
                                     @csrf
@@ -150,9 +157,9 @@
                         <strong id="cart-summary-total">&#8369; {{ number_format($selectedSubtotal + $selectedShipping, 2) }}</strong>
                     </div>
 
-                    <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form">
+                    <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form" data-enable-loading>
                         <div id="selected-cart-items-inputs"></div>
-                        <button type="submit" class="action-btn primary-btn full-btn">Checkout</button>
+                        <button type="submit" class="action-btn primary-btn full-btn" data-enable-loading data-loading-text="Loading Checkout...">Checkout</button>
                     </form>
                 </div>
             </aside>
@@ -170,6 +177,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const totalEl = document.getElementById('cart-summary-total');
     const selectedInputsContainer = document.getElementById('selected-cart-items-inputs');
     const checkoutForm = document.getElementById('cart-checkout-form');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     if (!cartLayout || !selectAll || !itemCheckboxes.length || !subtotalEl || !shippingEl || !totalEl || !selectedInputsContainer || !checkoutForm) {
         return;
@@ -244,6 +252,43 @@ document.addEventListener('DOMContentLoaded', function () {
         saveSelection(selectedIds);
     };
 
+    const updateQuantityRow = (row, quantity) => {
+        const nextQuantity = Number(quantity || 1);
+        const unitPrice = Number(row.dataset.unitPrice || 0);
+        const unitShipping = Number(row.dataset.unitShipping || 0);
+        const subtotal = unitPrice * nextQuantity;
+        const shipping = unitShipping * nextQuantity;
+        const quantityDisplay = row.querySelector('[data-cart-quantity-display]');
+        const subtotalDisplay = row.querySelector('[data-cart-item-subtotal]');
+        const decrementInput = row.querySelector('[data-cart-next-quantity="decrement"]');
+        const incrementInput = row.querySelector('[data-cart-next-quantity="increment"]');
+
+        row.dataset.subtotal = String(subtotal);
+        row.dataset.shipping = String(shipping);
+
+        if (quantityDisplay) {
+            quantityDisplay.value = nextQuantity;
+        }
+
+        if (subtotalDisplay) {
+            subtotalDisplay.innerHTML = formatPeso(subtotal);
+        }
+
+        if (decrementInput) {
+            decrementInput.value = String(Math.max(1, nextQuantity - 1));
+        }
+
+        if (incrementInput) {
+            incrementInput.value = String(nextQuantity + 1);
+        }
+    };
+
+    const setQuantityButtonsState = (row, disabled) => {
+        row.querySelectorAll('[data-cart-quantity-form] button[type="submit"]').forEach((button) => {
+            button.disabled = disabled;
+        });
+    };
+
     selectAll.addEventListener('change', function () {
         itemCheckboxes.forEach((checkbox) => {
             checkbox.checked = selectAll.checked;
@@ -253,6 +298,52 @@ document.addEventListener('DOMContentLoaded', function () {
 
     itemCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', syncSummary);
+    });
+
+    cartLayout.addEventListener('submit', async function (event) {
+        const form = event.target.closest('[data-cart-quantity-form]');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const row = form.closest('.cart-item');
+
+        if (!row || row.dataset.quantityPending === '1') {
+            return;
+        }
+
+        row.dataset.quantityPending = '1';
+        setQuantityButtonsState(row, true);
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+                body: new FormData(form),
+                credentials: 'same-origin',
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(payload.message || 'Unable to update the cart quantity.');
+            }
+
+            updateQuantityRow(row, payload.cart_item?.quantity);
+            syncSummary();
+        } catch (error) {
+            window.alert(error.message || 'Unable to update the cart quantity.');
+        } finally {
+            delete row.dataset.quantityPending;
+            setQuantityButtonsState(row, false);
+        }
     });
 
     checkoutForm.addEventListener('submit', function (event) {

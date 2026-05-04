@@ -11,12 +11,32 @@
 
                 <main class="dashboard-main">
                     <section class="seller-page-panel panel">
+                        @php
+                            $pendingPayoutRequest = collect($payoutRequests ?? [])->firstWhere('status', \App\Models\SellerPayout::STATUS_PENDING);
+                        @endphp
+
                         <div class="page-header">
                             <div>
                                 <span class="section-kicker">Earnings</span>
-                                <h2>Payout and revenue overview</h2>
+                                <h2>Earnings</h2>
+                            </div>
+                            <div class="earnings-page-actions">
+                                @if($canRequestPayout)
+                                    <form action="{{ route('seller.payouts.store') }}" method="POST">
+                                        @csrf
+                                        <button type="submit" class="page-action-btn">Request Payout</button>
+                                    </form>
+                                @else
+                                    <button type="button" class="page-action-btn is-disabled" disabled>Request Payout</button>
+                                @endif
                             </div>
                         </div>
+
+                        @if(!$hasPayoutDetails)
+                            <p class="earnings-note">Save payout details in Settings.</p>
+                        @elseif($pendingPayoutRequest)
+                            <p class="earnings-note">Pending payout in progress.</p>
+                        @endif
 
                         <div class="earnings-stats">
                             <article class="mini-stat panel">
@@ -28,6 +48,11 @@
                             <article class="mini-stat panel">
                                 <span>Available Earnings</span>
                                 <strong>&#8369; {{ number_format($stats['available_earnings'] ?? 0, 2) }}</strong>
+                            </article>
+
+                            <article class="mini-stat panel">
+                                <span>Requested</span>
+                                <strong>&#8369; {{ number_format($stats['requested_earnings'] ?? 0, 2) }}</strong>
                             </article>
 
                             <article class="mini-stat panel">
@@ -140,6 +165,41 @@
                                     @empty
                                         <tr>
                                             <td colspan="9" class="empty-text">No earnings records found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="table-panel seller-payout-history">
+                            <table class="seller-table">
+                                <thead>
+                                    <tr>
+                                        <th>Requested</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                        <th>Account</th>
+                                        <th>Status</th>
+                                        <th>Reference</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($payoutRequests as $payout)
+                                        <tr>
+                                            <td>{{ $payout->requested_at?->format('M d, Y h:i A') ?? 'N/A' }}</td>
+                                            <td>&#8369; {{ number_format((float) $payout->amount, 2) }}</td>
+                                            <td>{{ strtoupper($payout->method) }}</td>
+                                            <td>{{ $payout->account_name }} • {{ $payout->account_number }}</td>
+                                            <td>
+                                                <span class="status-chip {{ $payout->toneClass() }}">
+                                                    {{ $payout->statusLabel() }}
+                                                </span>
+                                            </td>
+                                            <td>{{ $payout->reference_number ?: '—' }}</td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="empty-text">No payout requests yet.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>

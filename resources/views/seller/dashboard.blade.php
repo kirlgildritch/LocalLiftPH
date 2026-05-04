@@ -370,34 +370,6 @@
                             </section>
                         </div>
 
-                        <section class="content-panel panel">
-                            <div class="panel-heading">
-                                <div>
-                                    <span class="section-kicker">Products</span>
-                                    <h2>Your Products</h2>
-                                </div>
-                                <a href="{{ route('seller.products.index') }}" class="inline-link">Manage Products</a>
-                            </div>
-
-                            <div class="product-grid">
-                                @forelse ($recentProducts as $product)
-                                    <article class="product-card panel">
-                                        <img src="{{ $product->image ? asset('storage/' . $product->image) : 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=900&auto=format&fit=crop' }}"
-                                            alt="{{ $product->name }}">
-                                        <div class="product-copy">
-                                            <h3>{{ $product->name }}</h3>
-                                            <p>{{ ucfirst($product->status) }} {{ $product->is_active ? 'listing' : 'draft' }}</p>
-                                            <div class="product-card-bottom">
-                                                <strong>&#8369; {{ number_format($product->price, 2) }}</strong>
-                                                <a href="{{ route('seller.products.index') }}" class="mini-action">View</a>
-                                            </div>
-                                        </div>
-                                    </article>
-                                @empty
-                                    <p class="empty-text">You do not have products yet.</p>
-                                @endforelse
-                            </div>
-                        </section>
                     @endif
                 </main>
             </div>

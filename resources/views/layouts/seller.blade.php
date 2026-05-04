@@ -5,7 +5,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Seller Dashboard' }}</title>
+    @php
+        $currentRoute = request()->route()?->getName();
+        $sellerRouteTitle = match (true) {
+            $currentRoute === 'seller.dashboard' => 'Seller Dashboard',
+            $currentRoute === 'seller.products.index' => 'Manage Products',
+            $currentRoute === 'seller.products.create' => 'Add Product',
+            $currentRoute === 'seller.products.edit' => 'Edit Product',
+            $currentRoute === 'seller.products.reviews' => 'Product Reviews',
+            $currentRoute === 'seller.orders' => 'Seller Orders',
+            $currentRoute === 'seller.earnings' => 'Earnings',
+            $currentRoute === 'seller.messages',
+            $currentRoute === 'seller.messages.show' => 'Seller Messages',
+            $currentRoute === 'seller.profile' => 'Seller Profile',
+            $currentRoute === 'seller.settings' => 'Seller Settings',
+            $currentRoute === 'seller.search' => 'Seller Search',
+            $currentRoute === 'seller.shop.preview' => 'Shop Preview',
+            default => 'Seller Dashboard',
+        };
+
+        $sellerDocumentTitle = trim($__env->yieldContent('title')) ?: ($title ?? $sellerRouteTitle);
+    @endphp
+    <title>{{ $sellerDocumentTitle }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"

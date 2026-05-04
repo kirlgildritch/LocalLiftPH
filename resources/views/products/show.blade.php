@@ -88,19 +88,20 @@
                                             <span class="section-kicker">Purchase</span>
                                             <h2>Order summary</h2>
 
-                                            <div class="quantity-box">
+                                            <div class="quantity-box" data-purchase-quantity-box data-max-stock="{{ max(0, (int) $product->stock) }}">
                                                 <span>Quantity</span>
                                                 <div class="quantity-control">
-                                                    <button type="button">-</button>
-                                                    <input type="text" value="1" readonly>
-                                                    <button type="button">+</button>
+                                                    <button type="button" data-quantity-decrement aria-label="Decrease quantity">-</button>
+                                                    <input type="text" value="{{ $product->stock > 0 ? 1 : 0 }}" readonly data-quantity-display>
+                                                    <button type="button" data-quantity-increment aria-label="Increase quantity">+</button>
                                                 </div>
+                                                <small class="quantity-note" data-quantity-note hidden></small>
                                             </div>
 
                                             <div class="purchase-meta">
                                                 <div>
                                                     <span>Price</span>
-                                                    <strong>&#8369; {{ number_format($product->price, 2) }}</strong>
+                                                    <strong data-purchase-total>&#8369; {{ number_format($product->stock > 0 ? $product->price : 0, 2) }}</strong>
                                                 </div>
                                                 <div>
                                                     <span>Delivery</span>
@@ -115,12 +116,12 @@
                                                     @else
                                                         <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
                                                             @csrf
-                                                            <input type="hidden" name="quantity" value="1">
+                                                            <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
                                                             <button type="submit" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></button>
                                                         </form>
                                                         <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
                                                             @csrf
-                                                            <input type="hidden" name="quantity" value="1">
+                                                            <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
                                                             <input type="hidden" name="buy_now" value="1">
                                                             <button type="submit" class="action-btn secondary-btn">Buy Now</button>
                                                         </form>
@@ -290,4 +291,78 @@
                                 </div>
                             </div>
                         </section>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+                                const quantityBox = document.querySelector('[data-purchase-quantity-box]');
+
+                                if (!quantityBox) {
+                                    return;
+                                }
+
+                                const maxStock = Math.max(0, Number(quantityBox.dataset.maxStock || 0));
+                                const minQuantity = maxStock > 0 ? 1 : 0;
+                                const display = quantityBox.querySelector('[data-quantity-display]');
+                                const decrementButton = quantityBox.querySelector('[data-quantity-decrement]');
+                                const incrementButton = quantityBox.querySelector('[data-quantity-increment]');
+                                const note = quantityBox.querySelector('[data-quantity-note]');
+                                const totalDisplay = document.querySelector('[data-purchase-total]');
+                                const quantityInputs = Array.from(document.querySelectorAll('[data-purchase-quantity]'));
+                                const unitPrice = {{ json_encode((float) $product->price) }};
+
+                                if (!display || !decrementButton || !incrementButton || !note || !totalDisplay || !quantityInputs.length) {
+                                    return;
+                                }
+
+                                const formatPeso = (value) => `₱ ${Number(value).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}`;
+
+                                const clampQuantity = (value) => {
+                                    if (maxStock <= 0) {
+                                        return 0;
+                                    }
+
+                                    return Math.min(maxStock, Math.max(minQuantity, value));
+                                };
+
+                                const updateQuantity = (nextQuantity) => {
+                                    const quantity = clampQuantity(nextQuantity);
+
+                                    display.value = quantity;
+                                    totalDisplay.textContent = formatPeso(unitPrice * quantity);
+                                    quantityInputs.forEach((input) => {
+                                        input.value = String(quantity);
+                                    });
+
+                                    decrementButton.disabled = quantity <= minQuantity;
+                                    incrementButton.disabled = maxStock <= 0 || quantity >= maxStock;
+
+                                    if (maxStock <= 0) {
+                                        note.hidden = false;
+                                        note.textContent = 'Out of stock.';
+                                        return;
+                                    }
+
+                                    if (quantity >= maxStock) {
+                                        note.hidden = false;
+                                        note.textContent = 'Max stock reached.';
+                                        return;
+                                    }
+
+                                    note.hidden = true;
+                                    note.textContent = '';
+                                };
+
+                                decrementButton.addEventListener('click', function () {
+                                    updateQuantity(Number(display.value || minQuantity) - 1);
+                                });
+
+                                incrementButton.addEventListener('click', function () {
+                                    updateQuantity(Number(display.value || minQuantity) + 1);
+                                });
+
+                                updateQuantity(Number(display.value || minQuantity));
+                            });
+                        </script>
 @endsection

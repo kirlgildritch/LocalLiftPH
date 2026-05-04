@@ -17,11 +17,11 @@
                             </div>
                         </div>
 
-                        <div class="table-panel">
+                        <div class="table-panel table-panel--scroll">
                             <table class="seller-table">
                                 <thead>
                                     <tr>
-                                        <th>Order ID</th>
+                                        <th>Products</th>
                                         <th>Customer</th>
                                         <th>Shipping Status</th>
                                         <th>Payment Method</th>
@@ -36,9 +36,25 @@
                                     @forelse($orders as $order)
                                         @php
                                             $nextStatuses = $order->nextShippingStatuses();
+                                            $orderItems = $order->items ?? collect();
+                                            $firstItem = $orderItems->first();
+                                            $firstItemName = $firstItem?->product?->name ?? 'Product unavailable';
+                                            $firstItemQuantity = max(1, (int) ($firstItem->quantity ?? 1));
+                                            $additionalItemCount = max($orderItems->count() - 1, 0);
+                                            $productSummary = $firstItem
+                                                ? $firstItemName . ' x' . $firstItemQuantity
+                                                : 'No items';
+                                            $productMeta = 'Order #' . $order->id;
+
+                                            if ($additionalItemCount > 0) {
+                                                $productMeta .= ' | +' . $additionalItemCount . ' more item' . ($additionalItemCount > 1 ? 's' : '');
+                                            }
                                         @endphp
                                         <tr>
-                                            <td>#{{ $order->id }}</td>
+                                            <td class="order-products-cell">
+                                                <strong class="order-products-title">{{ $productSummary }}</strong>
+                                                <span class="order-products-meta">{{ $productMeta }}</span>
+                                            </td>
                                             <td>{{ $order->user->name ?? 'N/A' }}</td>
                                             <td>
                                                 <span class="status-chip {{ $order->shippingToneClass() }}">

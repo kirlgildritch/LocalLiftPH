@@ -123,6 +123,25 @@ class CartController extends Controller
             'quantity' => $request->quantity,
         ]);
 
+        if ($request->expectsJson()) {
+            $price = (float) ($cartItem->product->price ?? 0);
+            $shippingFee = (float) ($cartItem->product->shipping_fee ?? 0);
+            $quantity = (int) $cartItem->quantity;
+            $subtotal = $price * $quantity;
+            $shipping = $shippingFee * $quantity;
+
+            return response()->json([
+                'message' => 'Cart updated successfully.',
+                'cart_item' => [
+                    'id' => $cartItem->id,
+                    'quantity' => $quantity,
+                    'subtotal' => $subtotal,
+                    'shipping' => $shipping,
+                    'subtotal_formatted' => number_format($subtotal, 2),
+                ],
+            ]);
+        }
+
         return redirect()->route('cart.index')->with('success', 'Cart updated successfully.');
     }
 

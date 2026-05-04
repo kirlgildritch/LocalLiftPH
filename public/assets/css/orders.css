@@ -8,6 +8,49 @@
   font-weight: 700;
 }
 
+.table-panel--scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-panel--scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-panel--scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(143, 167, 196, 0.35);
+}
+
+.table-panel--scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-panel--scroll .seller-table {
+  min-width: 980px;
+}
+
+.order-products-cell {
+  min-width: 220px;
+}
+
+.order-products-title {
+  display: block;
+  color: #f8fafc;
+  font-size: 14px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.order-products-meta {
+  display: block;
+  margin-top: 4px;
+  color: #8fa7c4;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .status-chip.completed,
 .status-chip.delivered {
   background: rgba(76, 175, 80, 0.14);

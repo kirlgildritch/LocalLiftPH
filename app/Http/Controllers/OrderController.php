@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderCancellation;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -111,6 +113,7 @@ class OrderController extends Controller
     public function cancel(Request $request, Order $order)
     {
         $this->authorize('view', $order);
+        $order->loadMissing('items');
 
         if (!$order->canBeCancelled()) {
             return redirect()
@@ -142,22 +145,39 @@ class OrderController extends Controller
             $otherReason = null;
         }
 
-        OrderCancellation::updateOrCreate(
-            ['order_id' => $order->id],
-            [
-                'user_id' => Auth::id(),
-                'reasons' => $selectedReasons->all(),
-                'other_reason' => $otherReason,
-                'status_before_cancellation' => $order->shippingStatus(),
-            ]
-        );
+        DB::transaction(function () use ($order, $selectedReasons, $otherReason): void {
+            OrderCancellation::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'user_id' => Auth::id(),
+                    'reasons' => $selectedReasons->all(),
+                    'other_reason' => $otherReason,
+                    'status_before_cancellation' => $order->shippingStatus(),
+                ]
+            );
 
-        $order->update([
-            'status' => Order::STATUS_CANCELLED,
-            'shipping_status' => Order::SHIPPING_CANCELLED,
-            'payment_status' => Order::PAYMENT_CANCELLED,
-            'seller_earning_status' => Order::EARNING_REVERSED,
-        ]);
+            $restockByProduct = $order->items
+                ->filter(fn ($item) => filled($item->product_id))
+                ->groupBy('product_id')
+                ->map(fn ($items) => (int) $items->sum('quantity'));
+
+            if ($restockByProduct->isNotEmpty()) {
+                Product::query()
+                    ->whereIn('id', $restockByProduct->keys())
+                    ->lockForUpdate()
+                    ->get()
+                    ->each(function (Product $product) use ($restockByProduct): void {
+                        $product->increment('stock', (int) ($restockByProduct[$product->id] ?? 0));
+                    });
+            }
+
+            $order->update([
+                'status' => Order::STATUS_CANCELLED,
+                'shipping_status' => Order::SHIPPING_CANCELLED,
+                'payment_status' => Order::PAYMENT_CANCELLED,
+                'seller_earning_status' => Order::EARNING_REVERSED,
+            ]);
+        });
 
         return redirect()
             ->route('buyer.orders.show', $order)

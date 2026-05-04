@@ -43,12 +43,10 @@ class SellerDashboardController extends Controller
         ];
 
         $recentOrders = collect();
-        $recentProducts = collect();
 
         if ($seller && $seller->application_status === Seller::STATUS_APPROVED) {
             $stats = $this->buildApprovedDashboardStats($user->id);
             $recentOrders = $this->recentOrders($user->id);
-            $recentProducts = $this->recentProducts($user->id);
         }
 
         return view('seller.dashboard', compact(
@@ -57,8 +55,7 @@ class SellerDashboardController extends Controller
             'moderationNotifications',
             'dashboardState',
             'stats',
-            'recentOrders',
-            'recentProducts'
+            'recentOrders'
         ));
     }
 
@@ -249,11 +246,4 @@ class SellerDashboardController extends Controller
             ->get();
     }
 
-    private function recentProducts(int $sellerId)
-    {
-        return Product::where('user_id', $sellerId)
-            ->latest()
-            ->take(4)
-            ->get();
-    }
 }

@@ -1261,6 +1261,12 @@
                 const ids = getSelectedIds();
                 if (ids.length === 0) return;
                 fillIds(bulkApproveIds, ids);
+                window.LocalLiftActionLoading?.start(bulkApproveButton, { label: 'Approving...' });
+                if (typeof bulkApproveForm.requestSubmit === 'function') {
+                    bulkApproveForm.requestSubmit();
+                    return;
+                }
+
                 bulkApproveForm.submit();
             });
 

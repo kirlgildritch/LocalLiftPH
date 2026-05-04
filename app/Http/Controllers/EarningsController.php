@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\SellerPayout;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -67,11 +68,15 @@ class EarningsController extends Controller
             $earningStatus = 'all';
         }
 
-        $baseOrderQuery = Order::with(['user', 'items.product'])
+        $baseOrderQuery = Order::with(['user', 'items.product', 'sellerPayout'])
             ->where('seller_id', $sellerId)
             ->latest();
 
         $allOrders = (clone $baseOrderQuery)->get();
+        $sellerProfile = (Auth::guard('seller')->user() ?? Auth::user())?->sellerProfile;
+        $payoutRequests = $sellerProfile
+            ? $sellerProfile->payouts()->latest('requested_at')->get()
+            : collect();
 
         $pendingOrders = $allOrders->filter(fn(Order $order) => in_array($order->seller_earning_status, [
             Order::EARNING_PENDING,
@@ -79,8 +84,10 @@ class EarningsController extends Controller
         ], true));
 
         $availableOrders = $allOrders->filter(fn(Order $order) => $order->seller_earning_status === Order::EARNING_AVAILABLE);
+        $availableBalanceOrders = $availableOrders->filter(fn(Order $order) => $order->seller_payout_id === null);
         $paidOutOrders = $allOrders->filter(fn(Order $order) => $order->seller_earning_status === Order::EARNING_PAID_OUT);
         $reversedOrders = $allOrders->filter(fn(Order $order) => $order->seller_earning_status === Order::EARNING_REVERSED);
+        $requestedPayouts = $payoutRequests->where('status', SellerPayout::STATUS_PENDING);
 
         $todayStart = now()->startOfDay();
         $todayEnd = now()->endOfDay();
@@ -129,23 +136,32 @@ class EarningsController extends Controller
 
         $stats = [
             'pending_earnings' => (float) $pendingOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
-            'available_earnings' => (float) $availableOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'available_earnings' => (float) $availableBalanceOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'requested_earnings' => (float) $requestedPayouts->sum('amount'),
             'paid_out_earnings' => (float) $paidOutOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
             'reversed_earnings' => (float) $reversedOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
             'today_earnings' => (float) $availableWithinRange($todayStart, $todayEnd),
             'weekly_earnings' => (float) $availableWithinRange($weekStart, $weekEnd),
             'monthly_earnings' => (float) $availableWithinRange($monthStart, $monthEnd),
-            'overall_earnings' => (float) $allOrders
-                ->filter(fn(Order $order) => in_array($order->seller_earning_status, [
-                    Order::EARNING_AVAILABLE,
-                    Order::EARNING_PAID_OUT,
-                ], true))
-                ->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
+            'overall_earnings' => (float) $availableBalanceOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order))
+                + (float) $requestedPayouts->sum('amount')
+                + (float) $paidOutOrders->sum(fn(Order $order) => $this->sellerOrderTotal($order)),
         ];
 
         return view('seller.earnings', [
             'stats' => $stats,
             'historyOrders' => $historyOrders,
+            'payoutRequests' => $payoutRequests,
+            'canRequestPayout' => $sellerProfile
+                && filled($sellerProfile->payout_method)
+                && filled($sellerProfile->payout_account_name)
+                && filled($sellerProfile->payout_account_number)
+                && $requestedPayouts->isEmpty()
+                && $availableBalanceOrders->isNotEmpty(),
+            'hasPayoutDetails' => $sellerProfile
+                && filled($sellerProfile->payout_method)
+                && filled($sellerProfile->payout_account_name)
+                && filled($sellerProfile->payout_account_number),
             'filters' => [
                 'status' => $earningStatus,
                 'from' => $from,

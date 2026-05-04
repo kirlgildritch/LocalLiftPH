@@ -118,7 +118,12 @@
                                             </td>
                                             <td data-label="Category">{{ $product->category?->name ?? 'Uncategorized' }}</td>
                                             <td data-label="Price">&#8369;{{ number_format($product->price, 2) }}</td>
-                                            <td data-label="Stock">{{ $product->stock }}</td>
+                                            <td data-label="Stock">
+                                                <div>{{ $product->stock }}</div>
+                                                @if((int) $product->stock > 0 && (int) $product->stock <= (int) ($sellerSettings->low_stock_threshold ?? 0))
+                                                    <small class="muted-label">Low stock</small>
+                                                @endif
+                                            </td>
                                             <td data-label="Rating">
                                                 <div class="seller-rating-chip">
                                                     <i class="fa-solid fa-star"></i>

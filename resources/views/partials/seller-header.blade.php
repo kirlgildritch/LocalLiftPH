@@ -16,23 +16,12 @@
             </a>
 
             <form class="seller-search" action="{{ route('seller.search') }}" method="GET">
-                <i class="fa-solid fa-magnifying-glass seller-search__icon"></i>
-                <input
-                    type="text"
-                    id="sellerSearchInput"
-                    name="q"
-                    value="{{ request('q') }}"
-                    placeholder="Search products, orders, messages, and tools..."
-                    aria-label="Search seller dashboard"
-                    autocomplete="off"
-                >
-                <button
-                    type="button"
-                    id="sellerSearchClearButton"
-                    class="seller-search__clear is-hidden"
-                    title="Clear search"
-                    aria-label="Clear search"
-                >
+
+                <input type="text" id="sellerSearchInput" name="q" value="{{ request('q') }}"
+                    placeholder="Search products, orders, messages, and tools..." aria-label="Search seller dashboard"
+                    autocomplete="off">
+                <button type="button" id="sellerSearchClearButton" class="seller-search__clear is-hidden"
+                    title="Clear search" aria-label="Clear search">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
                 <button type="submit" class="seller-search__submit" title="Search" aria-label="Search">
@@ -158,6 +147,11 @@
                 searchInput.value = item.dataset.suggestionLabel || item.textContent;
                 syncClearButton();
                 hideSuggestions();
+                if (typeof searchInput.form.requestSubmit === 'function') {
+                    searchInput.form.requestSubmit();
+                    return;
+                }
+
                 searchInput.form.submit();
             };
 

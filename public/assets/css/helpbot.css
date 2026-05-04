@@ -12,6 +12,10 @@
   border: 0;
 }
 
+.helpbot-panel[hidden] {
+  display: none !important;
+}
+
 .helpbot-shell {
   position: fixed;
   left: 24px;
@@ -19,6 +23,15 @@
   z-index: 280;
   width: min(350px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
+}
+
+.helpbot-shell--inline {
+  position: static;
+  left: auto;
+  bottom: auto;
+  z-index: auto;
+  width: 100%;
+  max-width: none;
 }
 
 .helpbot-fab {
@@ -39,6 +52,10 @@
   text-transform: uppercase;
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
   transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.helpbot-fab--hidden {
+  display: none;
 }
 
 .helpbot-fab:hover {
@@ -64,6 +81,14 @@
   transform: translateY(12px) scale(0.985);
   pointer-events: none;
   transition: opacity 220ms ease, transform 220ms ease, visibility 220ms ease;
+}
+
+.helpbot-panel--inline {
+  position: static;
+  left: auto;
+  bottom: auto;
+  margin-top: 12px;
+  max-height: min(70vh, 520px);
 }
 
 .helpbot-shell.is-open .helpbot-panel {

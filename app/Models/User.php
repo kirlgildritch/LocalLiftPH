@@ -1,4 +1,5 @@
 <?php
+// app/Models/User.php
 
 namespace App\Models;
 
@@ -17,7 +18,9 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'email_verified_at',
         'password',
+        'google_id',
         'profile_image',
         'phone',
         'address',
@@ -63,7 +66,7 @@ class User extends Authenticatable
 
     public function isBuyer(): bool
     {
-        return ! $this->isSeller() && ! $this->isAdmin();
+        return !$this->isSeller() && !$this->isAdmin();
     }
 
     public function isAdmin(): bool

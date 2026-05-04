@@ -562,6 +562,12 @@
                     }
                     sellerRequestMoreDocuments.value = '1';
                     sellerReviewStatus.value = 'pending';
+                    window.LocalLiftActionLoading?.start(requestDocumentsButton, { label: 'Sending...' });
+                    if (typeof sellerReviewForm.requestSubmit === 'function') {
+                        sellerReviewForm.requestSubmit();
+                        return;
+                    }
+
                     sellerReviewForm.submit();
                 });
             }
@@ -570,6 +576,12 @@
                 button.addEventListener('click', () => {
                     sellerRequestMoreDocuments.value = '0';
                     sellerReviewStatus.value = button.dataset.statusSubmit;
+                    window.LocalLiftActionLoading?.start(button, { label: 'Saving...' });
+                    if (typeof sellerReviewForm.requestSubmit === 'function') {
+                        sellerReviewForm.requestSubmit();
+                        return;
+                    }
+
                     sellerReviewForm.submit();
                 });
             });

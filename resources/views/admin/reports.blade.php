@@ -563,9 +563,18 @@
                 });
             }
 
-            function submitReportAction(action) {
+            function submitReportAction(action, triggerButton = null) {
                 const form = document.getElementById('report-action-form');
                 document.getElementById('report-action-input').value = action;
+                if (triggerButton) {
+                    window.LocalLiftActionLoading?.start(triggerButton, { label: 'Saving...' });
+                }
+
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                    return;
+                }
+
                 form.submit();
             }
 
@@ -592,20 +601,20 @@
                     return;
                 }
 
-                addButton('Warn Seller', 'action-button action-button--warning', () => submitReportAction('warn_seller'));
+                addButton('Warn Seller', 'action-button action-button--warning', (event) => submitReportAction('warn_seller', event.currentTarget));
 
                 if (report.target_type === 'Product') {
-                    addButton('Hide / Delist Product', 'action-button action-button--light', () => submitReportAction(
-                        'delist_product'));
-                    addButton('Ban / Remove Product', 'action-button action-button--danger', () => submitReportAction(
-                        'ban_product'));
+                    addButton('Hide / Delist Product', 'action-button action-button--light', (event) => submitReportAction(
+                        'delist_product', event.currentTarget));
+                    addButton('Ban / Remove Product', 'action-button action-button--danger', (event) => submitReportAction(
+                        'ban_product', event.currentTarget));
                 }
 
-                addButton('Suspend Seller Account', 'action-button action-button--danger', () => submitReportAction(
-                    'suspend_seller'));
-                addButton('Dismiss Report', 'button', () => submitReportAction('dismiss_report'));
-                addButton('Mark as Resolved', 'action-button action-button--success', () => submitReportAction(
-                    'mark_resolved'));
+                addButton('Suspend Seller Account', 'action-button action-button--danger', (event) => submitReportAction(
+                    'suspend_seller', event.currentTarget));
+                addButton('Dismiss Report', 'button', (event) => submitReportAction('dismiss_report', event.currentTarget));
+                addButton('Mark as Resolved', 'action-button action-button--success', (event) => submitReportAction(
+                    'mark_resolved', event.currentTarget));
             }
 
             function openProductModal(report) {

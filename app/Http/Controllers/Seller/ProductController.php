@@ -25,6 +25,7 @@ class ProductController extends Controller
     {
         $currentTab = request('status', 'live');
         $allowedTabs = ['live', 'sold_out', 'reviewing', 'violation', 'delisted'];
+        $sellerSettings = (Auth::guard('seller')->user() ?? Auth::user())?->sellerProfile;
 
         if (!in_array($currentTab, $allowedTabs, true)) {
             $currentTab = 'live';
@@ -94,7 +95,7 @@ class ProductController extends Controller
 
         $products = $productsQuery->latest()->get();
 
-        return view('seller.manage_products', compact('products', 'statusCounts', 'currentTab'));
+        return view('seller.manage_products', compact('products', 'statusCounts', 'currentTab', 'sellerSettings'));
     }
 
     public function create()

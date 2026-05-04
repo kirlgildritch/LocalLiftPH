@@ -721,6 +721,14 @@
 
             const requestJson = async (form) => {
                 const submitButton = form.querySelector('button[type="submit"]');
+                const loadingHelper = window.LocalLiftActionLoading;
+
+                if (submitButton && loadingHelper) {
+                    loadingHelper.start(submitButton, {
+                        label: submitButton.textContent.trim() ? 'Loading...' : '',
+                    });
+                }
+
                 submitButton?.setAttribute('disabled', 'disabled');
                 submitButton?.classList.add('is-busy');
 
@@ -741,6 +749,10 @@
 
                     return await response.json();
                 } finally {
+                    if (submitButton && loadingHelper && submitButton.isConnected) {
+                        loadingHelper.stop(submitButton);
+                    }
+
                     submitButton?.removeAttribute('disabled');
                     submitButton?.classList.remove('is-busy');
                     updateBulkActionState();

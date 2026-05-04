@@ -5,6 +5,11 @@
     $helpbotFallback = config('helpbot.fallback', '');
     $helpbotFaqs = config('helpbot.faqs', []);
     $helpbotQuickTopics = config('helpbot.quick_questions', []);
+    $helpbotMode = $helpbotMode ?? 'floating';
+    $isInlineHelpbot = $helpbotMode === 'auth-inline';
+    $helpbotInstance = 'helpbot-' . uniqid();
+    $helpbotPanelId = $helpbotInstance . '-panel';
+    $helpbotInputId = $helpbotInstance . '-query';
 
     $helpbotPayload = [];
 
@@ -39,13 +44,16 @@
     }
 @endphp
 
-<div class="helpbot-shell" data-helpbot data-helpbot-name="{{ $helpbotName }}">
-    <button type="button" class="helpbot-fab" data-helpbot-toggle aria-controls="helpbot-panel" aria-expanded="false"
+<div class="helpbot-shell{{ $isInlineHelpbot ? ' helpbot-shell--inline' : '' }}" data-helpbot
+    data-helpbot-name="{{ $helpbotName }}">
+    <button type="button" class="helpbot-fab{{ $isInlineHelpbot ? ' helpbot-fab--hidden' : '' }}" data-helpbot-toggle
+        aria-controls="{{ $helpbotPanelId }}" aria-expanded="false"
         aria-label="Open {{ $helpbotName }}">
         <span>FAQ</span>
     </button>
 
-    <section id="helpbot-panel" class="helpbot-panel" data-helpbot-panel hidden>
+    <section id="{{ $helpbotPanelId }}" class="helpbot-panel{{ $isInlineHelpbot ? ' helpbot-panel--inline' : '' }}"
+        data-helpbot-panel hidden>
         <header class="helpbot-header">
             <div class="helpbot-header-copy">
                 <span class="helpbot-kicker">FAQ</span>
@@ -80,8 +88,8 @@
             </div>
 
             <form class="helpbot-form" data-helpbot-form>
-                <label class="sr-only" for="helpbot-query">Ask {{ $helpbotName }}</label>
-                <input id="helpbot-query" type="text" name="query" data-helpbot-input
+                <label class="sr-only" for="{{ $helpbotInputId }}">Ask {{ $helpbotName }}</label>
+                <input id="{{ $helpbotInputId }}" type="text" name="query" data-helpbot-input
                     placeholder="Ask a quick question" autocomplete="off" maxlength="120">
                 <button type="submit" class="helpbot-submit">Send</button>
             </form>
@@ -203,14 +211,18 @@
                     panel.hidden = false;
                     requestAnimationFrame(function () {
                         shell.classList.add('is-open');
-                        toggleButton.setAttribute('aria-expanded', 'true');
+                        if (toggleButton) {
+                            toggleButton.setAttribute('aria-expanded', 'true');
+                        }
                         input.focus();
                     });
                 };
 
                 const closePanel = function () {
                     shell.classList.remove('is-open');
-                    toggleButton.setAttribute('aria-expanded', 'false');
+                    if (toggleButton) {
+                        toggleButton.setAttribute('aria-expanded', 'false');
+                    }
                     window.clearTimeout(closeTimer);
                     closeTimer = window.setTimeout(function () {
                         panel.hidden = true;
@@ -230,16 +242,20 @@
                     appendMessage('bot', match ? match.answer : fallbackMessage, botName);
                 };
 
-                toggleButton.addEventListener('click', function () {
-                    if (shell.classList.contains('is-open')) {
-                        closePanel();
-                        return;
-                    }
+                if (toggleButton) {
+                    toggleButton.addEventListener('click', function () {
+                        if (shell.classList.contains('is-open')) {
+                            closePanel();
+                            return;
+                        }
 
-                    openPanel();
-                });
+                        openPanel();
+                    });
+                }
 
-                closeButton.addEventListener('click', closePanel);
+                if (closeButton) {
+                    closeButton.addEventListener('click', closePanel);
+                }
 
                 questionButtons.forEach(function (button) {
                     button.addEventListener('click', function () {
@@ -251,6 +267,8 @@
                 form.addEventListener('submit', function (event) {
                     event.preventDefault();
 
+                    const loadingHelper = window.LocalLiftActionLoading;
+                    const submitButton = form.querySelector('button[type="submit"]');
                     const query = input.value.trim();
 
                     if (!query) {
@@ -258,9 +276,16 @@
                         return;
                     }
 
+                    loadingHelper?.start(submitButton, { label: 'Sending...' });
                     answerPrompt(query, query);
                     form.reset();
                     input.focus();
+
+                    window.setTimeout(function () {
+                        if (submitButton && submitButton.isConnected) {
+                            loadingHelper?.stop(submitButton);
+                        }
+                    }, 180);
                 });
 
                 document.addEventListener('keydown', function (event) {

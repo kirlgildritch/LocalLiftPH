@@ -50,6 +50,7 @@ class Order extends Model
         'paid_at',
         'seller_earning_status',
         'seller_released_at',
+        'seller_payout_id',
     ];
 
     protected $casts = [
@@ -75,6 +76,11 @@ class Order extends Model
     public function cancellation()
     {
         return $this->hasOne(OrderCancellation::class);
+    }
+
+    public function sellerPayout()
+    {
+        return $this->belongsTo(SellerPayout::class);
     }
 
     public static function progressStatuses(): array

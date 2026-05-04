@@ -7,6 +7,7 @@
 @endphp
 
 @extends($isSellerInbox ? 'layouts.seller' : 'layouts.app')
+@section('title', $isSellerInbox ? 'Seller Messages' : 'LocalLift PH - Messages')
 
 @section('content')
     @if($isSellerInbox)
@@ -1203,6 +1204,8 @@
                         return;
                     }
 
+                    const loadingHelper = window.LocalLiftActionLoading;
+                    const submitButton = form.querySelector('button[type="submit"]');
                     const formData = new FormData(form);
                     const message = String(formData.get('message') || '').trim();
                     const selectedImage = formData.get('image');
@@ -1211,6 +1214,7 @@
                         return;
                     }
 
+                    loadingHelper?.start(submitButton, { label: 'Sending...' });
                     formData.set('message', message);
                     const clientMessageId = createClientMessageId();
                     formData.set('client_message_id', clientMessageId);
@@ -1249,6 +1253,10 @@
                         console.error(error);
                         markOptimisticMessageFailed(clientMessageId);
                         renderAll({ forceScroll: true });
+                    } finally {
+                        if (submitButton && submitButton.isConnected) {
+                            loadingHelper?.stop(submitButton);
+                        }
                     }
                 });
             };
