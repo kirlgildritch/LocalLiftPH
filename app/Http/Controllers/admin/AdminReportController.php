@@ -8,7 +8,7 @@ use App\Models\Report;
 use App\Models\ReportAction;
 use App\Models\Seller;
 use App\Models\User;
-use App\Notifications\SellerModerationNotification;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -48,19 +48,19 @@ class AdminReportController extends Controller
         return view('admin.reports', compact('reports'));
     }
 
-    public function resolve(Report $report): RedirectResponse
+    public function resolve(Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         return $this->applyAction(request()->merge([
             'action' => 'mark_resolved',
-        ]), $report);
+        ]), $report, $sellerNotifications);
     }
 
-    public function action(Request $request, Report $report): RedirectResponse
+    public function action(Request $request, Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        return $this->applyAction($request, $report);
+        return $this->applyAction($request, $report, $sellerNotifications);
     }
 
-    protected function applyAction(Request $request, Report $report): RedirectResponse
+    protected function applyAction(Request $request, Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $validated = $request->validate([
             'action' => ['required', Rule::in($this->availableActions())],
@@ -80,14 +80,14 @@ class AdminReportController extends Controller
         $sellerProfile = $sellerUser?->sellerProfile;
         $product = $report->product;
 
-        DB::transaction(function () use ($report, $action, $notes, $admin, $sellerUser, $sellerProfile, $product) {
+        DB::transaction(function () use ($report, $action, $notes, $admin, $sellerUser, $sellerProfile, $product, $sellerNotifications) {
             match ($action) {
-                'warn_seller' => $this->warnSeller($sellerUser, $notes, $report),
-                'delist_product' => $this->delistProduct($product, $sellerUser, $notes, $report),
-                'ban_product' => $this->banProduct($product, $sellerUser, $notes, $report),
-                'suspend_seller' => $this->suspendSeller($sellerProfile, $sellerUser, $notes, $report),
+                'warn_seller' => $this->warnSeller($sellerUser, $notes, $report, $sellerNotifications),
+                'delist_product' => $this->delistProduct($product, $sellerUser, $notes, $report, $sellerNotifications),
+                'ban_product' => $this->banProduct($product, $sellerUser, $notes, $report, $sellerNotifications),
+                'suspend_seller' => $this->suspendSeller($sellerProfile, $sellerUser, $notes, $report, $sellerNotifications),
                 'mark_resolved' => $report->update(['status' => Report::STATUS_RESOLVED]),
-                'dismiss_report' => $this->dismissReport($report, $sellerUser, $notes),
+                'dismiss_report' => $this->dismissReport($report, $sellerUser, $notes, $sellerNotifications),
                 default => null,
             };
 
@@ -107,16 +107,16 @@ class AdminReportController extends Controller
         return $report->seller ?: $report->product?->user;
     }
 
-    protected function notifySeller(?User $seller, string $title, string $message, string $action, ?int $reportId): void
+    protected function notifySeller(?User $seller, string $title, string $message, string $action, ?int $reportId, SellerNotificationService $sellerNotifications): void
     {
         if (! $seller) {
             return;
         }
 
-        $seller->notify(new SellerModerationNotification($title, $message, $action, $reportId));
+        $sellerNotifications->adminViolation($seller, $title, $message, $action, $reportId);
     }
 
-    protected function warnSeller(?User $seller, string $notes, Report $report): void
+    protected function warnSeller(?User $seller, string $notes, Report $report, SellerNotificationService $sellerNotifications): void
     {
         $this->notifySeller(
             $seller,
@@ -124,10 +124,11 @@ class AdminReportController extends Controller
             $notes !== '' ? $notes : 'A report on your account or listing has been reviewed and a warning was issued.',
             'warn_seller',
             $report->id,
+            $sellerNotifications,
         );
     }
 
-    protected function delistProduct(?Product $product, ?User $seller, string $notes, Report $report): void
+    protected function delistProduct(?Product $product, ?User $seller, string $notes, Report $report, SellerNotificationService $sellerNotifications): void
     {
         if ($product) {
             $product->update([
@@ -141,10 +142,11 @@ class AdminReportController extends Controller
             $notes !== '' ? $notes : 'One of your products was hidden from buyers after a report review.',
             'delist_product',
             $report->id,
+            $sellerNotifications,
         );
     }
 
-    protected function banProduct(?Product $product, ?User $seller, string $notes, Report $report): void
+    protected function banProduct(?Product $product, ?User $seller, string $notes, Report $report, SellerNotificationService $sellerNotifications): void
     {
         if ($product) {
             $product->update([
@@ -160,10 +162,11 @@ class AdminReportController extends Controller
             $notes !== '' ? $notes : 'One of your products was removed after a report review.',
             'ban_product',
             $report->id,
+            $sellerNotifications,
         );
     }
 
-    protected function suspendSeller(?Seller $sellerProfile, ?User $seller, string $notes, Report $report): void
+    protected function suspendSeller(?Seller $sellerProfile, ?User $seller, string $notes, Report $report, SellerNotificationService $sellerNotifications): void
     {
         if ($sellerProfile) {
             $sellerProfile->update([
@@ -178,10 +181,11 @@ class AdminReportController extends Controller
             $notes !== '' ? $notes : 'Your seller account was suspended after a report review.',
             'suspend_seller',
             $report->id,
+            $sellerNotifications,
         );
     }
 
-    protected function dismissReport(Report $report, ?User $seller, string $notes): void
+    protected function dismissReport(Report $report, ?User $seller, string $notes, SellerNotificationService $sellerNotifications): void
     {
         $report->update([
             'status' => Report::STATUS_DISMISSED,
@@ -193,6 +197,7 @@ class AdminReportController extends Controller
             $notes !== '' ? $notes : 'A report connected to your account or listing was reviewed and dismissed.',
             'dismiss_report',
             $report->id,
+            $sellerNotifications,
         );
     }
 }

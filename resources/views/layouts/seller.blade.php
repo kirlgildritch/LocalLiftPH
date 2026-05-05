@@ -39,6 +39,7 @@
     @endif
     <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
     @vite(['resources/js/app.js'])
+    @stack('styles')
     <style>
         html,
         body {
@@ -124,6 +125,7 @@
         });
     </script>
     <script src="{{ asset('assets/js/skeleton-loader.js') }}" defer></script>
+    @stack('scripts')
 </body>
 
 </html>

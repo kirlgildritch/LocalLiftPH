@@ -21,21 +21,6 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main panel">
-                    @if ($moderationNotifications->isNotEmpty())
-                        <section class="dashboard-status-state panel">
-                            <span class="section-kicker">Moderation Updates</span>
-                            <div class="status-card-grid">
-                                @foreach ($moderationNotifications as $notification)
-                                    @php($payload = $notification->data)
-                                    <article class="status-card panel">
-                                        <strong>{{ $payload['title'] ?? 'Update' }}</strong>
-                                        <p>{{ $payload['message'] ?? '' }}</p>
-                                    </article>
-                                @endforeach
-                            </div>
-                        </section>
-                    @endif
-
                     @if ($dashboardState === 'not_started')
                         <section class="dashboard-empty-state panel">
                             <span class="section-kicker">Seller Dashboard</span>

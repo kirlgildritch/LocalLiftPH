@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Report;
 use App\Models\User;
 use App\Notifications\AdminActivityNotification;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -13,7 +14,7 @@ use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
 {
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $validator = Validator::make($request->all(), [
             'product_id' => ['nullable', 'integer', 'exists:products,id'],
@@ -74,6 +75,14 @@ class ReportController extends Controller
                 'admin.reports',
             )
         );
+
+        if ($report->product_id) {
+            $sellerNotifications->productReported($report->fresh(['product.user.sellerProfile', 'user']));
+        }
+
+        if ($report->seller_id) {
+            $sellerNotifications->shopFlagged($report->fresh(['seller.sellerProfile', 'user']));
+        }
 
         return back()->with('success', 'Your report has been submitted for review.');
     }

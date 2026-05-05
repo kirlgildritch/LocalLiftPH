@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Seller;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -118,7 +119,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, SellerNotificationService $sellerNotifications)
     {
         $validated = $request->validate([
             'selected_cart_items' => ['nullable', 'array'],
@@ -162,9 +163,10 @@ class CheckoutController extends Controller
         $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
         $checkoutGroup = (string) Str::uuid();
         $createdOrders = collect();
+        $stockChecks = collect();
 
         try {
-            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders) {
+            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders, &$stockChecks) {
                 $lockedProducts = Product::query()
                     ->with('user.sellerProfile')
                     ->whereIn('id', $cartItems->pluck('product_id')->filter()->unique()->values())
@@ -201,6 +203,8 @@ class CheckoutController extends Controller
                             throw new \RuntimeException('One or more selected products are no longer available in the requested quantity.');
                         }
 
+                        $previousStock = (int) $product->stock;
+
                         $order->items()->create([
                             'product_id' => $product->id,
                             'quantity' => $item->quantity,
@@ -209,6 +213,11 @@ class CheckoutController extends Controller
                         ]);
 
                         $product->decrement('stock', (int) $item->quantity);
+
+                        $stockChecks->push([
+                            'product_id' => $product->id,
+                            'previous_stock' => $previousStock,
+                        ]);
                     }
 
                     $createdOrders->push($order);
@@ -225,6 +234,20 @@ class CheckoutController extends Controller
                 ->with('error', $exception->getMessage())
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
+
+        $createdOrders->each(function (Order $order) use ($sellerNotifications): void {
+            $sellerNotifications->newOrder($order->fresh(['seller.sellerProfile', 'user', 'items']));
+        });
+
+        $stockChecks
+            ->unique('product_id')
+            ->each(function (array $stockCheck) use ($sellerNotifications): void {
+                $product = Product::with('user.sellerProfile')->find($stockCheck['product_id']);
+
+                if ($product) {
+                    $sellerNotifications->checkProductStock($product, (int) $stockCheck['previous_stock']);
+                }
+            });
 
         $primaryOrder = $createdOrders->sortBy('id')->first();
 

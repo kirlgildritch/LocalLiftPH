@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Report;
 use App\Models\Seller;
 use App\Models\User;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -131,7 +132,7 @@ class ProductApprovalController extends Controller
         ]);
     }
 
-    public function approve(Product $product): RedirectResponse
+    public function approve(Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $product->update([
             'status' => Product::STATUS_APPROVED,
@@ -139,10 +140,12 @@ class ProductApprovalController extends Controller
             'rejection_reason' => null,
         ]);
 
+        $sellerNotifications->productApproved($product->fresh(['user.sellerProfile']));
+
         return back()->with('success', $product->name . ' approved successfully.');
     }
 
-    public function reject(Request $request, Product $product): RedirectResponse
+    public function reject(Request $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $request->validate([
             'rejection_reason_key' => ['nullable', Rule::in(array_keys($this->rejectionReasons()))],
@@ -160,10 +163,12 @@ class ProductApprovalController extends Controller
             'rejection_reason' => $rejectionReason,
         ]);
 
+        $sellerNotifications->productRejected($product->fresh(['user.sellerProfile']));
+
         return back()->with('success', 'Product rejected.');
     }
 
-    public function bulkUpdate(Request $request): RedirectResponse
+    public function bulkUpdate(Request $request, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $validated = $request->validate([
             'action' => ['required', Rule::in(['approve', 'reject'])],
@@ -173,7 +178,7 @@ class ProductApprovalController extends Controller
             'rejection_reason_custom' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $products = Product::whereIn('id', $validated['product_ids'])->get();
+        $products = Product::with('user.sellerProfile')->whereIn('id', $validated['product_ids'])->get();
 
         if ($validated['action'] === 'approve') {
             foreach ($products as $product) {
@@ -182,6 +187,8 @@ class ProductApprovalController extends Controller
                     'is_active' => 1,
                     'rejection_reason' => null,
                 ]);
+
+                $sellerNotifications->productApproved($product->fresh(['user.sellerProfile']));
             }
 
             return back()->with('success', 'Selected products approved.');
@@ -198,6 +205,8 @@ class ProductApprovalController extends Controller
                 'is_active' => 0,
                 'rejection_reason' => $rejectionReason,
             ]);
+
+            $sellerNotifications->productRejected($product->fresh(['user.sellerProfile']));
         }
 
         return back()->with('success', 'Selected products rejected.');

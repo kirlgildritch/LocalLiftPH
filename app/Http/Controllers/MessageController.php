@@ -9,6 +9,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
 use App\Models\User;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -415,7 +416,7 @@ class MessageController extends Controller
         ]);
     }
 
-    public function start(Request $request, User $seller): RedirectResponse|JsonResponse
+    public function start(Request $request, User $seller, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
     {
         $this->touchCurrentUserPresence();
 
@@ -446,6 +447,7 @@ class MessageController extends Controller
 
             $messageSentEvent = new ConversationMessageSent($conversation->id, $this->formatMessage($productMessage));
             $this->safeBroadcast($messageSentEvent, $this->currentSocketId($request));
+            $sellerNotifications->buyerMessage($productMessage);
         }
 
         if ($request->expectsJson()) {
@@ -469,7 +471,7 @@ class MessageController extends Controller
         return redirect()->route('messages.show', $conversation);
     }
 
-    public function store(Request $request, Conversation $conversation): RedirectResponse|JsonResponse
+    public function store(Request $request, Conversation $conversation, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
     {
         $this->touchCurrentUserPresence();
 
@@ -503,6 +505,10 @@ class MessageController extends Controller
 
         $messageSentEvent = new ConversationMessageSent($conversation->id, $this->formatMessage($message));
         $this->safeBroadcast($messageSentEvent, $this->currentSocketId($request));
+
+        if (! $this->isSellerContext()) {
+            $sellerNotifications->buyerMessage($message);
+        }
 
         $freshConversation = Conversation::with([
             'messages.sender',

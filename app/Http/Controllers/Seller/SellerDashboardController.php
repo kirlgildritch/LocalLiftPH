@@ -26,7 +26,10 @@ class SellerDashboardController extends Controller
         $seller = Seller::with('latestDocumentRequest')->where('user_id', $user->id)->first();
         $latestDocumentRequest = $seller?->latestDocumentRequest;
         $moderationNotifications = $user->notifications()
-            ->where('type', SellerModerationNotification::class)
+            ->where(function ($query) {
+                $query->where('type', SellerModerationNotification::class)
+                    ->orWhere('data->type', 'admin');
+            })
             ->latest()
             ->take(5)
             ->get();
