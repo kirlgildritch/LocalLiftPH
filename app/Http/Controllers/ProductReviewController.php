@@ -6,13 +6,14 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Review;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProductReviewController extends Controller
 {
-    public function store(Request $request, Product $product): RedirectResponse
+    public function store(Request $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $validated = $request->validate([
             'order_item_id' => ['required', 'integer'],
@@ -36,13 +37,15 @@ class ProductReviewController extends Controller
                 ->with('error', 'You can only review products from your completed purchases, once per order item.');
         }
 
-        Review::create([
+        $review = Review::create([
             'product_id' => $product->id,
             'user_id' => Auth::id(),
             'order_item_id' => $orderItem->id,
             'rating' => $validated['rating'],
             'comment' => trim((string) ($validated['comment'] ?? '')) ?: null,
         ]);
+
+        $sellerNotifications->buyerLeftReview($review->fresh(['product.user.sellerProfile', 'user']));
 
         return redirect()
             ->route('products.show', $product)

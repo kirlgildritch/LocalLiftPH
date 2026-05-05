@@ -13,6 +13,7 @@ use App\Http\Controllers\ProductBrowseController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SellerNotificationController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SellerAuthenticatedSessionController;
 use App\Http\Controllers\Seller\SellerCenterEntryController;
@@ -115,6 +116,14 @@ Route::middleware('seller')->group(function () {
     Route::post('/seller-messages/{conversation}', [MessageController::class, 'store'])->name('seller.messages.store');
     Route::post('/seller-messages/{conversation}/typing', [MessageController::class, 'typing'])->name('seller.messages.typing');
     Route::get('/seller-chat/widget', [MessageController::class, 'widget'])->name('seller.chat.widget');
+
+    Route::get('/seller-notifications', [SellerNotificationController::class, 'index'])->name('seller.notifications.index');
+    Route::get('/seller-notifications/feed', [SellerNotificationController::class, 'feed'])->name('seller.notifications.feed');
+    Route::patch('/seller-notifications/read-all', [SellerNotificationController::class, 'markAllAsRead'])->name('seller.notifications.read-all');
+    Route::delete('/seller-notifications/clear-read', [SellerNotificationController::class, 'clearRead'])->name('seller.notifications.clear-read');
+    Route::patch('/seller-notifications/{notification}/read', [SellerNotificationController::class, 'markAsRead'])->name('seller.notifications.read');
+    Route::delete('/seller-notifications/{notification}', [SellerNotificationController::class, 'destroy'])->name('seller.notifications.destroy');
+    Route::get('/seller-notifications/{notification}/open', [SellerNotificationController::class, 'open'])->name('seller.notifications.open');
 
     Route::get('/seller-settings', [SettingsController::class, 'index'])->name('seller.settings');
     Route::patch('/seller-settings', [SettingsController::class, 'update'])->name('seller.settings.update');

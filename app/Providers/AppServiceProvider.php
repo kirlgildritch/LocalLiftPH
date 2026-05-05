@@ -6,6 +6,7 @@ use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Conversation;
 use App\Models\Order;
+use App\Notifications\SellerNotificationService;
 use App\Policies\OrderPolicy;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -30,7 +31,10 @@ class AppServiceProvider extends ServiceProvider
             $cartCount = 0;
             $messagePreviewConversations = collect();
             $messageConversationCount = 0;
+            $sellerHeaderNotifications = collect();
+            $sellerUnreadNotificationCount = 0;
             $buyerGuard = Auth::guard('web');
+            $sellerGuard = Auth::guard('seller');
 
             if ($buyerGuard->check()) {
                 $buyerId = $buyerGuard->id();
@@ -58,12 +62,27 @@ class AppServiceProvider extends ServiceProvider
                 $messageConversationCount = Conversation::where('buyer_id', $buyerId)->count();
             }
 
+            if ($sellerGuard->check()) {
+                $sellerUser = $sellerGuard->user();
+
+                app(SellerNotificationService::class)->syncPendingOrdersNotShipped($sellerUser);
+
+                $sellerHeaderNotifications = $sellerUser->notifications()
+                    ->latest()
+                    ->limit(5)
+                    ->get();
+
+                $sellerUnreadNotificationCount = $sellerUser->unreadNotifications()->count();
+            }
+
             $view->with('defaultAddress', $defaultAddress);
             $view->with('miniCartItems', $miniCartItems);
             $view->with('miniCartCount', $miniCartCount);
             $view->with('cartCount', $cartCount);
             $view->with('messagePreviewConversations', $messagePreviewConversations);
             $view->with('messageConversationCount', $messageConversationCount);
+            $view->with('sellerHeaderNotifications', $sellerHeaderNotifications);
+            $view->with('sellerUnreadNotificationCount', $sellerUnreadNotificationCount);
         });
     }
 }

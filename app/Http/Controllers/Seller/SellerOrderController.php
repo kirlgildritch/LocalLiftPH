@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class SellerOrderController extends Controller
         return view('seller.orders', compact('orders'));
     }
 
-    public function updateShippingStatus(Request $request, Order $order): RedirectResponse
+    public function updateShippingStatus(Request $request, Order $order, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $order->loadMissing(['items.product', 'user']);
 
@@ -62,6 +63,10 @@ class SellerOrderController extends Controller
         }
 
         $order->update($updates);
+
+        if ($shippingStatus === Order::SHIPPING_COMPLETED) {
+            $sellerNotifications->orderCompleted($order->fresh(['seller.sellerProfile', 'user']));
+        }
 
         return redirect()
             ->route('seller.orders')

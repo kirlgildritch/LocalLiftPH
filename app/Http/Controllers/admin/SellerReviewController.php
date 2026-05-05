@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Report;
 use App\Models\Seller;
 use App\Models\SellerDocumentRequest;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -93,7 +94,7 @@ class SellerReviewController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, Seller $seller): RedirectResponse
+    public function updateStatus(Request $request, Seller $seller, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $requestMoreDocuments = $request->boolean('request_more_documents');
 
@@ -130,6 +131,14 @@ class SellerReviewController extends Controller
                 ]);
             });
 
+            $sellerNotifications->adminViolation(
+                $seller->user,
+                'Shop verification update',
+                'Additional documents were requested for your shop application.',
+                'shop_documents_requested',
+                $seller->id,
+            );
+
             return back()->with('success', 'Document request sent to seller.');
         }
 
@@ -152,6 +161,11 @@ class SellerReviewController extends Controller
                     ]);
             }
         });
+
+        $seller->loadMissing('user');
+        if (in_array($newStatus, [Seller::STATUS_APPROVED, Seller::STATUS_REJECTED], true)) {
+            $sellerNotifications->shopReviewed($seller, $newStatus);
+        }
 
         return back()->with('success', 'Seller application status updated.');
     }

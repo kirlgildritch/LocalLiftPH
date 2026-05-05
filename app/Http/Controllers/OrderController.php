@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderCancellation;
 use App\Models\Product;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -110,7 +111,7 @@ class OrderController extends Controller
         return redirect()->route('cart.index')->with('success', 'Items added to cart again.');
     }
 
-    public function cancel(Request $request, Order $order)
+    public function cancel(Request $request, Order $order, SellerNotificationService $sellerNotifications)
     {
         $this->authorize('view', $order);
         $order->loadMissing('items');
@@ -179,12 +180,14 @@ class OrderController extends Controller
             ]);
         });
 
+        $sellerNotifications->orderCancelled($order->fresh(['seller.sellerProfile', 'user']));
+
         return redirect()
             ->route('buyer.orders.show', $order)
             ->with('success', 'Order cancelled successfully.');
     }
 
-    public function confirmReceived(Order $order)
+    public function confirmReceived(Order $order, SellerNotificationService $sellerNotifications)
     {
         $this->authorize('view', $order);
 
@@ -201,6 +204,8 @@ class OrderController extends Controller
             'paid_at' => now(),
             'seller_earning_status' => Order::EARNING_AVAILABLE,
         ]);
+
+        $sellerNotifications->buyerConfirmedReceipt($order->fresh(['seller.sellerProfile', 'user']));
 
         return redirect()
             ->route('buyer.orders.show', $order)

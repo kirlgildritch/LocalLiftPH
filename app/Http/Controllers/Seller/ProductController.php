@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\User;
 use App\Notifications\AdminActivityNotification;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -172,10 +173,11 @@ class ProductController extends Controller
         return redirect()->back()->with('success', 'Product submitted for approval.');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, SellerNotificationService $sellerNotifications)
     {
         $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
         $originalName = $product->name;
+        $originalStock = (int) $product->stock;
         $sellerName = auth()->user()?->name ?? 'a seller';
         $changedFields = [];
         $originalValues = [
@@ -254,6 +256,11 @@ class ProductController extends Controller
             'shipping_fee' => $shippingFee,
             'image' => $validated['image'] ?? $product->image,
         ]);
+
+        $product->refresh();
+
+        $sellerNotifications->productEdited($product, $changedFields);
+        $sellerNotifications->checkProductStock($product, $originalStock);
 
         $updatedProductName = $validated['name'];
         if ($changedFields !== []) {
