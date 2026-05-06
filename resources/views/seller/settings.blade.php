@@ -30,7 +30,8 @@
                         <div id="general" class="settings-tab-content active">
                             <div class="settings-card panel">
                                 <h3>Shop Information</h3>
-                                <form action="{{ route('seller.settings.update') }}" method="POST" enctype="multipart/form-data">
+                                <form action="{{ route('seller.settings.update') }}" method="POST"
+                                    enctype="multipart/form-data" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
@@ -77,7 +78,8 @@
                                         @enderror
                                     </div>
 
-                                    <button type="submit" class="page-action-btn">Save</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
@@ -85,7 +87,7 @@
                         <div id="payout" class="settings-tab-content">
                             <div class="settings-card panel">
                                 <h3>Payout</h3>
-                                <form action="{{ route('seller.settings.payout') }}" method="POST">
+                                <form action="{{ route('seller.settings.payout') }}" method="POST" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
@@ -116,7 +118,8 @@
                                         @enderror
                                     </div>
 
-                                    <button type="submit" class="page-action-btn">Save</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
@@ -124,7 +127,7 @@
                         <div id="inventory" class="settings-tab-content">
                             <div class="settings-card panel">
                                 <h3>Inventory</h3>
-                                <form action="{{ route('seller.settings.inventory') }}" method="POST">
+                                <form action="{{ route('seller.settings.inventory') }}" method="POST" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
@@ -140,7 +143,8 @@
                                         <label><input type="checkbox" name="hide_out_of_stock" value="1" {{ old('hide_out_of_stock', $seller->hide_out_of_stock ?? 0) ? 'checked' : '' }}> Hide sold-out products from buyers</label>
                                     </div>
 
-                                    <button type="submit" class="page-action-btn">Save</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
@@ -148,7 +152,7 @@
                         <div id="status" class="settings-tab-content">
                             <div class="settings-card panel">
                                 <h3>Shop Status</h3>
-                                <form action="{{ route('seller.settings.status') }}" method="POST">
+                                <form action="{{ route('seller.settings.status') }}" method="POST" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
@@ -166,7 +170,8 @@
                                         <small class="error-text">{{ $message }}</small>
                                     @enderror
 
-                                    <button type="submit" class="page-action-btn">Save</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>

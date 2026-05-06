@@ -237,7 +237,7 @@ class Order extends Model
         return [
             self::SHIPPING_PENDING => [self::SHIPPING_TO_SHIP, self::SHIPPING_CANCELLED],
             self::SHIPPING_TO_SHIP => [self::SHIPPING_SHIPPED, self::SHIPPING_CANCELLED],
-            self::SHIPPING_SHIPPED => [self::SHIPPING_COMPLETED],
+            self::SHIPPING_SHIPPED => [],
             self::SHIPPING_COMPLETED => [],
             self::SHIPPING_CANCELLED => [],
         ];

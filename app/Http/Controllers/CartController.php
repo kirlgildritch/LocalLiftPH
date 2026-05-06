@@ -62,7 +62,7 @@ class CartController extends Controller
     public function store(Request $request, $productId)
     {
         $product = Product::findOrFail($productId);
-        $quantity = max(1, (int) $request->input('quantity', 1));
+        $requestedQuantity = max(1, (int) $request->input('quantity', 1));
         $buyNow = $request->boolean('buy_now');
 
         if ((int) $product->user_id === (int) Auth::id()) {
@@ -77,14 +77,49 @@ class CartController extends Controller
                 ->with('error', 'You cannot add your own product to the cart.');
         }
 
+        $availableStock = max(0, (int) $product->stock);
+
+        if ($availableStock <= 0) {
+            $message = 'This product is out of stock.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                ], 422);
+            }
+
+            return redirect()
+                ->back()
+                ->with('error', $message);
+        }
+
         $cartItem = Cart::where('user_id', Auth::id())
             ->where('product_id', $product->id)
             ->first();
 
         if ($cartItem) {
-            $cartItem->increment('quantity', $quantity);
+            $nextQuantity = (int) $cartItem->quantity + $requestedQuantity;
+
+            if ($nextQuantity > $availableStock) {
+                $message = 'Max stock reached.';
+
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => $message,
+                        'max_stock' => $availableStock,
+                    ], 422);
+                }
+
+                return redirect()
+                    ->back()
+                    ->with('error', $message);
+            }
+
+            $cartItem->increment('quantity', $requestedQuantity);
             $cartItem->refresh();
         } else {
+            $quantity = min($requestedQuantity, $availableStock);
+
             $cartItem = Cart::create([
                 'user_id' => Auth::id(),
                 'product_id' => $product->id,
@@ -119,8 +154,42 @@ class CartController extends Controller
             ->where('id', $id)
             ->firstOrFail();
 
+        $product = $cartItem->product;
+        $availableStock = max(0, (int) ($product?->stock ?? 0));
+        $requestedQuantity = (int) $request->quantity;
+
+        if ($availableStock <= 0) {
+            $message = 'This product is out of stock.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                    'max_stock' => 0,
+                ], 422);
+            }
+
+            return redirect()
+                ->route('cart.index')
+                ->with('error', $message);
+        }
+
+        if ($requestedQuantity > $availableStock) {
+            $message = 'Max stock reached.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                    'max_stock' => $availableStock,
+                ], 422);
+            }
+
+            return redirect()
+                ->route('cart.index')
+                ->with('error', $message);
+        }
+
         $cartItem->update([
-            'quantity' => $request->quantity,
+            'quantity' => $requestedQuantity,
         ]);
 
         if ($request->expectsJson()) {
@@ -135,6 +204,7 @@ class CartController extends Controller
                 'cart_item' => [
                     'id' => $cartItem->id,
                     'quantity' => $quantity,
+                    'max_stock' => $availableStock,
                     'subtotal' => $subtotal,
                     'shipping' => $shipping,
                     'subtotal_formatted' => number_format($subtotal, 2),

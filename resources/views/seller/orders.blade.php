@@ -77,6 +77,7 @@
                                                 @if($nextStatuses)
                                                     <form method="POST"
                                                         action="{{ route('seller.orders.shipping-status', $order) }}"
+                                                        data-enable-loading
                                                         style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                                         @csrf
                                                         @method('PATCH')
@@ -87,7 +88,8 @@
                                                                 </option>
                                                             @endforeach
                                                         </select>
-                                                        <button type="submit" class="table-action secondary">Update</button>
+                                                        <button type="submit" class="table-action secondary"
+                                                            data-enable-loading data-loading-text="Updating...">Update</button>
                                                     </form>
                                                 @else
                                                     <span class="empty-text">No more updates</span>

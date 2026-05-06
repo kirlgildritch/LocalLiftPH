@@ -99,6 +99,13 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
+        if ($this->unavailableProducts($cartItems)->isNotEmpty()) {
+            return redirect()
+                ->route('cart.index')
+                ->with('error', 'One or more selected products are no longer available in the requested quantity.')
+                ->with('selected_cart_item_ids', $selectedCartItemIds->all());
+        }
+
         $totals = $this->calculateCartTotals($cartItems);
         $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
 

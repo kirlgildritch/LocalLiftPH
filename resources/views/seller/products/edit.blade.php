@@ -49,6 +49,7 @@
                             </div>
 
                             <form class="product-form edit-product-form" action="{{ route('seller.products.update', $product) }}"
+                                data-enable-loading
                                 method="POST" enctype="multipart/form-data">
                                 @csrf
                                 @method('PATCH')
@@ -212,7 +213,8 @@
 
                                 <div class="form-actions edit-form-actions">
                                     <a href="{{ route('seller.products.index') }}" class="table-action secondary">Cancel</a>
-                                    <button type="submit" class="page-action-btn">Save Changes</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save Changes</button>
                                 </div>
                             </form>
                         </div>

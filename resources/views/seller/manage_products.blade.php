@@ -16,7 +16,8 @@
                                 <h2>My Products</h2>
                             </div>
 
-                            <a href="{{ url('/add-product') }}" class="page-action-btn">
+                            <a href="{{ url('/add-product') }}" class="page-action-btn" data-enable-loading
+                                data-loading-text="Loading...">
                                 <i class="fa-solid fa-plus"></i> Add Product
                             </a>
                         </div>

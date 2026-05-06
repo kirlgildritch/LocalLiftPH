@@ -24,6 +24,7 @@
                         </div>
 
                         <form class="product-form" action="{{ route('seller.products.store') }}" method="POST"
+                            data-enable-loading
                             enctype="multipart/form-data">
                             @csrf
 
@@ -134,7 +135,8 @@
                             </div>
 
                             <div class="form-actions">
-                                <button type="submit" class="page-action-btn">Add Product</button>
+                                <button type="submit" class="page-action-btn" data-enable-loading
+                                    data-loading-text="Adding Product...">Add Product</button>
                             </div>
                         </form>
                     </section>

@@ -25,6 +25,8 @@
         };
 
         $sellerDocumentTitle = trim($__env->yieldContent('title')) ?: ($title ?? $sellerRouteTitle);
+        $sellerDashboardCss = asset('assets/css/seller_dashboard.css') . '?v=' . @filemtime(public_path('assets/css/seller_dashboard.css'));
+        $sellerMessagesCss = asset('assets/css/messages.css') . '?v=' . @filemtime(public_path('assets/css/messages.css'));
     @endphp
     <title>{{ $sellerDocumentTitle }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -33,9 +35,9 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
-    <link rel="stylesheet" href="{{ asset('assets/css/seller_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ $sellerDashboardCss }}">
     @if(empty($disableFloatingChatWidget))
-        <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
+        <link rel="stylesheet" href="{{ $sellerMessagesCss }}">
     @endif
     <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
     @vite(['resources/js/app.js'])
@@ -50,7 +52,7 @@
 
 </head>
 
-<body>
+<body data-loading-scope="explicit">
     @php
         $sellerToast = null;
 
