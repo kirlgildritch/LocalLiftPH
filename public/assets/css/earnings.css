@@ -24,8 +24,178 @@
   color: #79b9ff;
 }
 
+.earnings-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+}
+
+.earnings-filters label {
+  display: grid;
+  gap: 7px;
+}
+
+.earnings-filters span {
+  color: #bbdefb;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.earnings-filters select,
+.earnings-filters input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  outline: none;
+}
+
+.earnings-filter-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.table-action.ghost {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #bbdefb;
+  text-decoration: none;
+}
+
+.earnings-product-cell {
+  min-width: 220px;
+}
+
+.earnings-negative-text {
+  color: #ffc0cb;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .earnings-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .earnings-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .earnings-filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .earnings-stats,
+  .earnings-filters {
     grid-template-columns: 1fr;
   }
+}
+/* public/assets/css/earnings.css */
+
+/* Fix table alignment + spacing */
+.seller-table td,
+.seller-table th {
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* Fix amount column wrapping issue */
+.seller-table td:nth-child(5) {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/* Fix negative amount layout */
+.earnings-negative-text {
+  color: #ff6b6b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Ensure proper spacing between symbol and number */
+.seller-table td:nth-child(5)::first-letter {
+  margin-right: 2px;
+}
+
+/* Fix badge spacing */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* Prevent column collapse */
+.seller-table {
+  table-layout: auto;
+  width: 100%;
+}
+
+/* Fix row height consistency */
+.seller-table tr {
+  height: 70px;
+}
+
+/* Fix long product names */
+.earnings-product-cell {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Improve mobile responsiveness */
+@media (max-width: 768px) {
+  .seller-table {
+    font-size: 12px;
+  }
+
+  .seller-table td,
+  .seller-table th {
+    padding: 8px;
+  }
+
+  .earnings-product-cell {
+    max-width: 120px;
+  }
+}
+/* public/assets/css/earnings.css */
+
+/* Enable horizontal scroll */
+.table-panel {
+  overflow-x: auto;
+}
+
+/* Ensure table expands */
+.seller-table {
+  min-width: 1100px;
+  /* adjust if needed */
+  width: 100%;
+  table-layout: auto;
+}
+
+/* Prevent text breaking */
+.seller-table th,
+.seller-table td {
+  white-space: nowrap;
+}
+
+/* Optional: smoother scrolling */
+.table-panel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.table-panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
 }

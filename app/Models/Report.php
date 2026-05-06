@@ -9,6 +9,7 @@ class Report extends Model
 {
     public const STATUS_PENDING = 'pending';
     public const STATUS_RESOLVED = 'resolved';
+    public const STATUS_DISMISSED = 'dismissed';
 
     protected $fillable = [
         'user_id',
@@ -34,6 +35,11 @@ class Report extends Model
         return $this->belongsTo(User::class, 'seller_id');
     }
 
+    public function actions()
+    {
+        return $this->hasMany(ReportAction::class)->latest('handled_at')->latest('id');
+    }
+
     public function reasonLabel(): string
     {
         return match ($this->reason) {
@@ -47,7 +53,11 @@ class Report extends Model
 
     public function statusLabel(): string
     {
-        return $this->status === self::STATUS_RESOLVED ? 'Resolved' : 'Pending';
+        return match ($this->status) {
+            self::STATUS_RESOLVED => 'Resolved',
+            self::STATUS_DISMISSED => 'Dismissed',
+            default => 'Pending',
+        };
     }
 
     public function targetLabel(): string

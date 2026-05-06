@@ -93,7 +93,11 @@ class SellerSearchController extends Controller
 
         $toolSuggestions = $this->matchTools($this->sellerTools(), $query)
             ->take(4)
+<<<<<<< HEAD
             ->map(fn(array $tool) => $tool['label']);
+=======
+            ->map(fn (array $tool) => $tool['label']);
+>>>>>>> origin/main
 
         $productSuggestions = Product::query()
             ->where('user_id', $sellerUser->id)
@@ -114,7 +118,11 @@ class SellerSearchController extends Controller
             ->latest()
             ->limit(2)
             ->get()
+<<<<<<< HEAD
             ->map(fn(Order $order) => 'Order #' . $order->id);
+=======
+            ->map(fn (Order $order) => 'Order #' . $order->id);
+>>>>>>> origin/main
 
         $messageSuggestions = Conversation::query()
             ->with('buyer')
@@ -125,18 +133,30 @@ class SellerSearchController extends Controller
             ->latest('updated_at')
             ->limit(2)
             ->get()
+<<<<<<< HEAD
             ->map(fn(Conversation $conversation) => 'Message: ' . ($conversation->buyer?->name ?? 'Buyer'));
+=======
+            ->map(fn (Conversation $conversation) => 'Message: ' . ($conversation->buyer?->name ?? 'Buyer'));
+>>>>>>> origin/main
 
         $suggestions = $toolSuggestions
             ->concat($productSuggestions)
             ->concat($orderSuggestions)
             ->concat($messageSuggestions)
+<<<<<<< HEAD
             ->map(fn($value) => trim((string) $value))
+=======
+            ->map(fn ($value) => trim((string) $value))
+>>>>>>> origin/main
             ->filter()
             ->unique()
             ->values()
             ->take(8)
+<<<<<<< HEAD
             ->map(fn(string $label) => [
+=======
+            ->map(fn (string $label) => [
+>>>>>>> origin/main
                 'label' => $label,
                 'selectable' => true,
             ])

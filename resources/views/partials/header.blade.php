@@ -530,6 +530,11 @@
                 item.addEventListener('click', function () {
                     searchInput.value = this.dataset.suggestionLabel || this.textContent;
                     hideSuggestions();
+                    if (typeof searchInput.form.requestSubmit === 'function') {
+                        searchInput.form.requestSubmit();
+                        return;
+                    }
+
                     searchInput.form.submit();
                 });
             });
@@ -691,9 +696,16 @@
             event.preventDefault();
 
             const submitButton = form.querySelector('button[type="submit"]');
-            const originalDisabled = submitButton ? submitButton.disabled : false;
+            const loadingHelper = window.LocalLiftActionLoading;
+
             if (submitButton) {
-                submitButton.disabled = true;
+                if (loadingHelper) {
+                    loadingHelper.start(submitButton, {
+                        label: submitButton.textContent.trim() ? 'Adding...' : '',
+                    });
+                } else {
+                    submitButton.disabled = true;
+                }
             }
 
             try {
@@ -720,7 +732,11 @@
                 window.alert('Unable to update the cart right now. Please try again.');
             } finally {
                 if (submitButton) {
-                    submitButton.disabled = originalDisabled;
+                    if (loadingHelper && submitButton.isConnected) {
+                        loadingHelper.stop(submitButton);
+                    } else if (!loadingHelper) {
+                        submitButton.disabled = false;
+                    }
                 }
             }
         });

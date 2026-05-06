@@ -8,6 +8,7 @@
         <div class="dashboard-layout">
             @include('seller.partials.sidebar')
 
+<<<<<<< HEAD
             <main class="dashboard-main">
                 @include('seller.partials.success-toast')
 
@@ -17,6 +18,21 @@
                             <span class="section-kicker">Catalog</span>
                             <h2>Product Reviews</h2>
                             <p>See all buyer feedback for this product in one place.</p>
+=======
+                <main class="dashboard-main">
+                    <section class="seller-page-panel panel seller-product-reviews-panel">
+                        <div class="page-header seller-product-reviews-header">
+                            <div>
+                                <span class="section-kicker">Catalog</span>
+                                <h2>Product Reviews</h2>
+                                <p>See all buyer feedback for this product in one place.</p>
+                            </div>
+
+                            <a href="{{ route('seller.products.index') }}" class="table-action secondary">
+                                <i class="fa-solid fa-arrow-left"></i>
+                                Back to Products
+                            </a>
+>>>>>>> origin/main
                         </div>
 
                         <a href="{{ route('seller.products.index') }}" class="table-action secondary">
@@ -113,12 +129,33 @@
                             </div>
                             @endif
 
+<<<<<<< HEAD
                             @if(filled($review->seller_reply))
                             <div class="seller-review-reply-card">
                                 <div>
                                     <strong>Your reply</strong><br>
                                     @if($review->seller_replied_at)
                                     <span>{{ $review->seller_replied_at->format('M d, Y') }}</span><br>
+=======
+                            @if($reviews->hasPages())
+                                <div class="seller-review-pagination">
+                                    @if($reviews->onFirstPage())
+                                        <span class="table-action secondary seller-review-pagination-button is-disabled">Previous</span>
+                                    @else
+                                        <a href="{{ $reviews->previousPageUrl() }}"
+                                            class="table-action secondary seller-review-pagination-button">Previous</a>
+                                    @endif
+
+                                    <span class="seller-review-pagination-meta">
+                                        Page {{ $reviews->currentPage() }} of {{ $reviews->lastPage() }}
+                                    </span>
+
+                                    @if($reviews->hasMorePages())
+                                        <a href="{{ $reviews->nextPageUrl() }}"
+                                            class="table-action secondary seller-review-pagination-button">Next</a>
+                                    @else
+                                        <span class="table-action secondary seller-review-pagination-button is-disabled">Next</span>
+>>>>>>> origin/main
                                     @endif
                                 </div>
 
@@ -572,10 +609,89 @@
             justify-content: stretch;
         }
 
+<<<<<<< HEAD
         .seller-review-reply-actions .table-action {
             width: 100%;
             justify-content: center;
         }
     }
 </style>
+=======
+        .seller-review-pagination {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            gap: 14px;
+            margin-top: 4px;
+        }
+
+        .seller-review-pagination-meta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 18px;
+            border: 1px solid rgba(187, 222, 251, 0.12);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #8fa7c4;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .seller-review-pagination-button {
+            min-width: 118px;
+        }
+
+        .seller-review-pagination > :first-child {
+            justify-self: start;
+        }
+
+        .seller-review-pagination > :last-child {
+            justify-self: end;
+        }
+
+        .is-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        @media (max-width: 900px) {
+            .seller-review-product-summary,
+            .seller-review-page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .seller-review-summary-cards {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .seller-review-summary-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .seller-review-product-main {
+                align-items: flex-start;
+            }
+
+            .seller-review-pagination {
+                grid-template-columns: 1fr;
+            }
+
+            .seller-review-pagination-button,
+            .seller-review-pagination > :first-child,
+            .seller-review-pagination > :last-child {
+                justify-self: stretch;
+            }
+
+            .seller-review-pagination-button {
+                width: 100%;
+            }
+        }
+    </style>
+>>>>>>> origin/main
 @endsection

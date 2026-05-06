@@ -17,14 +17,16 @@
                             </div>
                         </div>
 
-
-                        <div class="table-panel">
+                        <div class="table-panel table-panel--scroll">
                             <table class="seller-table">
                                 <thead>
                                     <tr>
-                                        <th>Order ID</th>
+                                        <th>Products</th>
                                         <th>Customer</th>
                                         <th>Shipping Status</th>
+                                        <th>Payment Method</th>
+                                        <th>Payment Status</th>
+                                        <th>Earning Status</th>
                                         <th>Total</th>
                                         <th>Action</th>
                                     </tr>
@@ -33,22 +35,49 @@
                                 <tbody>
                                     @forelse($orders as $order)
                                         @php
-                                            $canManageShipping = $order->sellerOwnsAllItems(auth('seller')->user());
                                             $nextStatuses = $order->nextShippingStatuses();
+                                            $orderItems = $order->items ?? collect();
+                                            $firstItem = $orderItems->first();
+                                            $firstItemName = $firstItem?->product?->name ?? 'Product unavailable';
+                                            $firstItemQuantity = max(1, (int) ($firstItem->quantity ?? 1));
+                                            $additionalItemCount = max($orderItems->count() - 1, 0);
+                                            $productSummary = $firstItem
+                                                ? $firstItemName . ' x' . $firstItemQuantity
+                                                : 'No items';
+                                            $productMeta = 'Order #' . $order->id;
+
+                                            if ($additionalItemCount > 0) {
+                                                $productMeta .= ' | +' . $additionalItemCount . ' more item' . ($additionalItemCount > 1 ? 's' : '');
+                                            }
                                         @endphp
                                         <tr>
-                                            <td>#{{ $order->id }}</td>
+                                            <td class="order-products-cell">
+                                                <strong class="order-products-title">{{ $productSummary }}</strong>
+                                                <span class="order-products-meta">{{ $productMeta }}</span>
+                                            </td>
                                             <td>{{ $order->user->name ?? 'N/A' }}</td>
                                             <td>
                                                 <span class="status-chip {{ $order->shippingToneClass() }}">
                                                     {{ $order->shippingStatusLabel() }}
                                                 </span>
                                             </td>
+                                            <td>{{ $order->paymentMethodLabel() }}</td>
+                                            <td>
+                                                <span class="status-chip {{ $order->paymentToneClass() }}">
+                                                    {{ $order->paymentStatusLabel() }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="status-chip {{ $order->earningToneClass() }}">
+                                                    {{ $order->earningStatusLabel() }}
+                                                </span>
+                                            </td>
                                             <td>&#8369; {{ number_format($order->total_price ?? 0, 2) }}</td>
                                             <td>
-                                                @if($canManageShipping && $nextStatuses)
+                                                @if($nextStatuses)
                                                     <form method="POST"
                                                         action="{{ route('seller.orders.shipping-status', $order) }}"
+                                                        data-enable-loading
                                                         style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                                                         @csrf
                                                         @method('PATCH')
@@ -59,10 +88,9 @@
                                                                 </option>
                                                             @endforeach
                                                         </select>
-                                                        <button type="submit" class="table-action secondary">Update</button>
+                                                        <button type="submit" class="table-action secondary"
+                                                            data-enable-loading data-loading-text="Updating...">Update</button>
                                                     </form>
-                                                @elseif(!$canManageShipping)
-                                                    <span class="empty-text">Mixed-seller order</span>
                                                 @else
                                                     <span class="empty-text">No more updates</span>
                                                 @endif
@@ -70,12 +98,34 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="empty-text">No orders found.</td>
+                                            <td colspan="8" class="empty-text">No orders found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                             </table>
                         </div>
+
+                        @if($orders->hasPages())
+                            <div class="seller-orders-pagination">
+                                @if($orders->onFirstPage())
+                                    <span class="table-action secondary seller-orders-pagination-button is-disabled">Previous</span>
+                                @else
+                                    <a href="{{ $orders->previousPageUrl() }}"
+                                        class="table-action secondary seller-orders-pagination-button">Previous</a>
+                                @endif
+
+                                <span class="seller-orders-pagination-meta">
+                                    Page {{ $orders->currentPage() }} of {{ $orders->lastPage() }}
+                                </span>
+
+                                @if($orders->hasMorePages())
+                                    <a href="{{ $orders->nextPageUrl() }}"
+                                        class="table-action secondary seller-orders-pagination-button">Next</a>
+                                @else
+                                    <span class="table-action secondary seller-orders-pagination-button is-disabled">Next</span>
+                                @endif
+                            </div>
+                        @endif
                     </section>
                 </main>
             </div>

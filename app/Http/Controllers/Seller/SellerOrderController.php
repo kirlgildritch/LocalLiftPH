@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Notifications\SellerNotificationService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Contracts\View\View;
 
 class SellerOrderController extends Controller
 {
@@ -16,17 +17,16 @@ class SellerOrderController extends Controller
     {
         $seller = Auth::guard('seller')->user();
 
-        $orders = Order::with(['user', 'items.product'])
-            ->whereHas('items.product', function ($query) use ($seller) {
-                $query->where('user_id', $seller->id);
-            })
+        $orders = Order::with(['user', 'seller.sellerProfile', 'items.product'])
+            ->where('seller_id', $seller->id)
             ->latest()
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return view('seller.orders', compact('orders'));
     }
 
-    public function updateShippingStatus(Request $request, Order $order): RedirectResponse
+    public function updateShippingStatus(Request $request, Order $order, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $order->loadMissing(['items.product', 'user']);
 
@@ -46,10 +46,27 @@ class SellerOrderController extends Controller
             'shipping_status.in' => 'Invalid shipping status transition.',
         ]);
 
-        $order->update([
-            'shipping_status' => $validated['shipping_status'],
-            'status' => Order::legacyStatusForShipping($validated['shipping_status']),
-        ]);
+        $shippingStatus = $validated['shipping_status'];
+
+        $updates = [
+            'shipping_status' => $shippingStatus,
+            'status' => Order::legacyStatusForShipping($shippingStatus),
+        ];
+
+        if ($shippingStatus === Order::SHIPPING_SHIPPED) {
+            $updates['seller_earning_status'] = Order::EARNING_ON_HOLD;
+        }
+
+        if ($shippingStatus === Order::SHIPPING_CANCELLED) {
+            $updates['payment_status'] = Order::PAYMENT_CANCELLED;
+            $updates['seller_earning_status'] = Order::EARNING_REVERSED;
+        }
+
+        $order->update($updates);
+
+        if ($shippingStatus === Order::SHIPPING_COMPLETED) {
+            $sellerNotifications->orderCompleted($order->fresh(['seller.sellerProfile', 'user']));
+        }
 
         return redirect()
             ->route('seller.orders')

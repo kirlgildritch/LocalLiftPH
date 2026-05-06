@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderCancellation;
+use App\Models\Product;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -18,8 +21,7 @@ class OrderController extends Controller
             Order::SHIPPING_PENDING,
             Order::SHIPPING_TO_SHIP,
             Order::SHIPPING_SHIPPED,
-            Order::SHIPPING_OUT_FOR_DELIVERY,
-            Order::SHIPPING_DELIVERED,
+            Order::SHIPPING_COMPLETED,
             Order::SHIPPING_CANCELLED,
         ];
 
@@ -27,7 +29,7 @@ class OrderController extends Controller
             $currentStatus = 'all';
         }
 
-        $orders = Order::with(['items.product.user.sellerProfile', 'items.review', 'cancellation'])
+        $orders = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.review', 'cancellation'])
             ->where('user_id', Auth::id())
             ->when($currentStatus !== 'all', function ($query) use ($currentStatus) {
                 $query->where('shipping_status', $currentStatus);
@@ -41,16 +43,45 @@ class OrderController extends Controller
             ->groupBy('shipping_status')
             ->pluck('count', 'shipping_status');
 
-        return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts'));
+        $checkoutGroupCounts = Order::query()
+            ->where('user_id', Auth::id())
+            ->get(['id', 'checkout_group'])
+            ->groupBy(fn(Order $order) => $order->checkoutGroupKey())
+            ->map(fn($group) => $group->count());
+
+        return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts', 'checkoutGroupCounts'));
     }
 
     public function show(Order $order)
     {
         $this->authorize('view', $order);
 
-        $order->load(['items.product.user.sellerProfile', 'items.review', 'cancellation']);
+        $groupOrdersQuery = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.review', 'cancellation'])
+            ->where('user_id', Auth::id());
 
-        return view('buyer.order-show', compact('order'));
+        if ($order->checkout_group) {
+            $groupOrdersQuery->where('checkout_group', $order->checkout_group);
+        } else {
+            $groupOrdersQuery->where('id', $order->id);
+        }
+
+        $groupOrders = $groupOrdersQuery
+            ->latest('id')
+            ->get();
+
+        $groupSummary = [
+            'items' => (int) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->itemCount()),
+            'subtotal' => (float) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->subtotalAmount()),
+            'shipping' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->shipping_fee),
+            'total' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->total_price),
+            'shops' => (int) $groupOrders->count(),
+        ];
+
+        return view('buyer.order-show', [
+            'order' => $order,
+            'groupOrders' => $groupOrders,
+            'groupSummary' => $groupSummary,
+        ]);
     }
 
     public function buyAgain(Order $order)
@@ -80,9 +111,10 @@ class OrderController extends Controller
         return redirect()->route('cart.index')->with('success', 'Items added to cart again.');
     }
 
-    public function cancel(Request $request, Order $order)
+    public function cancel(Request $request, Order $order, SellerNotificationService $sellerNotifications)
     {
         $this->authorize('view', $order);
+        $order->loadMissing('items');
 
         if (!$order->canBeCancelled()) {
             return redirect()
@@ -114,27 +146,48 @@ class OrderController extends Controller
             $otherReason = null;
         }
 
-        OrderCancellation::updateOrCreate(
-            ['order_id' => $order->id],
-            [
-                'user_id' => Auth::id(),
-                'reasons' => $selectedReasons->all(),
-                'other_reason' => $otherReason,
-                'status_before_cancellation' => $order->shippingStatus(),
-            ]
-        );
+        DB::transaction(function () use ($order, $selectedReasons, $otherReason): void {
+            OrderCancellation::updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'user_id' => Auth::id(),
+                    'reasons' => $selectedReasons->all(),
+                    'other_reason' => $otherReason,
+                    'status_before_cancellation' => $order->shippingStatus(),
+                ]
+            );
 
-        $order->update([
-            'status' => Order::STATUS_CANCELLED,
-            'shipping_status' => Order::SHIPPING_CANCELLED,
-        ]);
+            $restockByProduct = $order->items
+                ->filter(fn ($item) => filled($item->product_id))
+                ->groupBy('product_id')
+                ->map(fn ($items) => (int) $items->sum('quantity'));
+
+            if ($restockByProduct->isNotEmpty()) {
+                Product::query()
+                    ->whereIn('id', $restockByProduct->keys())
+                    ->lockForUpdate()
+                    ->get()
+                    ->each(function (Product $product) use ($restockByProduct): void {
+                        $product->increment('stock', (int) ($restockByProduct[$product->id] ?? 0));
+                    });
+            }
+
+            $order->update([
+                'status' => Order::STATUS_CANCELLED,
+                'shipping_status' => Order::SHIPPING_CANCELLED,
+                'payment_status' => Order::PAYMENT_CANCELLED,
+                'seller_earning_status' => Order::EARNING_REVERSED,
+            ]);
+        });
+
+        $sellerNotifications->orderCancelled($order->fresh(['seller.sellerProfile', 'user']));
 
         return redirect()
             ->route('buyer.orders.show', $order)
             ->with('success', 'Order cancelled successfully.');
     }
 
-    public function confirmReceived(Order $order)
+    public function confirmReceived(Order $order, SellerNotificationService $sellerNotifications)
     {
         $this->authorize('view', $order);
 
@@ -146,7 +199,13 @@ class OrderController extends Controller
 
         $order->update([
             'status' => Order::STATUS_COMPLETED,
+            'shipping_status' => Order::SHIPPING_COMPLETED,
+            'payment_status' => Order::PAYMENT_PAID,
+            'paid_at' => now(),
+            'seller_earning_status' => Order::EARNING_AVAILABLE,
         ]);
+
+        $sellerNotifications->buyerConfirmedReceipt($order->fresh(['seller.sellerProfile', 'user']));
 
         return redirect()
             ->route('buyer.orders.show', $order)

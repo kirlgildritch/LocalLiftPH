@@ -263,6 +263,12 @@
     font-size: 0.92rem;
 }
 
+.quantity-note {
+  color: var(--text-soft);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
 .quantity-control,
 .purchase-actions,
 .seller-row,

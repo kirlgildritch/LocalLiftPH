@@ -17,11 +17,8 @@
                         </div>
                     </div>
 
-                    @if(session('success'))
-                        <p class="seller-feedback success-message">Profile updated successfully.</p>
-                    @endif
-
-                    <form method="POST" action="{{ route('seller.profile.update') }}" enctype="multipart/form-data" class="profile-form">
+                    <form method="POST" action="{{ route('seller.profile.update') }}" enctype="multipart/form-data"
+                        class="profile-form" data-enable-loading>
                         @csrf
                         @method('PATCH')
 
@@ -85,7 +82,8 @@
                             <input type="password" name="password_confirmation" id="password_confirmation">
                         </div>
 
-                        <button type="submit" class="page-action-btn">Update Profile</button>
+                        <button type="submit" class="page-action-btn" data-enable-loading
+                            data-loading-text="Updating...">Update Profile</button>
                     </form>
                 </section>
             </main>

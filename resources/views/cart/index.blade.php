@@ -65,7 +65,15 @@
                             }
                         @endphp
 
-                        <article class="cart-item" data-cart-item-id="{{ $item->id }}" data-subtotal="{{ $subtotal }}" data-shipping="{{ $shipping }}">
+                        <article
+                            class="cart-item"
+                            data-cart-item-id="{{ $item->id }}"
+                            data-max-stock="{{ max(0, (int) ($item->product->stock ?? 0)) }}"
+                            data-subtotal="{{ $subtotal }}"
+                            data-shipping="{{ $shipping }}"
+                            data-unit-price="{{ (float) $item->product->price }}"
+                            data-unit-shipping="{{ (float) ($item->product->shipping_fee ?? 0) }}"
+                        >
                             <div class="item-select">
                                 <input
                                     type="checkbox"
@@ -90,26 +98,27 @@
 
                             <div class="item-quantity">
                                 <div class="qty-box">
-                                    <form action="{{ route('cart.update', $item->id) }}" method="POST">
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST" data-cart-quantity-form>
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="quantity" value="{{ max(1, $item->quantity - 1) }}">
-                                        <button type="submit">-</button>
+                                        <input type="hidden" name="quantity" value="{{ max(1, $item->quantity - 1) }}" data-cart-next-quantity="decrement">
+                                        <button type="submit" data-cart-quantity-button="decrement">-</button>
                                     </form>
 
-                                    <input type="text" value="{{ $item->quantity }}" readonly>
+                                    <input type="text" value="{{ $item->quantity }}" readonly data-cart-quantity-display>
 
-                                    <form action="{{ route('cart.update', $item->id) }}" method="POST">
+                                    <form action="{{ route('cart.update', $item->id) }}" method="POST" data-cart-quantity-form>
                                         @csrf
                                         @method('PATCH')
-                                        <input type="hidden" name="quantity" value="{{ $item->quantity + 1 }}">
-                                        <button type="submit">+</button>
+                                        <input type="hidden" name="quantity" value="{{ $item->quantity + 1 }}" data-cart-next-quantity="increment">
+                                        <button type="submit" data-cart-quantity-button="increment">+</button>
                                     </form>
                                 </div>
+                                <small class="quantity-note" data-cart-quantity-note hidden></small>
                             </div>
 
                             <div class="item-subtotal">
-                                <strong>&#8369; {{ number_format($subtotal, 2) }}</strong>
+                                <strong data-cart-item-subtotal>&#8369; {{ number_format($subtotal, 2) }}</strong>
 
                                 <form action="{{ route('cart.remove', $item->id) }}" method="POST">
                                     @csrf
@@ -150,9 +159,9 @@
                         <strong id="cart-summary-total">&#8369; {{ number_format($selectedSubtotal + $selectedShipping, 2) }}</strong>
                     </div>
 
-                    <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form">
+                    <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form" data-enable-loading>
                         <div id="selected-cart-items-inputs"></div>
-                        <button type="submit" class="action-btn primary-btn full-btn">Checkout</button>
+                        <button type="submit" class="action-btn primary-btn full-btn" data-enable-loading data-loading-text="Loading Checkout...">Checkout</button>
                     </form>
                 </div>
             </aside>
@@ -170,6 +179,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const totalEl = document.getElementById('cart-summary-total');
     const selectedInputsContainer = document.getElementById('selected-cart-items-inputs');
     const checkoutForm = document.getElementById('cart-checkout-form');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     if (!cartLayout || !selectAll || !itemCheckboxes.length || !subtotalEl || !shippingEl || !totalEl || !selectedInputsContainer || !checkoutForm) {
         return;
@@ -244,6 +254,84 @@ document.addEventListener('DOMContentLoaded', function () {
         saveSelection(selectedIds);
     };
 
+    const setQuantityLimitState = (row, quantity) => {
+        const maxStock = Math.max(0, Number(row.dataset.maxStock || 0));
+        const nextQuantity = Number(quantity || 0);
+        const decrementButton = row.querySelector('[data-cart-quantity-button="decrement"]');
+        const incrementButton = row.querySelector('[data-cart-quantity-button="increment"]');
+        const note = row.querySelector('[data-cart-quantity-note]');
+
+        if (decrementButton) {
+            decrementButton.disabled = nextQuantity <= 1;
+        }
+
+        if (incrementButton) {
+            incrementButton.disabled = maxStock <= 0 || nextQuantity >= maxStock;
+        }
+
+        if (!note) {
+            return;
+        }
+
+        if (maxStock <= 0) {
+            note.hidden = false;
+            note.textContent = 'Out of stock.';
+            return;
+        }
+
+        if (nextQuantity >= maxStock) {
+            note.hidden = false;
+            note.textContent = 'Max stock reached.';
+            return;
+        }
+
+        note.hidden = true;
+        note.textContent = '';
+    };
+
+    const updateQuantityRow = (row, quantity, maxStock = null) => {
+        const nextQuantity = Number(quantity || 1);
+        const unitPrice = Number(row.dataset.unitPrice || 0);
+        const unitShipping = Number(row.dataset.unitShipping || 0);
+        const subtotal = unitPrice * nextQuantity;
+        const shipping = unitShipping * nextQuantity;
+        const quantityDisplay = row.querySelector('[data-cart-quantity-display]');
+        const subtotalDisplay = row.querySelector('[data-cart-item-subtotal]');
+        const decrementInput = row.querySelector('[data-cart-next-quantity="decrement"]');
+        const incrementInput = row.querySelector('[data-cart-next-quantity="increment"]');
+
+        if (maxStock !== null) {
+            row.dataset.maxStock = String(Math.max(0, Number(maxStock || 0)));
+        }
+
+        row.dataset.subtotal = String(subtotal);
+        row.dataset.shipping = String(shipping);
+
+        if (quantityDisplay) {
+            quantityDisplay.value = nextQuantity;
+        }
+
+        if (subtotalDisplay) {
+            subtotalDisplay.innerHTML = formatPeso(subtotal);
+        }
+
+        if (decrementInput) {
+            decrementInput.value = String(Math.max(1, nextQuantity - 1));
+        }
+
+        if (incrementInput) {
+            incrementInput.value = String(nextQuantity + 1);
+        }
+
+        setQuantityLimitState(row, nextQuantity);
+    };
+
+    const setQuantityButtonsState = (row, disabled) => {
+        row.querySelectorAll('[data-cart-quantity-form] button[type="submit"]').forEach((button) => {
+            button.disabled = disabled;
+        });
+    };
+
     selectAll.addEventListener('change', function () {
         itemCheckboxes.forEach((checkbox) => {
             checkbox.checked = selectAll.checked;
@@ -253,6 +341,64 @@ document.addEventListener('DOMContentLoaded', function () {
 
     itemCheckboxes.forEach((checkbox) => {
         checkbox.addEventListener('change', syncSummary);
+    });
+
+    cartLayout.addEventListener('submit', async function (event) {
+        const form = event.target.closest('[data-cart-quantity-form]');
+
+        if (!form) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const row = form.closest('.cart-item');
+
+        if (!row || row.dataset.quantityPending === '1') {
+            return;
+        }
+
+        const nextQuantityInput = form.querySelector('input[name="quantity"]');
+        const requestedQuantity = Number(nextQuantityInput?.value || 0);
+        const maxStock = Math.max(0, Number(row.dataset.maxStock || 0));
+
+        if (maxStock > 0 && requestedQuantity > maxStock) {
+            setQuantityLimitState(row, maxStock);
+            window.alert('Max stock reached.');
+            return;
+        }
+
+        row.dataset.quantityPending = '1';
+        setQuantityButtonsState(row, true);
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                },
+                body: new FormData(form),
+                credentials: 'same-origin',
+            });
+
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(payload.message || 'Unable to update the cart quantity.');
+            }
+
+            updateQuantityRow(row, payload.cart_item?.quantity, payload.cart_item?.max_stock ?? null);
+            syncSummary();
+        } catch (error) {
+            setQuantityLimitState(row, row.querySelector('[data-cart-quantity-display]')?.value || 1);
+            window.alert(error.message || 'Unable to update the cart quantity.');
+        } finally {
+            delete row.dataset.quantityPending;
+            setQuantityButtonsState(row, false);
+            setQuantityLimitState(row, row.querySelector('[data-cart-quantity-display]')?.value || 1);
+        }
     });
 
     checkoutForm.addEventListener('submit', function (event) {
@@ -272,6 +418,10 @@ document.addEventListener('DOMContentLoaded', function () {
             applySelection(savedSelection);
         }
     }
+
+    document.querySelectorAll('.cart-item').forEach((row) => {
+        updateQuantityRow(row, row.querySelector('[data-cart-quantity-display]')?.value || 1);
+    });
 
     syncSummary();
 });

@@ -8,15 +8,16 @@
 @section('content')
     @php
         $avatarClasses = ['gold', 'teal', 'rose', 'slate', 'olive'];
+        $statusOptions = [
+            '' => 'All Statuses',
+            'active' => 'Active',
+            'pending' => 'Pending Review',
+            'rejected' => 'Rejected',
+            'flagged' => 'Flagged',
+        ];
     @endphp
 
     <div class="page-stack">
-        <p class="sub-line" style="font-size: 1.05rem; margin: 0;">View and manage all registered sellers.</p>
-
-        @if (session('success'))
-            <div class="alert-note">{{ session('success') }}</div>
-        @endif
-
         <section class="seller-stats-grid">
             @foreach ($stats as $stat)
                 <article class="seller-stat-card seller-stat-card--{{ $stat['tone'] }}">
@@ -26,23 +27,30 @@
             @endforeach
         </section>
 
-        <div class="filter-bar">
+        <form method="GET" action="{{ route('admin.sellers') }}" class="filter-bar seller-filter-bar">
             <div class="search-box search-box--grow">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" placeholder="Search sellers..." />
+                <input type="text" name="search" value="{{ $filters['search'] }}" placeholder="Search sellers..." />
             </div>
-            <div class="inline-select"><i class="fa-solid fa-gear"></i> Filter <i class="fa-solid fa-chevron-down"></i>
-            </div>
-            <div class="inline-select"><i class="fa-solid fa-magnifying-glass"></i></div>
-        </div>
+            <label class="inline-select seller-inline-select">
+                <i class="fa-solid fa-gear"></i>
+                <select name="status" aria-label="Filter sellers by status">
+                    @foreach ($statusOptions as $value => $label)
+                        <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <button class="action-button action-button--primary" type="submit">Filter</button>
+            <a class="action-button action-button--light" href="{{ route('admin.sellers') }}">Reset</a>
+        </form>
 
-        <article class="table-card">
-            <div style="overflow-x:auto;">
+        <article class="table-card seller-table-card">
+            <div class="seller-table-scroll">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Seller</th>
-                            <th>Category</th>
+                            <th>Top Category</th>
                             <th>Products</th>
                             <th>Status</th>
                             <th>Date Joined</th>
@@ -54,20 +62,35 @@
                             @php
                                 $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
                                 $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
-                                $category = optional($seller->user?->products->first()?->category)->name
-                                    ?? ($seller->seller_type === 'registered_business' ? 'Business' : 'Individual');
-                                $productsCount = $seller->user?->products->count() ?? 0;
-                                $statusLabel = match ($seller->application_status) {
+                                $products = $seller->user?->products ?? collect();
+                                $productsCount = $products->count();
+                                $categoryCounts = $products
+                                    ->groupBy(fn($product) => $product->category?->name ?? 'Uncategorized')
+                                    ->map
+                                    ->count()
+                                    ->sortDesc();
+                                $distinctCategoryCount = $categoryCounts->count();
+                                $topCategory = $categoryCounts->keys()->first();
+                                $categoryLabel = match (true) {
+                                    $productsCount === 0 => 'No products yet',
+                                    $distinctCategoryCount === 1 => $topCategory,
+                                    default => 'Multiple Categories',
+                                };
+                                $categoryDetail = $productsCount > 0 && $distinctCategoryCount > 1 ? 'Top: ' . $topCategory : null;
+                                $hasFlaggedProducts = $products->contains(function ($product) {
+                                    return $product->reports->where('status', \App\Models\Report::STATUS_PENDING)->isNotEmpty();
+                                });
+                                $statusLabel = $hasFlaggedProducts ? 'Flagged' : match ($seller->application_status) {
                                     'approved' => 'Active',
                                     'rejected' => 'Rejected',
-                                    default => 'Pending',
+                                    default => 'Pending Review',
                                 };
-                                $statusClass = match ($seller->application_status) {
+                                $statusClass = $hasFlaggedProducts ? 'status-pill--danger' : match ($seller->application_status) {
                                     'approved' => 'status-pill--success',
                                     'rejected' => 'status-pill--danger',
                                     default => 'status-pill--pending',
                                 };
-                                $avatarClass = $avatarClasses[$index % count($avatarClasses)];
+                                $avatarClass = $avatarClasses[(($sellers->firstItem() ?? 1) + $index - 1) % count($avatarClasses)];
                             @endphp
                             <tr>
                                 <td>
@@ -81,7 +104,14 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>{{ $category }}</td>
+                                <td>
+                                    <div class="seller-cell__text">
+                                        <div class="seller-name">{{ $categoryLabel }}</div>
+                                        @if ($categoryDetail)
+                                            <div class="sub-line">{{ $categoryDetail }}</div>
+                                        @endif
+                                    </div>
+                                </td>
                                 <td>{{ $productsCount }}</td>
                                 <td>
                                     <span class="status-pill {{ $statusClass }}">
@@ -109,11 +139,32 @@
                 </table>
             </div>
 
-            <div class="pagination-bar">
-                <button class="pagination-button"><i class="fa-solid fa-chevron-left"></i></button>
-                <button class="pagination-button is-active">1</button>
-                <button class="pagination-button"><i class="fa-solid fa-chevron-right"></i></button>
-            </div>
+            @if ($sellers->hasPages())
+                @php
+                    $startPage = max(1, $sellers->currentPage() - 1);
+                    $endPage = min($sellers->lastPage(), $sellers->currentPage() + 1);
+                @endphp
+                <div class="pagination-bar">
+                    @if ($sellers->onFirstPage())
+                        <span class="pagination-button is-disabled"><i class="fa-solid fa-chevron-left"></i></span>
+                    @else
+                        <a class="pagination-button" href="{{ $sellers->previousPageUrl() }}"><i
+                                class="fa-solid fa-chevron-left"></i></a>
+                    @endif
+
+                    @foreach ($sellers->getUrlRange($startPage, $endPage) as $page => $url)
+                        <a class="pagination-button {{ $page === $sellers->currentPage() ? 'is-active' : '' }}"
+                            href="{{ $url }}">{{ $page }}</a>
+                    @endforeach
+
+                    @if ($sellers->hasMorePages())
+                        <a class="pagination-button" href="{{ $sellers->nextPageUrl() }}"><i
+                                class="fa-solid fa-chevron-right"></i></a>
+                    @else
+                        <span class="pagination-button is-disabled"><i class="fa-solid fa-chevron-right"></i></span>
+                    @endif
+                </div>
+            @endif
         </article>
     </div>
 @endsection
@@ -161,6 +212,15 @@
                                 <button class="button" type="button" id="seller-permit-link">View</button>
                             </div>
                         </div>
+
+                        <div class="doc-card">
+                            <div class="doc-thumb doc-thumb--address"></div>
+                            <div class="doc-card__content">
+                                <div class="seller-name" id="seller-requested-document-label">Requested Document</div>
+                                <div class="doc-card__status" id="seller-requested-document-status">Not uploaded</div>
+                                <button class="button" type="button" id="seller-requested-document-link">View</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -170,23 +230,49 @@
                         @csrf
                         @method('PATCH')
                         <input type="hidden" name="application_status" value="pending" id="seller-review-status">
+                        <input type="hidden" name="request_more_documents" value="0" id="seller-request-more-documents">
 
-                        <div class="form-row spacer-top">
-                            <select class="field-select" id="seller-review-reason">
+                        <div class="seller-request-card">
+                            <div class="seller-request-empty-state" id="seller-request-empty-state">
+                                <strong>No document request yet.</strong>
+                                <p>Send a request below if you need more verification documents from this seller.</p>
+                            </div>
+
+                            <div class="seller-request-details" id="seller-request-details" hidden>
+                                <div class="seller-request-detail-row">
+                                    <span>Reason</span>
+                                    <strong id="seller-request-current-reason">None</strong>
+                                </div>
+                                <div class="seller-request-detail-row">
+                                    <span>Notes</span>
+                                    <strong id="seller-request-current-notes">None</strong>
+                                </div>
+                                <div class="seller-request-detail-row">
+                                    <span>Requested</span>
+                                    <strong id="seller-request-current-date">N/A</strong>
+                                </div>
+                                <div class="seller-request-detail-row">
+                                    <span>Status</span>
+                                    <span class="seller-request-status-badge" id="seller-request-current-status">None</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="seller-request-form-row spacer-top">
+                            <select class="field-select seller-request-select" id="seller-review-reason" name="document_request_reason">
                                 <option value="">Select Reason</option>
-                                <option value="Please upload proof of address for verification.">Proof of Address</option>
-                                <option value="Please upload your tax identification number document.">Tax Identification
-                                    Number</option>
-                                <option value="Please upload a recent bank statement.">Bank Statement</option>
+                                @foreach ($documentRequestReasons as $value => $label)
+                                    <option value="{{ $value }}">{{ $label }}</option>
+                                @endforeach
                             </select>
-                            <button class="action-button action-button--warning" type="button"
+                            <button class="action-button action-button--warning seller-request-button" type="button"
                                 id="request-documents-button">Request Documents</button>
                         </div>
 
-                        <textarea class="field-textarea" name="review_notes" id="seller-review-notes" rows="4"
+                        <textarea class="field-textarea seller-request-notes" name="review_notes" id="seller-review-notes" rows="4"
                             placeholder="Add admin review notes or required document instructions..."></textarea>
 
-                        <div class="alert-note">Additional document requests will notify the seller through the dashboard
+                        <div class="alert-note seller-request-note">Additional document requests will notify the seller through the dashboard
                             review state.</div>
                     </form>
                 </div>
@@ -232,10 +318,23 @@
 
 @push('scripts')
     @php
-        $sellerModalData = $sellers->map(function ($seller, $index) use ($avatarClasses) {
+        $sellerModalData = $sellers->getCollection()->values()->map(function ($seller, $index) use ($avatarClasses, $sellers) {
             $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
             $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
             $productsCount = $seller->user?->products->count() ?? 0;
+            $latestRequest = $seller->latestDocumentRequest;
+            $requestReasonLabel = match ($latestRequest?->reason) {
+                'proof_of_address' => 'Proof of Address',
+                'tax_identification_number' => 'Tax Identification Number',
+                'bank_statement' => 'Bank Statement',
+                default => $latestRequest?->reason ? ucfirst(str_replace('_', ' ', $latestRequest->reason)) : null,
+            };
+            $requestStatusLabel = match ($latestRequest?->status) {
+                \App\Models\SellerDocumentRequest::STATUS_RESUBMITTED => 'Resubmitted',
+                \App\Models\SellerDocumentRequest::STATUS_RESOLVED => 'Resolved',
+                \App\Models\SellerDocumentRequest::STATUS_PENDING => 'Pending',
+                default => 'None',
+            };
 
             return [
                 'id' => $seller->id,
@@ -251,7 +350,14 @@
                 'status' => $seller->application_status,
                 'update_url' => route('admin.sellers.status', $seller),
                 'avatar' => strtoupper(substr($displayName, 0, 2)),
-                'avatar_class' => $avatarClasses[$index % count($avatarClasses)],
+                'avatar_class' => $avatarClasses[(($sellers->firstItem() ?? 1) + $index - 1) % count($avatarClasses)],
+                'latest_request_reason' => $latestRequest?->reason,
+                'latest_request_reason_label' => $requestReasonLabel,
+                'latest_request_notes' => $latestRequest?->admin_notes,
+                'latest_request_status' => $latestRequest?->status,
+                'latest_request_status_label' => $requestStatusLabel,
+                'latest_request_date' => optional($latestRequest?->requested_at)->format('m/d/Y h:i A'),
+                'latest_request_document_url' => $latestRequest?->response_document_path ? asset('storage/' . $latestRequest->response_document_path) : null,
             ];
         })->values();
     @endphp
@@ -265,6 +371,10 @@
             const documentModalLabel = document.getElementById('seller-document-modal-label');
             const documentPreviewStage = document.getElementById('seller-document-preview-stage');
             const documentOpenLink = document.getElementById('seller-document-open-link');
+            const sellerRequestMoreDocuments = document.getElementById('seller-request-more-documents');
+            const sellerRequestEmptyState = document.getElementById('seller-request-empty-state');
+            const sellerRequestDetails = document.getElementById('seller-request-details');
+            const sellerRequestCurrentStatus = document.getElementById('seller-request-current-status');
 
             const openModal = (id) => {
                 const modal = document.getElementById(id);
@@ -287,6 +397,33 @@
                     return new URL(url, window.location.origin).pathname.split('.').pop().toLowerCase();
                 } catch (error) {
                     return '';
+                }
+            };
+
+            const hasDocumentRequest = (seller) => Boolean(
+                seller?.latest_request_reason
+                || seller?.latest_request_status
+                || seller?.latest_request_date
+                || seller?.latest_request_notes
+            );
+
+            const requestStatusBadgeClass = (status) => {
+                switch (status) {
+                    case 'pending':
+                        return 'is-pending';
+                    case 'resubmitted':
+                        return 'is-resubmitted';
+                    case 'resolved':
+                        return 'is-resolved';
+                    default:
+                        return 'is-none';
+                }
+            };
+
+            const setText = (id, value, fallback = 'None') => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value || fallback;
                 }
             };
 
@@ -335,19 +472,26 @@
 
                     const idLink = document.getElementById('seller-id-link');
                     const permitLink = document.getElementById('seller-permit-link');
+                    const requestedDocumentLink = document.getElementById('seller-requested-document-link');
                     const idStatus = document.getElementById('seller-id-status');
                     const permitStatus = document.getElementById('seller-permit-status');
+                    const requestedDocumentStatus = document.getElementById('seller-requested-document-status');
                     const form = document.getElementById('seller-review-form');
                     const notes = document.getElementById('seller-review-notes');
                     const statusInput = document.getElementById('seller-review-status');
+                    const reasonSelect = document.getElementById('seller-review-reason');
 
                     form.action = seller.update_url;
                     notes.value = seller.review_notes || '';
                     statusInput.value = seller.status || 'pending';
+                    sellerRequestMoreDocuments.value = '0';
+                    reasonSelect.value = '';
                     idLink.onclick = null;
                     permitLink.onclick = null;
+                    requestedDocumentLink.onclick = null;
                     idLink.disabled = !seller.valid_id_url;
                     permitLink.disabled = !seller.business_permit_url;
+                    requestedDocumentLink.disabled = !seller.latest_request_document_url;
 
                     if (seller.valid_id_url) {
                         idStatus.textContent = 'Uploaded';
@@ -367,6 +511,39 @@
                         permitStatus.textContent = 'Optional / Not uploaded';
                     }
 
+                    setText('seller-request-current-reason', seller.latest_request_reason_label);
+                    setText('seller-request-current-notes', seller.latest_request_notes);
+                    setText('seller-request-current-date', seller.latest_request_date, 'N/A');
+                    setText('seller-request-current-status', seller.latest_request_status_label);
+
+                    if (sellerRequestCurrentStatus) {
+                        sellerRequestCurrentStatus.className = `seller-request-status-badge ${requestStatusBadgeClass(seller.latest_request_status)}`;
+                    }
+
+                    const requestExists = hasDocumentRequest(seller);
+                    if (sellerRequestEmptyState) {
+                        sellerRequestEmptyState.hidden = requestExists;
+                    }
+                    if (sellerRequestDetails) {
+                        sellerRequestDetails.hidden = !requestExists;
+                    }
+
+                    document.getElementById('seller-requested-document-label').textContent = seller
+                        .latest_request_reason_label || 'Requested Document';
+
+                    if (seller.latest_request_document_url) {
+                        requestedDocumentStatus.textContent = seller.latest_request_status_label || 'Uploaded';
+                        requestedDocumentLink.addEventListener('click', function handleRequestedDocumentClick() {
+                            openDocumentModal('Requested Document', seller.latest_request_reason_label ||
+                                'Requested Document', seller.latest_request_document_url);
+                        }, {
+                            once: true
+                        });
+                    } else {
+                        requestedDocumentStatus.textContent = seller.latest_request_status === 'pending' ? 'Awaiting upload' :
+                            'Not uploaded';
+                    }
+
                     openModal('seller-detail-modal');
                 });
             });
@@ -379,20 +556,265 @@
 
             if (requestDocumentsButton && sellerReviewReason && sellerReviewNotes) {
                 requestDocumentsButton.addEventListener('click', () => {
-                    if (sellerReviewReason.value) {
-                        sellerReviewNotes.value = sellerReviewReason.value;
+                    if (!sellerReviewReason.value) {
+                        sellerReviewReason.focus();
+                        return;
                     }
+                    sellerRequestMoreDocuments.value = '1';
                     sellerReviewStatus.value = 'pending';
+                    window.LocalLiftActionLoading?.start(requestDocumentsButton, { label: 'Sending...' });
+                    if (typeof sellerReviewForm.requestSubmit === 'function') {
+                        sellerReviewForm.requestSubmit();
+                        return;
+                    }
+
                     sellerReviewForm.submit();
                 });
             }
 
             document.querySelectorAll('[data-status-submit]').forEach((button) => {
                 button.addEventListener('click', () => {
+                    sellerRequestMoreDocuments.value = '0';
                     sellerReviewStatus.value = button.dataset.statusSubmit;
+                    window.LocalLiftActionLoading?.start(button, { label: 'Saving...' });
+                    if (typeof sellerReviewForm.requestSubmit === 'function') {
+                        sellerReviewForm.requestSubmit();
+                        return;
+                    }
+
                     sellerReviewForm.submit();
                 });
             });
         })();
     </script>
+@endpush
+
+@push('styles')
+    <style>
+        .seller-filter-bar {
+            align-items: stretch;
+        }
+
+        .seller-inline-select {
+            min-width: 12rem;
+        }
+
+        .seller-inline-select select {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .seller-table-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 34rem;
+        }
+
+        .seller-table-scroll {
+            flex: 1 1 auto;
+            overflow-x: auto;
+        }
+
+        .seller-table-card .pagination-bar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: auto;
+            padding-top: 18px;
+            align-self: center;
+            flex-wrap: wrap;
+        }
+
+        .pagination-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            border: 1px solid rgba(187, 222, 251, 0.14);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            color: #8fa7c4;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+            transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+        }
+
+        .pagination-button:hover {
+            background: rgba(66, 165, 245, 0.1);
+            border-color: rgba(66, 165, 245, 0.28);
+            color: #dfeaff;
+        }
+
+        .pagination-button.is-active {
+            background: linear-gradient(135deg, #4f8df0, #3e6fdb);
+            border-color: rgba(96, 165, 250, 0.4);
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(62, 111, 219, 0.24);
+        }
+
+        .pagination-button.is-disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .seller-request-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: linear-gradient(180deg, #fbfcff 0%, #f5f8fe 100%);
+            padding: 1rem 1.1rem;
+        }
+
+        .seller-request-empty-state {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .seller-request-empty-state strong {
+            color: var(--text);
+            font-size: 0.98rem;
+        }
+
+        .seller-request-empty-state p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .seller-request-details {
+            display: grid;
+            gap: 0;
+        }
+
+        .seller-request-detail-row {
+            display: grid;
+            grid-template-columns: minmax(110px, 140px) minmax(0, 1fr);
+            gap: 0.9rem;
+            align-items: start;
+            padding: 0.82rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .seller-request-detail-row:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .seller-request-detail-row:first-child {
+            padding-top: 0;
+        }
+
+        .seller-request-detail-row span:first-child {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .seller-request-detail-row strong {
+            color: var(--text);
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .seller-request-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 32px;
+            padding: 0 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            width: fit-content;
+        }
+
+        .seller-request-status-badge.is-pending {
+            background: #fff5dc;
+            color: #bf8612;
+        }
+
+        .seller-request-status-badge.is-resubmitted {
+            background: #e8f0ff;
+            color: #3b6fd6;
+        }
+
+        .seller-request-status-badge.is-resolved {
+            background: #edf8ef;
+            color: #3e9c4c;
+        }
+
+        .seller-request-status-badge.is-none {
+            background: #eef2f8;
+            color: #6e7890;
+        }
+
+        .seller-request-form-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.8rem;
+            align-items: stretch;
+        }
+
+        .seller-request-select {
+            max-width: none;
+            min-height: 48px;
+            border-color: #dbe4f1;
+            background: #fff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+        }
+
+        .seller-request-select:focus,
+        .seller-request-notes:focus {
+            border-color: rgba(59, 111, 214, 0.36);
+            box-shadow: 0 0 0 3px rgba(59, 111, 214, 0.08);
+            outline: none;
+        }
+
+        .seller-request-button {
+            min-width: 190px;
+        }
+
+        .seller-request-notes {
+            min-height: 120px;
+            line-height: 1.6;
+        }
+
+        .seller-request-note {
+            margin-top: 0;
+        }
+
+        @media (max-width: 720px) {
+            .seller-filter-bar > * {
+                flex: 1 1 100%;
+            }
+
+            .seller-table-card {
+                min-height: 0;
+            }
+
+            .seller-table-card .pagination-bar {
+                width: 100%;
+            }
+
+            .seller-request-detail-row {
+                grid-template-columns: 1fr;
+                gap: 0.35rem;
+            }
+
+            .seller-request-form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .seller-request-button {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+    </style>
 @endpush

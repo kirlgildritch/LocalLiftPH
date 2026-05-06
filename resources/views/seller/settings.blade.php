@@ -2,6 +2,8 @@
 
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/settings.css') }}">
+@php($currentShopStatus = old('shop_status', $seller ? $seller->effectiveShopStatus() : \App\Models\Seller::SHOP_STATUS_OPEN))
+@php($currentShopStatusUntil = old('shop_status_until', optional($seller?->shop_status_until)->format('Y-m-d')))
 
 <section class="dashboard-wrapper">
     <div class="container">
@@ -17,18 +19,8 @@
                         </div>
                     </div>
 
-                    @if(session('success'))
-                        <p class="seller-feedback success-message">{{ session('success') }}</p>
-                    @endif
-
-                    @if(session('error'))
-                        <p class="seller-feedback error-message">{{ session('error') }}</p>
-                    @endif
-
                     <div class="settings-tabs">
                         <button class="tab-btn active" onclick="showSettingsTab(event, 'general')">General</button>
-                        <button class="tab-btn" onclick="showSettingsTab(event, 'notifications')">Notifications</button>
-                        <button class="tab-btn" onclick="showSettingsTab(event, 'policies')">Policies</button>
                         <button class="tab-btn" onclick="showSettingsTab(event, 'payout')">Payout</button>
                         <button class="tab-btn" onclick="showSettingsTab(event, 'inventory')">Inventory</button>
                         <button class="tab-btn" onclick="showSettingsTab(event, 'status')">Shop Status</button>
@@ -38,7 +30,8 @@
                         <div id="general" class="settings-tab-content active">
                             <div class="settings-card panel">
                                 <h3>Shop Information</h3>
-                                <form action="{{ route('seller.settings.update') }}" method="POST" enctype="multipart/form-data">
+                                <form action="{{ route('seller.settings.update') }}" method="POST"
+                                    enctype="multipart/form-data" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
@@ -80,91 +73,78 @@
                                             <img src="{{ asset('storage/' . $seller->shop_logo) }}" width="80" class="shop-logo-preview">
                                         @endif
                                         <input type="file" name="shop_logo" accept="image/*">
+                                        @error('shop_logo')
+                                            <small class="error-text">{{ $message }}</small>
+                                        @enderror
                                     </div>
 
-                                    <button type="submit" class="page-action-btn">Save General Settings</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div id="notifications" class="settings-tab-content">
-                            <div class="settings-card panel">
-                                <h3>Notification Preferences</h3>
-                                <form action="{{ route('seller.settings.notifications') }}" method="POST">
-                                    @csrf
-                                    @method('PATCH')
-
-                                    <div class="checkbox-group"><label><input type="checkbox" name="notify_orders" value="1" {{ old('notify_orders', $seller->notify_orders ?? 1) ? 'checked' : '' }}> New order notifications</label></div>
-                                    <div class="checkbox-group"><label><input type="checkbox" name="notify_messages" value="1" {{ old('notify_messages', $seller->notify_messages ?? 1) ? 'checked' : '' }}> New message notifications</label></div>
-                                    <div class="checkbox-group"><label><input type="checkbox" name="notify_low_stock" value="1" {{ old('notify_low_stock', $seller->notify_low_stock ?? 0) ? 'checked' : '' }}> Low stock alerts</label></div>
-                                    <div class="checkbox-group"><label><input type="checkbox" name="notify_promotions" value="1" {{ old('notify_promotions', $seller->notify_promotions ?? 0) ? 'checked' : '' }}> Promotions and updates</label></div>
-
-                                    <button type="submit" class="page-action-btn">Save Notification Settings</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <div id="policies" class="settings-tab-content">
-                            <div class="settings-card panel">
-                                <h3>Store Policies</h3>
-                                <form action="{{ route('seller.settings.policies') }}" method="POST">
-                                    @csrf
-                                    @method('PATCH')
-
-                                    <div class="form-group">
-                                        <label for="return_policy">Return Policy</label>
-                                        <textarea id="return_policy" name="return_policy" rows="4">{{ old('return_policy', $seller->return_policy ?? '') }}</textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="cancellation_policy">Cancellation Policy</label>
-                                        <textarea id="cancellation_policy" name="cancellation_policy" rows="4">{{ old('cancellation_policy', $seller->cancellation_policy ?? '') }}</textarea>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="shipping_notes">Shipping Notes</label>
-                                        <textarea id="shipping_notes" name="shipping_notes" rows="4">{{ old('shipping_notes', $seller->shipping_notes ?? '') }}</textarea>
-                                    </div>
-
-                                    <button type="submit" class="page-action-btn">Save Store Policies</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
 
                         <div id="payout" class="settings-tab-content">
                             <div class="settings-card panel">
-                                <h3>Payout Information</h3>
-                                <form action="{{ route('seller.settings.payout') }}" method="POST">
+                                <h3>Payout</h3>
+                                <form action="{{ route('seller.settings.payout') }}" method="POST" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
-                                    <div class="form-group"><label for="gcash_number">GCash Number</label><input type="text" id="gcash_number" name="gcash_number" value="{{ old('gcash_number', $seller->gcash_number ?? '') }}"></div>
-                                    <div class="form-group"><label for="bank_name">Bank Name</label><input type="text" id="bank_name" name="bank_name" value="{{ old('bank_name', $seller->bank_name ?? '') }}"></div>
-                                    <div class="form-group"><label for="account_name">Account Name</label><input type="text" id="account_name" name="account_name" value="{{ old('account_name', $seller->account_name ?? '') }}"></div>
-                                    <div class="form-group"><label for="account_number">Account Number</label><input type="text" id="account_number" name="account_number" value="{{ old('account_number', $seller->account_number ?? '') }}"></div>
+                                    <div class="form-group">
+                                        <label for="payout_method">Method</label>
+                                        <select id="payout_method" name="payout_method">
+                                            <option value="gcash" {{ old('payout_method', $seller->payout_method ?? '') === 'gcash' ? 'selected' : '' }}>GCash</option>
+                                            <option value="bank" {{ old('payout_method', $seller->payout_method ?? '') === 'bank' ? 'selected' : '' }}>Bank</option>
+                                        </select>
+                                        @error('payout_method')
+                                            <small class="error-text">{{ $message }}</small>
+                                        @enderror
+                                    </div>
 
-                                    <button type="submit" class="page-action-btn">Save Payout Information</button>
+                                    <div class="form-group">
+                                        <label for="payout_account_name">Account Name</label>
+                                        <input type="text" id="payout_account_name" name="payout_account_name" value="{{ old('payout_account_name', $seller->payout_account_name ?? '') }}">
+                                        @error('payout_account_name')
+                                            <small class="error-text">{{ $message }}</small>
+                                        @enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="payout_account_number">Account Number</label>
+                                        <input type="text" id="payout_account_number" name="payout_account_number" value="{{ old('payout_account_number', $seller->payout_account_number ?? '') }}">
+                                        @error('payout_account_number')
+                                            <small class="error-text">{{ $message }}</small>
+                                        @enderror
+                                    </div>
+
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
 
                         <div id="inventory" class="settings-tab-content">
                             <div class="settings-card panel">
-                                <h3>Inventory Settings</h3>
-                                <form action="{{ route('seller.settings.inventory') }}" method="POST">
+                                <h3>Inventory</h3>
+                                <form action="{{ route('seller.settings.inventory') }}" method="POST" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
                                     <div class="form-group">
-                                        <label for="low_stock_threshold">Low Stock Threshold</label>
-                                        <input type="number" id="low_stock_threshold" name="low_stock_threshold" value="{{ old('low_stock_threshold', $seller->low_stock_threshold ?? 5) }}">
+                                        <label for="low_stock_threshold">Low Stock Alert At</label>
+                                        <input type="number" id="low_stock_threshold" name="low_stock_threshold" min="0" value="{{ old('low_stock_threshold', $seller->low_stock_threshold ?? 5) }}">
+                                        @error('low_stock_threshold')
+                                            <small class="error-text">{{ $message }}</small>
+                                        @enderror
                                     </div>
 
                                     <div class="checkbox-group">
-                                        <label><input type="checkbox" name="hide_out_of_stock" value="1" {{ old('hide_out_of_stock', $seller->hide_out_of_stock ?? 0) ? 'checked' : '' }}> Hide out-of-stock products</label>
+                                        <label><input type="checkbox" name="hide_out_of_stock" value="1" {{ old('hide_out_of_stock', $seller->hide_out_of_stock ?? 0) ? 'checked' : '' }}> Hide sold-out products from buyers</label>
                                     </div>
 
-                                    <button type="submit" class="page-action-btn">Save Inventory Settings</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
@@ -172,15 +152,26 @@
                         <div id="status" class="settings-tab-content">
                             <div class="settings-card panel">
                                 <h3>Shop Status</h3>
-                                <form action="{{ route('seller.settings.status') }}" method="POST">
+                                <form action="{{ route('seller.settings.status') }}" method="POST" data-enable-loading>
                                     @csrf
                                     @method('PATCH')
 
-                                    <div class="radio-group"><label><input type="radio" name="shop_status" value="open" {{ old('shop_status', $seller->shop_status ?? 'open') === 'open' ? 'checked' : '' }}> Open</label></div>
-                                    <div class="radio-group"><label><input type="radio" name="shop_status" value="closed" {{ old('shop_status', $seller->shop_status ?? '') === 'closed' ? 'checked' : '' }}> Temporarily Closed</label></div>
-                                    <div class="radio-group"><label><input type="radio" name="shop_status" value="vacation" {{ old('shop_status', $seller->shop_status ?? '') === 'vacation' ? 'checked' : '' }}> Vacation Mode</label></div>
+                                    <div class="radio-group"><label><input type="radio" name="shop_status" value="open" {{ $currentShopStatus === 'open' ? 'checked' : '' }}> Open</label></div>
+                                    <div class="radio-group"><label><input type="radio" name="shop_status" value="temporarily_closed" {{ $currentShopStatus === 'temporarily_closed' ? 'checked' : '' }}> Temporarily Closed</label></div>
+                                    <div class="form-group settings-inline-date" data-status-until-group>
+                                        <label for="shop_status_until">Until</label>
+                                        <input type="date" id="shop_status_until" name="shop_status_until" value="{{ $currentShopStatusUntil }}">
+                                    </div>
+                                    <div class="radio-group"><label><input type="radio" name="shop_status" value="vacation" {{ $currentShopStatus === 'vacation' ? 'checked' : '' }}> Vacation Mode</label></div>
+                                    @error('shop_status')
+                                        <small class="error-text">{{ $message }}</small>
+                                    @enderror
+                                    @error('shop_status_until')
+                                        <small class="error-text">{{ $message }}</small>
+                                    @enderror
 
-                                    <button type="submit" class="page-action-btn">Save Shop Status</button>
+                                    <button type="submit" class="page-action-btn" data-enable-loading
+                                        data-loading-text="Saving...">Save</button>
                                 </form>
                             </div>
                         </div>
@@ -200,7 +191,47 @@
         tabButtons.forEach(button => button.classList.remove('active'));
 
         document.getElementById(tabId).classList.add('active');
-        event.currentTarget.classList.add('active');
+        if (event?.currentTarget) {
+            event.currentTarget.classList.add('active');
+        } else {
+            document.querySelector(`.tab-btn[onclick*="'${tabId}'"]`)?.classList.add('active');
+        }
+
+        if (window.location.hash !== `#${tabId}`) {
+            history.replaceState(null, '', `#${tabId}`);
+        }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const tabId = window.location.hash ? window.location.hash.substring(1) : null;
+        const statusInputs = document.querySelectorAll('input[name="shop_status"]');
+        const statusUntilGroup = document.querySelector('[data-status-until-group]');
+        const statusUntilInput = document.getElementById('shop_status_until');
+
+        const syncStatusUntilVisibility = () => {
+            const selectedStatus = document.querySelector('input[name="shop_status"]:checked')?.value;
+            const showUntil = selectedStatus === 'temporarily_closed';
+
+            statusUntilGroup?.classList.toggle('is-hidden', !showUntil);
+
+            if (statusUntilInput) {
+                statusUntilInput.disabled = !showUntil;
+
+                if (!showUntil) {
+                    statusUntilInput.value = '';
+                }
+            }
+        };
+
+        statusInputs.forEach((input) => {
+            input.addEventListener('change', syncStatusUntilVisibility);
+        });
+
+        if (tabId && document.getElementById(tabId)) {
+            showSettingsTab(null, tabId);
+        }
+
+        syncStatusUntilVisibility();
+    });
 </script>
 @endsection

@@ -32,7 +32,18 @@ class ShopController extends Controller
             ])
             ->where('is_seller', 1)
             ->whereHas('sellerProfile', function ($query) {
-                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED);
+                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
+                    ->whereNull('suspended_at')
+                    ->where(function ($statusQuery) {
+                        $statusQuery
+                            ->where('shop_status', \App\Models\Seller::SHOP_STATUS_OPEN)
+                            ->orWhereNull('shop_status')
+                            ->orWhere(function ($temporaryQuery) {
+                                $temporaryQuery
+                                    ->whereIn('shop_status', ['paused', \App\Models\Seller::SHOP_STATUS_TEMPORARILY_CLOSED])
+                                    ->whereDate('shop_status_until', '<', now()->toDateString());
+                            });
+                    });
             })
             ->whereHas('products', function ($query) use ($categorySlug) {
                 $query->visibleToBuyers()
@@ -55,7 +66,10 @@ class ShopController extends Controller
 
     public function show(User $user)
     {
-        if (! $user->isSeller() || $user->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED) {
+        if (! $user->isSeller()
+            || $user->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
+            || $user->sellerProfile?->suspended_at
+            || ! $user->sellerProfile?->isVisibleToBuyers()) {
             abort(404);
         }
 

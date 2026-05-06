@@ -64,6 +64,14 @@
   border: 1px solid rgba(187, 222, 251, 0.16);
 }
 
+.settings-inline-date {
+  max-width: 220px;
+}
+
+.settings-inline-date.is-hidden {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .tab-btn {
     width: 100%;

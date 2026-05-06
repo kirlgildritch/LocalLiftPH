@@ -9,8 +9,6 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
-                    @include('seller.partials.success-toast')
-
                     <section class="seller-page-panel panel">
                         <div class="page-header">
                             <div>
@@ -18,7 +16,8 @@
                                 <h2>My Products</h2>
                             </div>
 
-                            <a href="{{ url('/add-product') }}" class="page-action-btn">
+                            <a href="{{ url('/add-product') }}" class="page-action-btn" data-enable-loading
+                                data-loading-text="Loading...">
                                 <i class="fa-solid fa-plus"></i> Add Product
                             </a>
                         </div>
@@ -120,7 +119,12 @@
                                             </td>
                                             <td data-label="Category">{{ $product->category?->name ?? 'Uncategorized' }}</td>
                                             <td data-label="Price">&#8369;{{ number_format($product->price, 2) }}</td>
-                                            <td data-label="Stock">{{ $product->stock }}</td>
+                                            <td data-label="Stock">
+                                                <div>{{ $product->stock }}</div>
+                                                @if((int) $product->stock > 0 && (int) $product->stock <= (int) ($sellerSettings->low_stock_threshold ?? 0))
+                                                    <small class="muted-label">Low stock</small>
+                                                @endif
+                                            </td>
                                             <td data-label="Rating">
                                                 <div class="seller-rating-chip">
                                                     <i class="fa-solid fa-star"></i>
@@ -138,7 +142,7 @@
                                                 <a href="{{ route('seller.products.reviews', $product) }}"
                                                     class="table-action secondary">Reviews</a>
 
-                                                <form action="{{ url('/delete-product/' . $product->id) }}" method="POST"
+                                                <form action="{{ route('seller.products.destroy', $product) }}" method="POST"
                                                     onsubmit="return confirm('Delete this product?')">
                                                     @csrf
                                                     @method('DELETE')

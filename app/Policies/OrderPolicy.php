@@ -19,6 +19,6 @@ class OrderPolicy
 
     public function updateShippingStatus(User $user, Order $order): bool
     {
-        return $user->isSeller() && $order->sellerOwnsAllItems($user);
+        return $user->isSeller() && (int) ($order->seller_id ?? 0) === (int) $user->id;
     }
 }

@@ -5,7 +5,7 @@
 
     $currentStatus = $order->shippingStatus();
     $progressStatus = $order->isCancelled()
-        ? ($order->cancellation?->status_before_cancellation ?: \App\Models\Order::SHIPPING_TO_SHIP)
+        ? ($order->cancellation?->status_before_cancellation ?: \App\Models\Order::SHIPPING_PENDING)
         : $currentStatus;
 
     $currentStepIndex = $statusIndex[$progressStatus] ?? 0;

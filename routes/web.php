@@ -1,5 +1,5 @@
 <?php
-
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Buyer\AddressController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
@@ -13,20 +13,24 @@ use App\Http\Controllers\ProductBrowseController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SellerNotificationController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SellerAuthenticatedSessionController;
 use App\Http\Controllers\Seller\SellerCenterEntryController;
 use App\Http\Controllers\Seller\SellerDashboardController;
+use App\Http\Controllers\Seller\SellerGoogleAuthController;
 use App\Http\Controllers\Seller\SellerOrderController;
 use App\Http\Controllers\Seller\SellerRegisteredUserController;
 use App\Http\Controllers\Seller\SellerSearchController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminNotificationController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminPayoutController;
 use App\Http\Controllers\Admin\AdminReportController;
 use App\Http\Controllers\Admin\ProductApprovalController;
 use App\Http\Controllers\Admin\SellerReviewController;
 use App\Http\Controllers\SellerController;
+use App\Http\Controllers\Seller\SellerPayoutController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +48,11 @@ Route::middleware('frontend')->group(function () {
     Route::view('/about', 'about')->name('about');
 
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+});
+
+Route::middleware('guest:web')->group(function () {
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])->name('google.login');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('google.callback');
 });
 
 Route::get('/dashboard', function () {
@@ -68,6 +77,9 @@ Route::prefix('seller-center')->name('seller.')->group(function () {
         Route::post('/login', [SellerAuthenticatedSessionController::class, 'store'])->name('login.store');
         Route::get('/register', [SellerRegisteredUserController::class, 'create'])->name('register');
         Route::post('/register', [SellerRegisteredUserController::class, 'store'])->name('register.store');
+
+        Route::get('/auth/google', [SellerGoogleAuthController::class, 'redirect'])->name('google.login');
+        Route::get('/auth/google/callback', [SellerGoogleAuthController::class, 'callback'])->name('google.callback');
     });
 
     Route::middleware('seller')->group(function () {
@@ -97,6 +109,10 @@ Route::middleware('seller')->group(function () {
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
     Route::patch('/seller-orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus'])->name('seller.orders.shipping-status');
     Route::get('/seller-earnings', [EarningsController::class, 'index'])->name('seller.earnings');
+<<<<<<< HEAD
+=======
+    Route::post('/seller-payouts', [SellerPayoutController::class, 'store'])->name('seller.payouts.store');
+>>>>>>> origin/main
     Route::get('/seller-search', [SellerSearchController::class, 'index'])->name('seller.search');
     Route::get('/seller-search/suggestions', [SellerSearchController::class, 'suggestions'])->name('seller.search.suggestions');
     Route::get('/seller-messages', [MessageController::class, 'index'])->name('seller.messages');
@@ -105,10 +121,16 @@ Route::middleware('seller')->group(function () {
     Route::post('/seller-messages/{conversation}/typing', [MessageController::class, 'typing'])->name('seller.messages.typing');
     Route::get('/seller-chat/widget', [MessageController::class, 'widget'])->name('seller.chat.widget');
 
+    Route::get('/seller-notifications', [SellerNotificationController::class, 'index'])->name('seller.notifications.index');
+    Route::get('/seller-notifications/feed', [SellerNotificationController::class, 'feed'])->name('seller.notifications.feed');
+    Route::patch('/seller-notifications/read-all', [SellerNotificationController::class, 'markAllAsRead'])->name('seller.notifications.read-all');
+    Route::delete('/seller-notifications/clear-read', [SellerNotificationController::class, 'clearRead'])->name('seller.notifications.clear-read');
+    Route::patch('/seller-notifications/{notification}/read', [SellerNotificationController::class, 'markAsRead'])->name('seller.notifications.read');
+    Route::delete('/seller-notifications/{notification}', [SellerNotificationController::class, 'destroy'])->name('seller.notifications.destroy');
+    Route::get('/seller-notifications/{notification}/open', [SellerNotificationController::class, 'open'])->name('seller.notifications.open');
+
     Route::get('/seller-settings', [SettingsController::class, 'index'])->name('seller.settings');
     Route::patch('/seller-settings', [SettingsController::class, 'update'])->name('seller.settings.update');
-    Route::patch('/seller-settings/notifications', [SettingsController::class, 'updateNotifications'])->name('seller.settings.notifications');
-    Route::patch('/seller-settings/policies', [SettingsController::class, 'updatePolicies'])->name('seller.settings.policies');
     Route::patch('/seller-settings/payout', [SettingsController::class, 'updatePayout'])->name('seller.settings.payout');
     Route::patch('/seller-settings/inventory', [SettingsController::class, 'updateInventory'])->name('seller.settings.inventory');
     Route::patch('/seller-settings/status', [SettingsController::class, 'updateStatus'])->name('seller.settings.status');
@@ -147,10 +169,15 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/sellers', [SellerReviewController::class, 'index'])->name('sellers');
     Route::patch('/sellers/{seller}/status', [SellerReviewController::class, 'updateStatus'])->name('sellers.status');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders');
+    Route::get('/payouts', [AdminPayoutController::class, 'index'])->name('payouts');
+    Route::patch('/payouts/{payout}/paid', [AdminPayoutController::class, 'markPaid'])->name('payouts.paid');
+    Route::patch('/payouts/{payout}/reject', [AdminPayoutController::class, 'reject'])->name('payouts.reject');
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports');
+    Route::patch('/reports/{report}/action', [AdminReportController::class, 'action'])->name('reports.action');
     Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
     Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
 });
+
 Route::middleware('buyer')->group(function () {
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{productId}', [CartController::class, 'store'])->name('cart.add');

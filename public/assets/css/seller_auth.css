@@ -59,36 +59,36 @@ input {
 }
 
 .seller-auth-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-}
+    display: inline-flex;
+    align-items: center;
+  gap: 0.75rem;
+  }
 
 .seller-auth-brand-mark img{
-  width: 46px;
-  height: 46px;
-  display: grid;
-  place-items: center;
-  border-radius: 14px;
-
-  color: #fff;
+  width: auto;
+  height: 60px;
+  object-fit: contain;
+  display: block;
+  border-radius: 0;
 
 }
 
 .seller-auth-brand-copy strong {
   display: block;
   color: var(--seller-ink);
-  font-size: 1.15rem;
-  line-height: 1;
+  font-size: 1.55rem;
+  line-height: 0.9;
+  font-weight: 800;
+  letter-spacing: -0.04em;
 }
 
 .seller-auth-brand-copy span {
   display: block;
-  margin-top: 4px;
+  margin-top: 0;
   color: var(--seller-accent);
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.26em;
 }
 
 .seller-auth-help {
@@ -300,6 +300,15 @@ input {
 @media (max-width: 640px) {
   .seller-auth-topbar {
     padding: 14px 18px;
+  }
+
+  .seller-auth-brand {
+    gap: 0.5rem;
+  }
+
+  .seller-auth-brand-mark img {
+    width: auto;
+    height: 46px;
   }
 
   .seller-auth-shell {

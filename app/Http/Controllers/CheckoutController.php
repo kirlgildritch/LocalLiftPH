@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Order;
-use Illuminate\Support\Facades\DB;
+use App\Models\Product;
+use App\Models\Seller;
+use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
@@ -22,9 +27,9 @@ class CheckoutController extends Controller
         return $cartItems->filter(function ($item) {
             $product = $item->product;
 
-            return ! $product
+            return !$product
                 || $product->status !== \App\Models\Product::STATUS_APPROVED
-                || ! $product->is_active
+                || !$product->is_active
                 || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
                 || (int) $product->stock < (int) $item->quantity;
         });
@@ -51,6 +56,14 @@ class CheckoutController extends Controller
         ];
     }
 
+    protected function groupedCartItemsBySeller(Collection $cartItems): Collection
+    {
+        return $cartItems
+            ->filter(fn($item) => $item->product && $item->product->user_id)
+            ->groupBy(fn($item) => (int) $item->product->user_id)
+            ->sortKeys();
+    }
+
     public function index(Request $request)
     {
         $validated = $request->validate([
@@ -59,12 +72,12 @@ class CheckoutController extends Controller
         ]);
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->filter()
             ->unique()
             ->values();
 
-        $cartQuery = Cart::with(['product.user'])
+        $cartQuery = Cart::with(['product.user.sellerProfile'])
             ->where('user_id', Auth::id())
             ->when($selectedCartItemIds->isNotEmpty(), function ($query) use ($selectedCartItemIds) {
                 $query->whereIn('id', $selectedCartItemIds);
@@ -86,7 +99,15 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
+        if ($this->unavailableProducts($cartItems)->isNotEmpty()) {
+            return redirect()
+                ->route('cart.index')
+                ->with('error', 'One or more selected products are no longer available in the requested quantity.')
+                ->with('selected_cart_item_ids', $selectedCartItemIds->all());
+        }
+
         $totals = $this->calculateCartTotals($cartItems);
+        $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
 
         $defaultAddress = Auth::user()->addresses()
             ->where('is_default', 1)
@@ -96,6 +117,7 @@ class CheckoutController extends Controller
 
         return view('checkout.index', [
             'cartItems' => $cartItems,
+            'groupedCartItems' => $groupedCartItems,
             'subtotal' => $totals['subtotal'],
             'shippingFee' => $totals['shippingFee'],
             'total' => $totals['total'],
@@ -104,7 +126,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, SellerNotificationService $sellerNotifications)
     {
         $validated = $request->validate([
             'selected_cart_items' => ['nullable', 'array'],
@@ -112,7 +134,7 @@ class CheckoutController extends Controller
         ]);
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->filter()
             ->unique()
             ->values();
@@ -145,33 +167,99 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
-        $totals = $this->calculateCartTotals($cartItems);
+        $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
+        $checkoutGroup = (string) Str::uuid();
+        $createdOrders = collect();
+        $stockChecks = collect();
 
-        $order = null;
+        try {
+            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders, &$stockChecks) {
+                $lockedProducts = Product::query()
+                    ->with('user.sellerProfile')
+                    ->whereIn('id', $cartItems->pluck('product_id')->filter()->unique()->values())
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
-        DB::transaction(function () use ($cartItems, $totals, &$order) {
-            $order = Order::create([
-                'user_id' => Auth::id(),
-                'shipping_fee' => $totals['shippingFee'],
-                'total_price' => $totals['total'],
-                'status' => Order::STATUS_PENDING,
-                'shipping_status' => Order::SHIPPING_PENDING,
-            ]);
+                foreach ($groupedCartItems as $sellerId => $sellerCartItems) {
+                    $totals = $this->calculateCartTotals($sellerCartItems);
 
-            foreach ($cartItems as $item) {
-                $order->items()->create([
-                    'product_id' => $item->product->id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
-                    'shipping_fee' => $item->product->shipping_fee ?? 0,
-                ]);
-            }
+                    $order = Order::create([
+                        'user_id' => Auth::id(),
+                        'seller_id' => (int) $sellerId,
+                        'checkout_group' => $checkoutGroup,
+                        'shipping_fee' => $totals['shippingFee'],
+                        'total_price' => $totals['total'],
+                        'status' => Order::STATUS_PENDING,
+                        'shipping_status' => Order::SHIPPING_PENDING,
+                        'payment_method' => Order::PAYMENT_METHOD_COD,
+                        'payment_status' => Order::PAYMENT_PENDING,
+                        'seller_earning_status' => Order::EARNING_PENDING,
+                    ]);
 
-            Cart::where('user_id', Auth::id())
-                ->whereIn('id', $cartItems->pluck('id'))
-                ->delete();
+                    foreach ($sellerCartItems as $item) {
+                        $product = $lockedProducts->get($item->product_id);
+
+                        if (
+                            ! $product
+                            || $product->status !== Product::STATUS_APPROVED
+                            || ! $product->is_active
+                            || $product->user?->sellerProfile?->application_status !== Seller::STATUS_APPROVED
+                            || (int) $product->stock < (int) $item->quantity
+                        ) {
+                            throw new \RuntimeException('One or more selected products are no longer available in the requested quantity.');
+                        }
+
+                        $previousStock = (int) $product->stock;
+
+                        $order->items()->create([
+                            'product_id' => $product->id,
+                            'quantity' => $item->quantity,
+                            'price' => $product->price,
+                            'shipping_fee' => $product->shipping_fee ?? 0,
+                        ]);
+
+                        $product->decrement('stock', (int) $item->quantity);
+
+                        $stockChecks->push([
+                            'product_id' => $product->id,
+                            'previous_stock' => $previousStock,
+                        ]);
+                    }
+
+                    $createdOrders->push($order);
+                }
+
+                Cart::query()
+                    ->where('user_id', Auth::id())
+                    ->whereIn('id', $cartItems->pluck('id'))
+                    ->delete();
+            });
+        } catch (\RuntimeException $exception) {
+            return redirect()
+                ->route('cart.index')
+                ->with('error', $exception->getMessage())
+                ->with('selected_cart_item_ids', $selectedCartItemIds->all());
+        }
+
+        $createdOrders->each(function (Order $order) use ($sellerNotifications): void {
+            $sellerNotifications->newOrder($order->fresh(['seller.sellerProfile', 'user', 'items']));
         });
 
-        return redirect()->route('buyer.orders')->with('success', 'Order placed successfully!');
+        $stockChecks
+            ->unique('product_id')
+            ->each(function (array $stockCheck) use ($sellerNotifications): void {
+                $product = Product::with('user.sellerProfile')->find($stockCheck['product_id']);
+
+                if ($product) {
+                    $sellerNotifications->checkProductStock($product, (int) $stockCheck['previous_stock']);
+                }
+            });
+
+        $primaryOrder = $createdOrders->sortBy('id')->first();
+
+        return redirect()
+            ->route('buyer.orders.show', $primaryOrder)
+            ->with('success', 'Order placed successfully!');
     }
 }

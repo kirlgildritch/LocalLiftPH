@@ -10,7 +10,7 @@
     <button type="button" class="chat-widget-fab" data-chat-toggle aria-label="Open chat">
         <i class="fa-regular fa-comments"></i>
 
-        <strong class="chat-widget-count" data-chat-count></strong>
+        <strong class="chat-widget-count is-hidden" data-chat-count></strong>
     </button>
 
     <section class="chat-widget-panel panel" data-chat-panel aria-hidden="true">
@@ -93,14 +93,17 @@
             const fileNameEl = widget.querySelector('[data-chat-file-name]');
             const previewEl = widget.querySelector('[data-chat-preview]');
             const backBtn = widget.querySelector('[data-chat-back]');
-            let pollTimer = null;
             let relativeTimeTimer = null;
             let typingTimer = null;
             let typingResetTimer = null;
+            let typingExpiryTimer = null;
             let imagePreviewUrl = null;
             let pendingScrollBehavior = 'auto';
             let conversationsSwapTimer = null;
             let messagesSwapTimer = null;
+            const subscriptions = new Map();
+            const presenceSubscriptions = new Map();
+            const presenceMembers = new Map();
 
             const state = {
                 open: autoOpen,
@@ -110,6 +113,7 @@
                 activeConversationId: initialConversationId || null,
                 conversations: [],
                 activeConversation: null,
+                meta: {},
                 mobileView: initialConversationId ? 'thread' : 'list',
                 renderCache: {
                     conversationsKey: '',
@@ -118,7 +122,24 @@
             };
 
             const isMobileChatViewport = () => window.matchMedia('(max-width: 640px)').matches;
-            const openForLiveUpdates = () => state.open && !state.minimized;
+            const createClientMessageId = () => `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            const socketId = () => window.Echo?.socketId?.() || '';
+            const requestHeaders = (includeSocket = true) => {
+                const headers = {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                };
+
+                if (csrfToken) {
+                    headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+
+                if (includeSocket && socketId()) {
+                    headers['X-Socket-ID'] = socketId();
+                }
+
+                return headers;
+            };
             const clearSwapTimer = (element) => {
                 if (element === conversationsEl && conversationsSwapTimer) {
                     window.clearTimeout(conversationsSwapTimer);
@@ -186,6 +207,10 @@
                         message.sender_label,
                         message.message || '',
                         message.image_url || '',
+                        message.product?.id || '',
+                        message.product?.name || '',
+                        message.product?.price_label || '',
+                        message.product?.shop_name || '',
                         message.time,
                         message.is_current_user ? 1 : 0,
                         message.is_seen ? 1 : 0,
@@ -223,6 +248,23 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+            const renderProductCard = (message) => {
+                if (!message?.has_product || !message?.product) {
+                    return '';
+                }
+
+                return `
+                    <a href="${escapeHtml(message.product.url)}" class="chat-widget-product-card">
+                        <img src="${escapeHtml(message.product.image_url)}" alt="${escapeHtml(message.product.name)}" class="chat-widget-product-card-image">
+                        <span class="chat-widget-product-card-copy">
+                            <span class="chat-widget-product-card-label">Product</span>
+                            <strong>${escapeHtml(message.product.name)}</strong>
+                            <span>${escapeHtml(message.product.price_label)}</span>
+                            <span>${escapeHtml(message.product.shop_name)}</span>
+                        </span>
+                    </a>
+                `;
+            };
             const relativeTimeFormatter = typeof Intl !== 'undefined' && Intl.RelativeTimeFormat
                 ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
                 : null;
@@ -279,6 +321,258 @@
                 }
 
                 relativeTimeTimer = window.setInterval(refreshConversationRelativeTimes, 30000);
+            };
+            const currentUserId = () => Number(state.meta?.current_user_id || 0);
+            const conversationById = (conversationId) => (
+                (Array.isArray(state.conversations) ? state.conversations : []).find((conversation) => Number(conversation.id) === Number(conversationId)) || null
+            );
+            const setConversationLastSeen = (conversationId, isoValue, label) => {
+                const conversation = conversationById(conversationId);
+                if (conversation) {
+                    conversation.last_seen_at = isoValue;
+                    conversation.last_seen_label = label;
+                }
+
+                if (Number(state.activeConversation?.id || 0) === Number(conversationId) && state.activeConversation) {
+                    state.activeConversation.last_seen_at = isoValue;
+                    state.activeConversation.last_seen_label = label;
+                }
+            };
+            const participantOnline = (conversation) => {
+                const participantId = Number(conversation?.participant_id || 0);
+                const members = presenceMembers.get(Number(conversation?.id || 0));
+
+                return Boolean(participantId && members?.has(participantId));
+            };
+            const presenceStatusText = (conversation) => {
+                if (participantOnline(conversation)) {
+                    return 'Online';
+                }
+
+                if (conversation?.last_seen_label) {
+                    return `Last seen ${conversation.last_seen_label}`;
+                }
+
+                return 'Offline';
+            };
+            const messagePreviewText = (message) => {
+                if (message.has_product && message.product?.name) {
+                    return `Product: ${String(message.product.name).slice(0, 40)}`;
+                }
+
+                if (message.has_image && !message.has_text) {
+                    return 'Sent an image';
+                }
+
+                if (message.has_image && message.has_text) {
+                    return `Image: ${String(message.message || '').slice(0, 40)}`;
+                }
+
+                return String(message.message || 'Start chatting from a product or shop page.').slice(0, 52);
+            };
+            const syncConversationFromMessage = (message, fallbackIso = null) => {
+                const conversation = conversationById(state.activeConversationId);
+                if (!conversation) {
+                    return;
+                }
+
+                const updatedAtIso = fallbackIso || new Date().toISOString();
+
+                conversation.preview = messagePreviewText(message);
+                conversation.updated_at = message.is_failed ? 'Failed to send' : 'just now';
+                conversation.updated_at_iso = updatedAtIso;
+                conversation.unread_count = 0;
+
+                state.conversations = [
+                    conversation,
+                    ...(state.conversations || []).filter((item) => Number(item.id) !== Number(conversation.id)),
+                ];
+            };
+            const createOptimisticMessage = ({ clientMessageId, text, file }) => ({
+                id: `temp-${clientMessageId}`,
+                client_message_id: clientMessageId,
+                sender_label: 'You',
+                message: text,
+                image_url: file ? URL.createObjectURL(file) : null,
+                has_image: Boolean(file),
+                has_text: Boolean(text),
+                has_product: false,
+                product: null,
+                time: 'Sending...',
+                is_current_user: true,
+                is_seen: false,
+                status_label: 'Sending...',
+                is_pending: true,
+                is_failed: false,
+            });
+            const appendOptimisticMessage = (message) => {
+                if (!state.activeConversation) {
+                    return;
+                }
+
+                state.activeConversation.messages = [
+                    ...(Array.isArray(state.activeConversation.messages) ? state.activeConversation.messages : []),
+                    message,
+                ];
+
+                syncConversationFromMessage(message);
+            };
+            const markOptimisticMessageFailed = (clientMessageId) => {
+                if (!state.activeConversation) {
+                    return;
+                }
+
+                state.activeConversation.messages = (state.activeConversation.messages || []).map((message) => {
+                    if (message.client_message_id !== clientMessageId) {
+                        return message;
+                    }
+
+                    return {
+                        ...message,
+                        time: 'Not sent',
+                        status_label: 'Failed',
+                        is_pending: false,
+                        is_failed: true,
+                    };
+                });
+
+                const failedMessage = (state.activeConversation.messages || []).find((message) => message.client_message_id === clientMessageId);
+                if (failedMessage) {
+                    syncConversationFromMessage(failedMessage);
+                }
+            };
+            const applyPresenceIndicators = () => {
+                widget.querySelectorAll('[data-chat-presence-dot]').forEach((dot) => {
+                    const conversationId = Number(dot.dataset.conversationId || 0);
+                    const conversation = conversationById(conversationId) || (Number(state.activeConversation?.id || 0) === conversationId ? state.activeConversation : null);
+                    const online = participantOnline(conversation);
+
+                    dot.classList.toggle('is-online', online);
+                    dot.classList.toggle('is-offline', !online);
+                });
+
+                widget.querySelectorAll('[data-chat-presence-label]').forEach((label) => {
+                    const conversationId = Number(label.dataset.conversationId || 0);
+                    const conversation = conversationById(conversationId) || (Number(state.activeConversation?.id || 0) === conversationId ? state.activeConversation : null);
+                    const baseLabel = label.dataset.baseLabel || '';
+                    const statusLabel = presenceStatusText(conversation);
+
+                    label.textContent = baseLabel ? `${baseLabel} • ${statusLabel}` : statusLabel;
+                });
+            };
+            const syncPresenceSubscriptions = () => {
+                if (!window.Echo) {
+                    return;
+                }
+
+                const nextConversations = Array.isArray(state.conversations) ? state.conversations : [];
+                const nextIds = new Set(nextConversations.map((conversation) => Number(conversation.id)));
+
+                nextConversations.forEach((conversation) => {
+                    const conversationId = Number(conversation.id || 0);
+                    const channelName = conversation.presence_channel;
+
+                    if (!conversationId || !channelName || presenceSubscriptions.has(conversationId)) {
+                        return;
+                    }
+
+                    const channel = window.Echo.join(channelName)
+                        .here((members) => {
+                            presenceMembers.set(conversationId, new Set(members.map((member) => Number(member.id))));
+                            applyPresenceIndicators();
+                        })
+                        .joining((member) => {
+                            const members = presenceMembers.get(conversationId) || new Set();
+                            members.add(Number(member.id));
+                            presenceMembers.set(conversationId, members);
+                            applyPresenceIndicators();
+                        })
+                        .leaving((member) => {
+                            const members = presenceMembers.get(conversationId) || new Set();
+                            members.delete(Number(member.id));
+                            presenceMembers.set(conversationId, members);
+
+                            if (Number(member.id) !== currentUserId()) {
+                                setConversationLastSeen(conversationId, new Date().toISOString(), 'just now');
+                            }
+
+                            applyPresenceIndicators();
+                        });
+
+                    presenceSubscriptions.set(conversationId, channel);
+                });
+
+                Array.from(presenceSubscriptions.keys()).forEach((conversationId) => {
+                    if (nextIds.has(conversationId)) {
+                        return;
+                    }
+
+                    const conversation = conversationById(conversationId);
+                    if (conversation?.presence_channel) {
+                        window.Echo.leave(conversation.presence_channel);
+                    }
+
+                    presenceSubscriptions.delete(conversationId);
+                    presenceMembers.delete(conversationId);
+                });
+            };
+            const syncSubscriptions = () => {
+                if (!window.Echo) {
+                    return;
+                }
+
+                const nextIds = new Set((Array.isArray(state.conversations) ? state.conversations : []).map((conversation) => Number(conversation.id)));
+
+                nextIds.forEach((conversationId) => {
+                    if (!conversationId || subscriptions.has(conversationId)) {
+                        return;
+                    }
+
+                    const channelName = `chat.conversation.${conversationId}`;
+                    const channel = window.Echo.private(channelName)
+                        .listen('.message.sent', (event) => {
+                            if (event.conversation_id === state.activeConversationId) {
+                                pendingScrollBehavior = 'force';
+                            }
+
+                            if (!state.loading) {
+                                loadWidget(state.activeConversationId || event.conversation_id);
+                            }
+                        })
+                        .listen('.typing.updated', (event) => {
+                            window.clearTimeout(typingExpiryTimer);
+
+                            if (event.typing && event.conversation_id === state.activeConversationId) {
+                                typingExpiryTimer = window.setTimeout(() => {
+                                    if (!state.loading) {
+                                        loadWidget(state.activeConversationId);
+                                    }
+                                }, 5500);
+                            }
+
+                            if (!state.loading) {
+                                loadWidget(state.activeConversationId || event.conversation_id);
+                            }
+                        })
+                        .listen('.messages.read', (event) => {
+                            if (event.conversation_id !== state.activeConversationId || state.loading) {
+                                return;
+                            }
+
+                            loadWidget(state.activeConversationId);
+                        });
+
+                    subscriptions.set(conversationId, channel);
+                });
+
+                Array.from(subscriptions.keys()).forEach((conversationId) => {
+                    if (nextIds.has(conversationId)) {
+                        return;
+                    }
+
+                    window.Echo.leave(`chat.conversation.${conversationId}`);
+                    subscriptions.delete(conversationId);
+                });
             };
 
             const updateShellState = () => {
@@ -420,11 +714,7 @@
                 try {
                     await fetch(typingUrl, {
                         method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': csrfToken,
-                        },
+                        headers: requestHeaders(),
                         body: new URLSearchParams({ typing: typing ? '1' : '0' }),
                         credentials: 'same-origin',
                     });
@@ -450,27 +740,6 @@
                 }, 1800);
             };
 
-            const startPolling = () => {
-                if (pollTimer) {
-                    return;
-                }
-
-                pollTimer = window.setInterval(() => {
-                    if (!state.loading) {
-                        loadWidget(state.activeConversationId);
-                    }
-                }, openForLiveUpdates() ? 1500 : 4000);
-            };
-
-            const restartPolling = () => {
-                if (pollTimer) {
-                    window.clearInterval(pollTimer);
-                    pollTimer = null;
-                }
-
-                startPolling();
-            };
-
             const renderConversations = ({ force = false, animate = false } = {}) => {
                 const keyword = (searchInput.value || '').trim().toLowerCase();
                 const filtered = state.conversations.filter((conversation) => {
@@ -482,8 +751,12 @@
                         || conversation.preview.toLowerCase().includes(keyword);
                 });
 
-                countBadge.textContent = state.conversations.length;
-                countBadge.classList.toggle('is-hidden', state.conversations.length < 1);
+                const unreadTotal = state.conversations.reduce((total, conversation) => {
+                    return total + Number(conversation.unread_count || 0);
+                }, 0);
+
+                countBadge.textContent = unreadTotal > 99 ? '99+' : String(unreadTotal);
+                countBadge.classList.toggle('is-hidden', unreadTotal < 1);
 
                 const renderKey = JSON.stringify([
                     keyword,
@@ -516,12 +789,17 @@
 
                 conversationsEl.innerHTML = filtered.map((conversation) => `
                     <button type="button" class="chat-widget-conversation ${conversation.id === state.activeConversationId ? 'is-active' : ''}" data-conversation-id="${conversation.id}">
-                        ${conversation.avatar_url
+                        <span class="chat-widget-conversation-media">
+                            ${conversation.avatar_url
                         ? `<img src="${escapeHtml(conversation.avatar_url)}" alt="${escapeHtml(conversation.name)}">`
                         : `<span class="chat-widget-avatar">${escapeHtml(conversation.avatar_initials)}</span>`}
+                            <span class="chat-widget-presence-dot chat-widget-presence-dot--avatar" data-chat-presence-dot data-conversation-id="${conversation.id}"></span>
+                        </span>
                         <span class="chat-widget-conversation-copy">
                             <span class="chat-widget-conversation-topline">
-                                <strong>${escapeHtml(conversation.name)}</strong>
+                                <span class="chat-widget-identity">
+                                    <strong>${escapeHtml(conversation.name)}</strong>
+                                </span>
                                 ${conversation.unread_count > 0 ? `<span class="chat-widget-unread-badge">${conversation.unread_count}</span>` : ''}
                             </span>
                             <p>${escapeHtml(conversation.preview)}</p>
@@ -602,25 +880,41 @@
                 headerEl.innerHTML = `
                     ${active.shop_url
                         ? `<a href="${escapeHtml(active.shop_url)}" class="chat-widget-profile-link">
-                                ${active.avatar_url
+                                <span class="chat-widget-profile-media">
+                                    ${active.avatar_url
                             ? `<img src="${escapeHtml(active.avatar_url)}" alt="${escapeHtml(active.name)}" class="chat-widget-profile-image">`
                             : `<span class="chat-widget-profile-avatar">${escapeHtml(active.avatar_initials)}</span>`}
+                                    <span class="chat-widget-presence-dot chat-widget-presence-dot--avatar" data-chat-presence-dot data-conversation-id="${active.id}"></span>
+                                </span>
                                 <span class="chat-widget-active-copy">
-                                    <h4>${escapeHtml(active.name)}</h4>
-                                    <span>${escapeHtml(active.role_label)}</span>
+                                    <span class="chat-widget-active-identity">
+                                        <h4>${escapeHtml(active.name)}</h4>
+                                    </span>
+                                    <span data-chat-presence-label data-conversation-id="${active.id}" data-base-label="${escapeHtml(active.role_label)}">${escapeHtml(active.role_label)}</span>
                                 </span>
                            </a>`
-                        : `<div class="chat-widget-active-copy">
-                                <h4>${escapeHtml(active.name)}</h4>
-                                <span>${escapeHtml(active.role_label)}</span>
+                        : `<div class="chat-widget-profile-link">
+                                <span class="chat-widget-profile-media">
+                                    ${active.avatar_url
+                            ? `<img src="${escapeHtml(active.avatar_url)}" alt="${escapeHtml(active.name)}" class="chat-widget-profile-image">`
+                            : `<span class="chat-widget-profile-avatar">${escapeHtml(active.avatar_initials)}</span>`}
+                                    <span class="chat-widget-presence-dot chat-widget-presence-dot--avatar" data-chat-presence-dot data-conversation-id="${active.id}"></span>
+                                </span>
+                                <div class="chat-widget-active-copy">
+                                <span class="chat-widget-active-identity">
+                                    <h4>${escapeHtml(active.name)}</h4>
+                                </span>
+                                <span data-chat-presence-label data-conversation-id="${active.id}" data-base-label="${escapeHtml(active.role_label)}">${escapeHtml(active.role_label)}</span>
+                           </div>
                            </div>`}
                 `;
 
                 messagesEl.innerHTML = active.messages.length
                     ? active.messages.map((message) => `
-                        <div class="chat-widget-row ${message.is_current_user ? 'is-right' : 'is-left'}">
+                        <div class="chat-widget-row ${message.is_current_user ? 'is-right' : 'is-left'} ${message.is_pending ? 'is-pending' : ''} ${message.is_failed ? 'is-failed' : ''}">
                             <div class="chat-widget-bubble">
                                 <strong>${escapeHtml(message.sender_label)}</strong>
+                                ${renderProductCard(message)}
                                 ${message.has_text ? `<p>${escapeHtml(message.message)}</p>` : ''}
                                 ${message.has_image ? `<img src="${escapeHtml(message.image_url)}" alt="Shared image" class="chat-widget-image">` : ''}
                             </div>
@@ -671,6 +965,8 @@
             const renderAll = (options = {}) => {
                 renderConversations(options);
                 renderMessages(options);
+                syncPresenceSubscriptions();
+                applyPresenceIndicators();
             };
 
             const loadWidget = async (conversationId = state.activeConversationId) => {
@@ -699,10 +995,7 @@
 
                 try {
                     const response = await fetch(url.toString(), {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
+                        headers: requestHeaders(),
                         credentials: 'same-origin',
                     });
 
@@ -714,10 +1007,13 @@
                     state.conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
                     state.activeConversation = payload.active_conversation || null;
                     state.activeConversationId = state.activeConversation?.id || (state.conversations[0]?.id ?? null);
+                    state.meta = payload.meta || {};
                     state.hasLoadedOnce = true;
                     pendingScrollBehavior = requestedConversationId !== previousConversationId
                         ? 'force'
                         : (preserveBottom ? 'force' : 'preserve');
+                    syncSubscriptions();
+                    syncPresenceSubscriptions();
 
                     if (isMobileChatViewport()) {
                         state.mobileView = state.activeConversation ? 'thread' : 'list';
@@ -741,7 +1037,6 @@
                 state.open = true;
                 state.minimized = false;
                 updateShellState();
-                restartPolling();
 
                 if (!state.hasLoadedOnce) {
                     loadWidget();
@@ -769,7 +1064,6 @@
                 if (state.open && !state.minimized) {
                     state.minimized = true;
                     updateShellState();
-                    restartPolling();
                     return;
                 }
 
@@ -779,14 +1073,12 @@
             minimizeBtn.addEventListener('click', function () {
                 state.minimized = true;
                 updateShellState();
-                restartPolling();
             });
 
             closeBtn.addEventListener('click', function () {
                 state.open = false;
                 state.minimized = false;
                 updateShellState();
-                restartPolling();
             });
 
             if (backBtn) {
@@ -812,11 +1104,7 @@
                     try {
                         const response = await fetch(action, {
                             method: 'POST',
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': csrfToken,
-                            },
+                            headers: requestHeaders(),
                             body: new FormData(startForm),
                             credentials: 'same-origin',
                         });
@@ -833,8 +1121,11 @@
                             state.conversations = widgetPayload.conversations || [];
                             state.activeConversation = widgetPayload.active_conversation || null;
                             state.activeConversationId = state.activeConversation?.id || conversationId || null;
+                            state.meta = widgetPayload.meta || {};
                             pendingScrollBehavior = 'force';
                             resetSelectedFile();
+                            syncSubscriptions();
+                            syncPresenceSubscriptions();
                             openWidget();
                             renderAll({ force: true, animate: true });
                             return;
@@ -920,15 +1211,26 @@
 
                 const formData = new FormData(form);
                 formData.set('message', message);
+                const clientMessageId = createClientMessageId();
+                formData.set('client_message_id', clientMessageId);
+
+                const optimisticMessage = createOptimisticMessage({
+                    clientMessageId,
+                    text: message,
+                    file: selectedImage,
+                });
+
+                input.value = '';
+                window.clearTimeout(typingResetTimer);
+                syncTyping(false);
+                resetSelectedFile();
+                appendOptimisticMessage(optimisticMessage);
+                renderAll({ force: true, animate: false });
 
                 try {
                     const response = await fetch(sendUrl, {
                         method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': csrfToken,
-                        },
+                        headers: requestHeaders(),
                         body: formData,
                         credentials: 'same-origin',
                     });
@@ -944,19 +1246,18 @@
                         state.conversations = widgetPayload.conversations || [];
                         state.activeConversation = widgetPayload.active_conversation || null;
                         state.activeConversationId = state.activeConversation?.id || state.activeConversationId;
+                        state.meta = widgetPayload.meta || {};
                         pendingScrollBehavior = 'force';
-                        input.value = '';
-                        window.clearTimeout(typingResetTimer);
-                        syncTyping(false);
-                        resetSelectedFile();
+                        syncSubscriptions();
+                        syncPresenceSubscriptions();
                         renderAll({ force: true, animate: true });
                     } else {
                         await loadWidget(state.activeConversationId);
-                        input.value = '';
-                        resetSelectedFile();
                     }
                 } catch (error) {
                     console.error(error);
+                    markOptimisticMessageFailed(clientMessageId);
+                    renderAll({ force: true, animate: false });
                 }
             });
 
@@ -972,7 +1273,6 @@
                 }
 
                 updateShellState();
-                restartPolling();
             });
 
             if (autoOpen) {
@@ -980,8 +1280,6 @@
             } else {
                 loadWidget();
             }
-
-            startPolling();
         });
     });
 </script>

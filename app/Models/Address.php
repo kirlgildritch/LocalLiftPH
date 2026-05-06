@@ -16,6 +16,7 @@ class Address extends Model
         'barangay',
         'street_address',
         'postal_code',
+        'landmark',
         'label',
         'is_default',
     ];

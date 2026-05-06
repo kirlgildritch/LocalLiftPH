@@ -9,6 +9,7 @@
         <div class="dashboard-layout">
             @include('seller.partials.sidebar')
 
+<<<<<<< HEAD
             <main class="dashboard-main">
                 @include('seller.partials.success-toast')
 
@@ -24,6 +25,26 @@
                             Back
                         </a>
                     </div>
+=======
+                <main class="dashboard-main">
+                    <section class="seller-page-panel panel">
+                        <div class="page-header">
+                            <div>
+                                <span class="section-kicker">Catalog</span>
+                                <h2>Add Product</h2>
+                            </div>
+
+                            <a href="{{ route('seller.products.index') }}" class="table-action secondary">
+                                <i class="fa-solid fa-arrow-left"></i>
+                                Back
+                            </a>
+                        </div>
+
+                        <form class="product-form" action="{{ route('seller.products.store') }}" method="POST"
+                            data-enable-loading
+                            enctype="multipart/form-data">
+                            @csrf
+>>>>>>> origin/main
 
                     <form class="product-form" action="{{ route('seller.products.store') }}" method="POST"
                         enctype="multipart/form-data">
@@ -135,12 +156,68 @@
                             </div>
                         </div>
 
+<<<<<<< HEAD
                         <div class="form-actions">
                             <button type="submit" class="page-action-btn">Add Product</button>
                         </div>
                     </form>
                 </section>
             </main>
+=======
+                            <div class="form-actions">
+                                <button type="submit" class="page-action-btn" data-enable-loading
+                                    data-loading-text="Adding Product...">Add Product</button>
+                            </div>
+                        </form>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </section>
+
+    <div class="shipping-modal-overlay" id="shippingModal" style="display: none;">
+        <div class="shipping-modal panel">
+            <div class="shipping-modal-header">
+                <div>
+                    <span class="section-kicker">Shipping Setup</span>
+                    <h3>Package details</h3>
+                </div>
+                <button type="button" class="shipping-close-btn" id="closeShippingModal">&times;</button>
+            </div>
+
+            <div class="shipping-modal-grid">
+                <div class="form-group">
+                    <label for="modal_weight">Weight (kg)</label>
+                    <input type="number" id="modal_weight" step="0.01" min="0.01" value="{{ old('weight') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="modal_width">Width (cm)</label>
+                    <input type="number" id="modal_width" step="0.01" min="0.01" value="{{ old('width_cm') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="modal_length">Length (cm)</label>
+                    <input type="number" id="modal_length" step="0.01" min="0.01" value="{{ old('length_cm') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="modal_height">Height (cm)</label>
+                    <input type="number" id="modal_height" step="0.01" min="0.01" value="{{ old('height_cm') }}">
+                </div>
+            </div>
+
+            <div class="shipping-fee-preview">
+                <span>Calculated Shipping Fee</span>
+                <strong id="shippingFeePreview">&#8369; 0.00</strong>
+                <small>Formula: &#8369; 60 base fee + &#8369; 35 x billable weight.</small>
+            </div>
+
+            <div class="shipping-modal-actions">
+                <button type="button" class="table-action secondary" id="cancelShippingModal">Cancel</button>
+                <button type="button" class="page-action-btn" id="saveShippingSetup">Save</button>
+            </div>
+>>>>>>> origin/main
         </div>
     </div>
 </section>

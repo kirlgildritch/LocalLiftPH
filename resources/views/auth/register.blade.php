@@ -4,6 +4,45 @@
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/auth.css') }}">
 
+    <style>
+        .google-auth-btn {
+            width: 100%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            background: #ffffff;
+            color: #1f2937;
+            font-weight: 700;
+            text-decoration: none;
+            transition: 0.2s ease;
+        }
+
+        .google-auth-btn:hover {
+            background: #f9fafb;
+            color: #111827;
+            transform: translateY(-1px);
+        }
+
+        .google-auth-btn i {
+            font-size: 18px;
+            color: #ea4335;
+        }
+
+        .auth-alert {
+            margin-bottom: 16px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #fee2e2;
+            color: #991b1b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+    </style>
+
     <section class="auth-page">
         <div class="auth-topbar">
             <div class="container auth-topbar-inner">
@@ -15,7 +54,7 @@
                     </div>
                 </a>
 
-                <a href="{{ route('home') }}" class="auth-help">Need help?</a>
+                <a href="{{ route('home') }}" class="auth-help">Back to Home</a>
             </div>
         </div>
 
@@ -39,7 +78,24 @@
                         <h2>Sign Up</h2>
                     </div>
 
-                    <form method="POST" action="{{ route('register') }}" class="auth-form">
+                    @if (session('error'))
+                        <div class="auth-alert">
+                            {{ session('error') }}
+                        </div>
+                    @endif
+
+                    <a href="{{ route('google.login') }}" class="google-auth-btn">
+                        <i class="fa-brands fa-google"></i>
+                        Continue with Google
+                    </a>
+
+                    <div class="auth-divider">
+                        <span></span>
+                        <small>OR</small>
+                        <span></span>
+                    </div>
+
+                    <form method="POST" action="{{ route('register') }}" class="auth-form" data-enable-loading>
                         @csrf
 
                         <div class="input-group">
@@ -87,14 +143,9 @@
                             <span>I agree to the <a href="#">Terms and Conditions</a></span>
                         </div>
 
-                        <button type="submit" class="auth-btn">Create Account</button>
+                        <button type="submit" class="auth-btn" data-enable-loading
+                            data-loading-text="Creating Account...">Create Account</button>
                     </form>
-
-                    <div class="auth-divider">
-                        <span></span>
-                        <small>OR</small>
-                        <span></span>
-                    </div>
 
                     <div class="auth-footer">
                         Already have an account?

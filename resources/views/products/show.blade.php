@@ -116,6 +116,7 @@ $buyerHasReviewedProduct = auth()->check()
                     <span class="section-kicker">Purchase</span>
                     <h2>Order summary</h2>
 
+<<<<<<< HEAD
                     <div class="quantity-box">
                         <span>Quantity</span>
                         <div class="quantity-control">
@@ -153,6 +154,46 @@ $buyerHasReviewedProduct = auth()->check()
                             <button type="submit" class="action-btn secondary-btn">Buy Now</button>
                         </form>
                         @endif
+=======
+                                            <div class="quantity-box" data-purchase-quantity-box data-max-stock="{{ max(0, (int) $product->stock) }}">
+                                                <span>Quantity</span>
+                                                <div class="quantity-control">
+                                                    <button type="button" data-quantity-decrement aria-label="Decrease quantity">-</button>
+                                                    <input type="text" value="{{ $product->stock > 0 ? 1 : 0 }}" readonly data-quantity-display>
+                                                    <button type="button" data-quantity-increment aria-label="Increase quantity">+</button>
+                                                </div>
+                                                <small class="quantity-note" data-quantity-note hidden></small>
+                                            </div>
+
+                                            <div class="purchase-meta">
+                                                <div>
+                                                    <span>Price</span>
+                                                    <strong data-purchase-total>&#8369; {{ number_format($product->stock > 0 ? $product->price : 0, 2) }}</strong>
+                                                </div>
+                                                <div>
+                                                    <span>Delivery</span>
+                                                    <strong>Nationwide ready</strong>
+                                                </div>
+                                            </div>
+
+                                            <div class="purchase-actions">
+                                                @auth
+                                                    @if($ownsProduct)
+                                                        <span class="action-btn secondary-btn" aria-disabled="true">This is your product</span>
+                                                    @else
+                                                        <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
+                                                            @csrf
+                                                            <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
+                                                            <button type="submit" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></button>
+                                                        </form>
+                                                        <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
+                                                            @csrf
+                                                            <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
+                                                            <input type="hidden" name="buy_now" value="1">
+                                                            <button type="submit" class="action-btn secondary-btn">Buy Now</button>
+                                                        </form>
+                                                    @endif
+>>>>>>> origin/main
 
                         @else
                         <a href="{{ route('login') }}" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></a>
@@ -167,6 +208,7 @@ $buyerHasReviewedProduct = auth()->check()
                     <a href="{{ route('shops.show', $product->user->id) }}"
                         class="action-btn secondary-btn full-btn">View Shop</a>
 
+<<<<<<< HEAD
                     @auth
                     @if(!$ownsProduct)
                     <form action="{{ route('messages.start', $product->user) }}" method="POST" data-chat-start-form>
@@ -180,6 +222,22 @@ $buyerHasReviewedProduct = auth()->check()
                     <a href="{{ route('login') }}" class="action-btn secondary-btn full-btn">Message Seller</a>
                     @endauth
                 </div>
+=======
+                                            @auth
+                                                @if(!$ownsProduct)
+                                                    <form action="{{ route('messages.start', $product->user) }}" method="POST" data-chat-start-form>
+                                                        @csrf
+                                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
+                                                        <button type="submit" class="action-btn secondary-btn full-btn">Message Seller</button>
+                                                    </form>
+                                                @else
+                                                    <span class="action-btn secondary-btn full-btn" aria-disabled="true">This is your product</span>
+                                                @endif
+                                            @else
+                                                <a href="{{ route('login') }}" class="action-btn secondary-btn full-btn">Message Seller</a>
+                                            @endauth
+                                        </div>
+>>>>>>> origin/main
 
 
             </aside>
@@ -225,6 +283,7 @@ $buyerHasReviewedProduct = auth()->check()
                             @endfor
                     </div> -->
 
+<<<<<<< HEAD
                     @if(auth()->check() && auth()->user()->isBuyer() && !$buyerHasReviewedProduct && $reviewableOrderItems->isNotEmpty())
                     <a href="#buyer-review-form" class="review-write-chip">
                         <i class="fa-solid fa-pen"></i>
@@ -233,6 +292,19 @@ $buyerHasReviewedProduct = auth()->check()
                     @endif
                 </div>
 
+=======
+                                                <div class="review-form-header">
+                                                    <div>
+                                                        <strong>Leave a review</strong>
+                                                        <p>Only buyers with completed purchases can rate this product.</p>
+                                                    </div>
+
+                                                    @if($reviewableOrderItems->count() > 1)
+                                                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} completed purchases
+                                                            eligible</span>
+                                                    @endif
+                                                </div>
+>>>>>>> origin/main
 
                 @if(auth()->check() && auth()->user()->isBuyer() && !$buyerHasReviewedProduct && $reviewableOrderItems->isNotEmpty())
                 @php
@@ -287,6 +359,7 @@ $buyerHasReviewedProduct = auth()->check()
                                     <input type="file" name="review_media[]" id="review_media" accept="image/*,video/*" multiple data-review-preview-input>
                                 </div>
                             </div>
+<<<<<<< HEAD
 
                             <div class="review-upload-preview" data-review-preview-grid hidden></div>
                         </div>
@@ -744,4 +817,81 @@ $buyerHasReviewedProduct = auth()->check()
         });
     });
 </script>
+=======
+                        </section>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function () {
+                                const quantityBox = document.querySelector('[data-purchase-quantity-box]');
+
+                                if (!quantityBox) {
+                                    return;
+                                }
+
+                                const maxStock = Math.max(0, Number(quantityBox.dataset.maxStock || 0));
+                                const minQuantity = maxStock > 0 ? 1 : 0;
+                                const display = quantityBox.querySelector('[data-quantity-display]');
+                                const decrementButton = quantityBox.querySelector('[data-quantity-decrement]');
+                                const incrementButton = quantityBox.querySelector('[data-quantity-increment]');
+                                const note = quantityBox.querySelector('[data-quantity-note]');
+                                const totalDisplay = document.querySelector('[data-purchase-total]');
+                                const quantityInputs = Array.from(document.querySelectorAll('[data-purchase-quantity]'));
+                                const unitPrice = {{ json_encode((float) $product->price) }};
+
+                                if (!display || !decrementButton || !incrementButton || !note || !totalDisplay || !quantityInputs.length) {
+                                    return;
+                                }
+
+                                const formatPeso = (value) => `₱ ${Number(value).toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                })}`;
+
+                                const clampQuantity = (value) => {
+                                    if (maxStock <= 0) {
+                                        return 0;
+                                    }
+
+                                    return Math.min(maxStock, Math.max(minQuantity, value));
+                                };
+
+                                const updateQuantity = (nextQuantity) => {
+                                    const quantity = clampQuantity(nextQuantity);
+
+                                    display.value = quantity;
+                                    totalDisplay.textContent = formatPeso(unitPrice * quantity);
+                                    quantityInputs.forEach((input) => {
+                                        input.value = String(quantity);
+                                    });
+
+                                    decrementButton.disabled = quantity <= minQuantity;
+                                    incrementButton.disabled = maxStock <= 0 || quantity >= maxStock;
+
+                                    if (maxStock <= 0) {
+                                        note.hidden = false;
+                                        note.textContent = 'Out of stock.';
+                                        return;
+                                    }
+
+                                    if (quantity >= maxStock) {
+                                        note.hidden = false;
+                                        note.textContent = 'Max stock reached.';
+                                        return;
+                                    }
+
+                                    note.hidden = true;
+                                    note.textContent = '';
+                                };
+
+                                decrementButton.addEventListener('click', function () {
+                                    updateQuantity(Number(display.value || minQuantity) - 1);
+                                });
+
+                                incrementButton.addEventListener('click', function () {
+                                    updateQuantity(Number(display.value || minQuantity) + 1);
+                                });
+
+                                updateQuantity(Number(display.value || minQuantity));
+                            });
+                        </script>
+>>>>>>> origin/main
 @endsection

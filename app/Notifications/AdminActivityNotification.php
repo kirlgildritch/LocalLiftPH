@@ -17,7 +17,12 @@ class AdminActivityNotification extends Notification
         protected ?string $route = null,
         protected array $routeParams = [],
         protected ?string $url = null,
+<<<<<<< HEAD
     ) {}
+=======
+    ) {
+    }
+>>>>>>> origin/main
 
     public function via(object $notifiable): array
     {

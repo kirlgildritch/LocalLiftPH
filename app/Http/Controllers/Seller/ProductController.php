@@ -5,9 +5,15 @@ namespace App\Http\Controllers\Seller;
 use App\Models\Category;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+<<<<<<< HEAD
 use App\Models\Review;
 use App\Models\User;
 use App\Notifications\AdminActivityNotification;
+=======
+use App\Models\User;
+use App\Notifications\AdminActivityNotification;
+use App\Notifications\SellerNotificationService;
+>>>>>>> origin/main
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +32,7 @@ class ProductController extends Controller
     {
         $currentTab = request('status', 'live');
         $allowedTabs = ['live', 'sold_out', 'reviewing', 'violation', 'delisted'];
+        $sellerSettings = (Auth::guard('seller')->user() ?? Auth::user())?->sellerProfile;
 
         if (!in_array($currentTab, $allowedTabs, true)) {
             $currentTab = 'live';
@@ -95,7 +102,7 @@ class ProductController extends Controller
 
         $products = $productsQuery->latest()->get();
 
-        return view('seller.manage_products', compact('products', 'statusCounts', 'currentTab'));
+        return view('seller.manage_products', compact('products', 'statusCounts', 'currentTab', 'sellerSettings'));
     }
 
     public function create()
@@ -172,10 +179,14 @@ class ProductController extends Controller
         return redirect()->back()->with('success', 'Product submitted for approval.');
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id, SellerNotificationService $sellerNotifications)
     {
         $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
         $originalName = $product->name;
+<<<<<<< HEAD
+=======
+        $originalStock = (int) $product->stock;
+>>>>>>> origin/main
         $sellerName = auth()->user()?->name ?? 'a seller';
         $changedFields = [];
         $originalValues = [
@@ -223,6 +234,7 @@ class ProductController extends Controller
             $changedFields[] = 'image';
         }
 
+<<<<<<< HEAD
         foreach (
             [
                 'name' => 'name',
@@ -237,6 +249,20 @@ class ProductController extends Controller
                 'height_cm' => 'height',
             ] as $field => $label
         ) {
+=======
+        foreach ([
+            'name' => 'name',
+            'category_id' => 'category',
+            'price' => 'price',
+            'stock' => 'stock',
+            'condition' => 'condition',
+            'description' => 'description',
+            'weight' => 'weight',
+            'width_cm' => 'width',
+            'length_cm' => 'length',
+            'height_cm' => 'height',
+        ] as $field => $label) {
+>>>>>>> origin/main
             if ((string) ($validated[$field] ?? '') !== (string) $originalValues[$field]) {
                 $changedFields[] = $label;
             }
@@ -257,6 +283,14 @@ class ProductController extends Controller
             'image' => $validated['image'] ?? $product->image,
         ]);
 
+<<<<<<< HEAD
+=======
+        $product->refresh();
+
+        $sellerNotifications->productEdited($product, $changedFields);
+        $sellerNotifications->checkProductStock($product, $originalStock);
+
+>>>>>>> origin/main
         $updatedProductName = $validated['name'];
         if ($changedFields !== []) {
             $message = $originalName !== $updatedProductName
@@ -302,7 +336,11 @@ class ProductController extends Controller
         }
 
         $product->carts()->delete();
+<<<<<<< HEAD
         $product->reviews()->get()->each->delete();
+=======
+        $product->reviews()->delete();
+>>>>>>> origin/main
         $product->reports()->delete();
 
         if (! empty($product->image)) {
@@ -341,6 +379,7 @@ class ProductController extends Controller
         return view('seller.products.reviews', compact('product', 'reviews'));
     }
 
+<<<<<<< HEAD
     public function replyToReview(Request $request, Product $product, Review $review){
         abort_unless((int) $product->user_id === (int) Auth::guard('seller')->id(), 403);
         abort_unless((int) $review->product_id === (int) $product->id, 404);
@@ -383,6 +422,34 @@ class ProductController extends Controller
         }
 
         if($count === 2){
+=======
+    private function notifyAdmins(AdminActivityNotification $notification): void
+    {
+        User::query()
+            ->where(function ($query) {
+                $query->where('is_admin', true)
+                    ->orWhere('role', 'admin');
+            })
+            ->get()
+            ->each
+            ->notify($notification);
+    }
+
+    private function formatFieldList(array $fields): string
+    {
+        $fields = array_values(array_unique($fields));
+        $count = count($fields);
+
+        if ($count === 0) {
+            return 'details';
+        }
+
+        if ($count === 1) {
+            return $fields[0];
+        }
+
+        if ($count === 2) {
+>>>>>>> origin/main
             return $fields[0] . ' and ' . $fields[1];
         }
 
