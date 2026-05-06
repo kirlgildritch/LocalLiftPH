@@ -80,7 +80,11 @@
                                 data-seller-notification-id="{{ $notification->id }}"
                                 data-seller-notification-read="{{ $notification->read_at ? '1' : '0' }}">
                                 <div class="notif-icon"><i class="fa-solid {{ $icon }}"></i></div>
-                                <a href="{{ route('seller.notifications.open', $notification) }}" class="notif-content">
+                                <a href="{{ route('seller.notifications.open', $notification) }}" class="notif-content"
+                                    @if($action === 'buyer_message' && !empty($data['related_id']))
+                                        data-chat-notification-link
+                                        data-chat-conversation-id="{{ (int) $data['related_id'] }}"
+                                    @endif>
                                     <p><strong>{{ $title }}</strong></p>
                                     <span>{{ $message }}</span>
                                     <small>{{ $notification->created_at?->diffForHumans() ?? 'Just now' }}</small>
@@ -334,6 +338,7 @@
         const sellerNotificationUserId = @json(auth('seller')->id());
         const sellerNotificationFeedUrl = @json(route('seller.notifications.feed'));
         const sellerNotificationBaseUrl = @json(url('/seller-notifications'));
+        const sellerNotificationButton = document.querySelector('[data-seller-notification-button]');
         const sellerNotificationMenu = document.querySelector('[data-seller-notification-menu]');
         const sellerNotificationBadge = document.querySelector('[data-seller-notification-badge]');
         const sellerNotificationMeta = document.querySelector('[data-seller-notification-meta]');
@@ -342,8 +347,20 @@
         let sellerUnreadCount = Number(@json((int) $sellerUnreadNotificationCount));
         let sellerNotificationRefreshInFlight = false;
         let sellerNotificationFeedTimer = null;
+        let sellerNotificationLastRefreshAt = 0;
 
         const sellerNotificationCountLabel = (count) => `${count} unread notification${count === 1 ? '' : 's'}`;
+        const sellerNotificationConversationId = (notification) => Number(
+            notification?.related_id
+            || notification?.route_params?.conversation
+            || notification?.data?.related_id
+            || notification?.data?.route_params?.conversation
+            || 0
+        );
+        const isSellerMessageNotification = (notification) => (
+            String(notification?.action || notification?.data?.action || '').toLowerCase() === 'buyer_message'
+            && sellerNotificationConversationId(notification) > 0
+        );
 
         const sellerNotificationIconClass = (notification) => {
             const action = (notification?.action || notification?.data?.action || '').toLowerCase();
@@ -428,6 +445,10 @@
                 action: payload.action || 'notification',
                 title: payload.title || 'Notification',
                 message: payload.message || 'You have a new notification.',
+                route: payload.route || null,
+                route_params: payload.route_params || {},
+                related_type: payload.related_type || null,
+                related_id: payload.related_id || null,
                 read_at: payload.read_at || null,
                 created_at_human: payload.created_at_human || 'Just now',
                 created_at_formatted: payload.created_at_formatted || '',
@@ -452,6 +473,11 @@
             const content = document.createElement('a');
             content.href = sellerNotificationOpenUrl(normalized.id);
             content.className = 'notif-content';
+
+            if (isSellerMessageNotification(normalized)) {
+                content.dataset.chatNotificationLink = '';
+                content.dataset.chatConversationId = String(sellerNotificationConversationId(normalized));
+            }
 
             const title = document.createElement('p');
             const strong = document.createElement('strong');
@@ -618,6 +644,17 @@
             }
         };
 
+        const refreshSellerNotificationFeedIfNeeded = () => {
+            const now = Date.now();
+
+            if ((now - sellerNotificationLastRefreshAt) < 2500) {
+                return;
+            }
+
+            sellerNotificationLastRefreshAt = now;
+            void fetchSellerNotificationFeed();
+        };
+
         const markSellerNotificationAsRead = async (form) => {
             const notificationId = form.closest('[data-seller-notification-id]')?.dataset.sellerNotificationId;
 
@@ -655,6 +692,31 @@
             } catch (error) {
                 console.error(error);
             }
+        };
+
+        const openSellerChatFromNotification = async (link) => {
+            const conversationId = Number(link.dataset.chatConversationId || 0);
+
+            if (!conversationId) {
+                return;
+            }
+
+            const notificationItem = link.closest('[data-seller-notification-item]');
+            const readForm = notificationItem?.querySelector(sellerNotificationReadButtonSelector);
+
+            try {
+                if (readForm) {
+                    await markSellerNotificationAsRead(readForm);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+
+            document.dispatchEvent(new CustomEvent('chat-widget:open-conversation', {
+                detail: {
+                    conversationId,
+                },
+            }));
         };
 
         if (sellerNotificationMenu) {
@@ -698,6 +760,21 @@
                 void markSellerNotificationAsRead(form);
             });
 
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('[data-chat-notification-link]');
+
+                if (!link || !sellerNotificationMenu.contains(link)) {
+                    return;
+                }
+
+                if (!document.querySelector('[data-chat-widget]')) {
+                    return;
+                }
+
+                event.preventDefault();
+                void openSellerChatFromNotification(link);
+            });
+
             document.addEventListener('seller:notification-read', (event) => {
                 const notificationId = event.detail?.id;
                 if (!notificationId) {
@@ -713,6 +790,15 @@
                 notificationItem.dataset.sellerNotificationRead = '1';
                 notificationItem.querySelector('[data-seller-notification-read-form]')?.remove();
             });
+
+            document.addEventListener('seller:notification-received', () => {
+                refreshSellerNotificationFeedIfNeeded();
+            });
+
+            sellerNotificationButton?.addEventListener('mouseenter', refreshSellerNotificationFeedIfNeeded);
+            sellerNotificationButton?.addEventListener('focus', refreshSellerNotificationFeedIfNeeded);
+            sellerNotificationButton?.addEventListener('click', refreshSellerNotificationFeedIfNeeded);
+            sellerNotificationMenu.addEventListener('mouseenter', refreshSellerNotificationFeedIfNeeded);
         }
 
         const menuToggle = document.getElementById('sellerMenuToggle');

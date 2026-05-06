@@ -383,12 +383,20 @@
                                         data-seller-notification-id="{{ $notification->id }}"
                                         data-seller-notification-read="{{ $notification->read_at ? '1' : '0' }}">
                                         <a href="{{ route('seller.notifications.open', $notification) }}"
-                                            class="seller-notification-row__icon">
+                                            class="seller-notification-row__icon"
+                                            @if($action === 'buyer_message' && !empty($data['related_id']))
+                                                data-chat-notification-link
+                                                data-chat-conversation-id="{{ (int) $data['related_id'] }}"
+                                            @endif>
                                             <i class="fa-solid {{ $icon }}"></i>
                                         </a>
 
                                         <a href="{{ route('seller.notifications.open', $notification) }}"
-                                            class="seller-notification-row__content">
+                                            class="seller-notification-row__content"
+                                            @if($action === 'buyer_message' && !empty($data['related_id']))
+                                                data-chat-notification-link
+                                                data-chat-conversation-id="{{ (int) $data['related_id'] }}"
+                                            @endif>
                                             <div class="seller-notification-row__header">
                                                 <h3>{{ $title }}</h3>
                                                 <span class="seller-notification-tag">{{ $tag }}</span>
@@ -480,6 +488,15 @@
             };
 
             const formatCount = (value) => String(Math.max(0, Number(value) || 0));
+            const notificationConversationId = (notification) => Number(
+                notification?.related_id
+                || notification?.route_params?.conversation
+                || 0
+            );
+            const isMessageNotification = (notification) => (
+                String(notification?.action || '').toLowerCase() === 'buyer_message'
+                && notificationConversationId(notification) > 0
+            );
 
             const escapeHtml = (value) => String(value ?? '')
                 .replace(/&/g, '&amp;')
@@ -540,6 +557,29 @@
                 `;
             };
 
+            const markNotificationAsRead = async (form) => {
+                const notificationId = form.closest('[data-seller-notification-id]')?.dataset.sellerNotificationId;
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...(csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {}),
+                    },
+                    body: new FormData(form),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to mark notification as read.');
+                }
+
+                const payload = await response.json();
+                document.dispatchEvent(new CustomEvent('seller:notification-read', {
+                    detail: payload.notification || { id: notificationId },
+                }));
+            };
+
             const buildRowHtml = (notification) => {
                 const isUnread = !notification.read_at;
                 const iconClass = iconClassFor(notification);
@@ -550,17 +590,21 @@
                 const openUrl = `/seller-notifications/${notification.id}/open`;
                 const deleteUrl = `/seller-notifications/${notification.id}`;
                 const readForm = isUnread ? buildReadForm(notification.id) : '';
+                const conversationId = notificationConversationId(notification);
+                const chatAttributes = isMessageNotification(notification)
+                    ? ` data-chat-notification-link data-chat-conversation-id="${escapeHtml(conversationId)}"`
+                    : '';
 
                 return `
                     <article class="seller-notification-row ${isUnread ? 'unread' : ''}"
                         data-seller-notification-row
                         data-seller-notification-id="${escapeHtml(notification.id)}"
                         data-seller-notification-read="${isUnread ? '0' : '1'}">
-                        <a href="${openUrl}" class="seller-notification-row__icon">
+                        <a href="${openUrl}" class="seller-notification-row__icon"${chatAttributes}>
                             <i class="fa-solid ${iconClass}"></i>
                         </a>
 
-                        <a href="${openUrl}" class="seller-notification-row__content">
+                        <a href="${openUrl}" class="seller-notification-row__content"${chatAttributes}>
                             <div class="seller-notification-row__header">
                                 <h3>${title}</h3>
                                 <span class="seller-notification-tag">${escapeHtml(tag)}</span>
@@ -662,6 +706,61 @@
                     status.textContent = 'Read';
                 }
                 row.querySelector('[data-seller-notification-read-form]')?.remove();
+            });
+
+            document.addEventListener('submit', function (event) {
+                const form = event.target.closest('[data-seller-notification-read-form]');
+
+                if (!form || !list.contains(form)) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                markNotificationAsRead(form).catch((error) => {
+                    console.error(error);
+                });
+            });
+
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('[data-chat-notification-link]');
+
+                if (!link || !list.contains(link)) {
+                    return;
+                }
+
+                if (!document.querySelector('[data-chat-widget]')) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const conversationId = Number(link.dataset.chatConversationId || 0);
+
+                if (!conversationId) {
+                    return;
+                }
+
+                const readForm = link.closest('[data-seller-notification-row]')?.querySelector('[data-seller-notification-read-form]');
+
+                const openChat = () => {
+                    document.dispatchEvent(new CustomEvent('chat-widget:open-conversation', {
+                        detail: {
+                            conversationId,
+                        },
+                    }));
+                };
+
+                if (!readForm) {
+                    openChat();
+                    return;
+                }
+
+                markNotificationAsRead(readForm)
+                    .catch((error) => {
+                        console.error(error);
+                    })
+                    .finally(openChat);
             });
         });
     </script>

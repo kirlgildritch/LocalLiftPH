@@ -16,12 +16,13 @@ class SellerNotificationController extends Controller
     {
         $seller = auth('seller')->user();
         $sellerNotifications->syncPendingOrdersNotShipped($seller);
+        $perPage = 4;
 
         $filter = $this->normalizeFilter((string) $request->query('filter', 'all'));
 
         $notifications = $this->filteredNotifications($request, $seller->notifications(), $filter)
             ->latest()
-            ->paginate(12)
+            ->paginate($perPage)
             ->withQueryString();
 
         return view('seller.notifications', [
@@ -37,7 +38,7 @@ class SellerNotificationController extends Controller
         $seller = auth('seller')->user();
         $sellerNotifications->syncPendingOrdersNotShipped($seller);
 
-        $notifications = $seller->notifications()->latest()->limit(5)->get();
+        $notifications = $seller->notifications()->latest()->limit(4)->get();
 
         return response()->json([
             'unreadCount' => $seller->unreadNotifications()->count(),
@@ -179,6 +180,10 @@ class SellerNotificationController extends Controller
             'action' => $data['action'] ?? 'notification',
             'title' => $data['title'] ?? 'Notification',
             'message' => $data['message'] ?? 'You have a new notification.',
+            'route' => $data['route'] ?? null,
+            'route_params' => $data['route_params'] ?? [],
+            'related_type' => $data['related_type'] ?? null,
+            'related_id' => $data['related_id'] ?? null,
             'open_url' => route('seller.notifications.open', $notification),
             'read_url' => route('seller.notifications.read', $notification),
             'delete_url' => route('seller.notifications.destroy', $notification),

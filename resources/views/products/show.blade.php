@@ -7,9 +7,6 @@
 $ownsProduct = auth()->check() && (int) $product->user_id === (int) auth()->id();
 $averageRating = round((float) ($product->reviews_avg_rating ?? 0), 1);
 $canReportProduct = auth('web')->check() && !$ownsProduct;
-$buyerHasReviewedProduct = auth()->check()
-&& auth()->user()->isBuyer()
-&& $product->reviews->contains('user_id', auth()->id());
 @endphp
 <!-- --------------------------------------------- -->
 @if(session('error'))
@@ -34,19 +31,6 @@ $buyerHasReviewedProduct = auth()->check()
             <span>&gt;</span>
             <span>{{ $product->name }}</span>
         </div>
-
-        @if(session('success'))
-        <div class="review-submitted-state" role="status" aria-live="polite">
-            <div class="review-submitted-icon">
-                <i class="fa-solid fa-check"></i>
-            </div>
-            <div>
-                <strong>Your review has been submitted</strong>
-                <p>You can see your feedback in the reviews below.</p>
-            </div>
-        </div>
-        @endif
-
 
         <div class="product-detail-layout">
             <div class="product-main panel">
@@ -227,7 +211,7 @@ $buyerHasReviewedProduct = auth()->check()
                             @endfor
                     </div> -->
 
-                    @if(auth()->check() && auth()->user()->isBuyer() && !$buyerHasReviewedProduct && $reviewableOrderItems->isNotEmpty())
+                    @if(auth()->check() && auth()->user()->isBuyer() && $reviewableOrderItems->isNotEmpty())
                     <a href="#buyer-review-form" class="review-write-chip">
                         <i class="fa-solid fa-pen"></i>
                         Write a review
@@ -235,7 +219,7 @@ $buyerHasReviewedProduct = auth()->check()
                     @endif
                 </div>
 
-                @if(auth()->check() && auth()->user()->isBuyer() && !$buyerHasReviewedProduct && $reviewableOrderItems->isNotEmpty())
+                @if(auth()->check() && auth()->user()->isBuyer() && $reviewableOrderItems->isNotEmpty())
                 @php
                 $selectedReviewableOrderItem = $reviewableOrderItems->firstWhere('id', (int) request('review_order_item'))
                 ?? $reviewableOrderItems->first();
@@ -445,6 +429,8 @@ $buyerHasReviewedProduct = auth()->check()
         const maxFiles = 5;
         const maxImageDimension = 1600;
         const imageQuality = 0.82;
+        const targetVideoBitrate = 900000;
+        const targetAudioBitrate = 96000;
 
         const setUploadStatus = function (message) {
             if (uploadStatus) {
@@ -526,10 +512,162 @@ $buyerHasReviewedProduct = auth()->check()
             }
         };
 
+        const getCompressedVideoName = function (file, mimeType) {
+            const extension = mimeType.includes('webm') ? 'webm' : 'mp4';
+            const baseName = file.name.replace(/\.[^.]+$/, '') || 'review-video';
+
+            return baseName + '.' + extension;
+        };
+
+        const getSupportedVideoMimeType = function () {
+            if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== 'function') {
+                return null;
+            }
+
+            const candidates = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm',
+            ];
+
+            return candidates.find(function (candidate) {
+                return MediaRecorder.isTypeSupported(candidate);
+            }) || null;
+        };
+
+        const compressVideo = async function (file) {
+            if (!file.type.startsWith('video/')) {
+                return file;
+            }
+
+            const mimeType = getSupportedVideoMimeType();
+            const canCapture = typeof HTMLVideoElement !== 'undefined'
+                && (HTMLVideoElement.prototype.captureStream || HTMLVideoElement.prototype.mozCaptureStream);
+
+            if (!mimeType || !canCapture) {
+                return file;
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            const video = document.createElement('video');
+            video.src = objectUrl;
+            video.preload = 'metadata';
+            video.muted = true;
+            video.playsInline = true;
+            video.crossOrigin = 'anonymous';
+
+            const cleanup = function () {
+                URL.revokeObjectURL(objectUrl);
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            };
+
+            try {
+                await new Promise(function (resolve, reject) {
+                    video.onloadedmetadata = function () {
+                        resolve();
+                    };
+
+                    video.onerror = function () {
+                        reject(new Error('Unable to read selected video.'));
+                    };
+                });
+
+                const stream = video.captureStream ? video.captureStream() : video.mozCaptureStream();
+
+                if (!stream) {
+                    cleanup();
+                    return file;
+                }
+
+                const chunks = [];
+                const compressedBlob = await new Promise(async function (resolve, reject) {
+                    let resolved = false;
+                    const recorder = new MediaRecorder(stream, {
+                        mimeType: mimeType,
+                        videoBitsPerSecond: targetVideoBitrate,
+                        audioBitsPerSecond: targetAudioBitrate,
+                    });
+
+                    const finish = function (value, isError) {
+                        if (resolved) {
+                            return;
+                        }
+
+                        resolved = true;
+
+                        if (recorder.state !== 'inactive') {
+                            recorder.stop();
+                        }
+
+                        stream.getTracks().forEach(function (track) {
+                            track.stop();
+                        });
+
+                        cleanup();
+
+                        if (isError) {
+                            reject(value);
+                            return;
+                        }
+
+                        resolve(value);
+                    };
+
+                    recorder.ondataavailable = function (event) {
+                        if (event.data && event.data.size > 0) {
+                            chunks.push(event.data);
+                        }
+                    };
+
+                    recorder.onerror = function () {
+                        finish(new Error('Unable to compress selected video.'), true);
+                    };
+
+                    recorder.onstop = function () {
+                        if (!resolved) {
+                            finish(new Blob(chunks, { type: mimeType.split(';')[0] || 'video/webm' }), false);
+                        }
+                    };
+
+                    video.onended = function () {
+                        if (recorder.state !== 'inactive') {
+                            recorder.stop();
+                        }
+                    };
+
+                    try {
+                        recorder.start(250);
+                        await video.play();
+                    } catch (error) {
+                        finish(error, true);
+                    }
+                });
+
+                if (!(compressedBlob instanceof Blob) || compressedBlob.size === 0 || compressedBlob.size >= file.size) {
+                    return file;
+                }
+
+                return new File([compressedBlob], getCompressedVideoName(file, compressedBlob.type || mimeType), {
+                    type: compressedBlob.type || mimeType.split(';')[0] || 'video/webm',
+                    lastModified: Date.now(),
+                });
+            } catch (error) {
+                cleanup();
+                return file;
+            }
+        };
+
         const prepareFiles = async function (files) {
             const preparedFiles = [];
 
             for (const file of files) {
+                if (file.type.startsWith('video/')) {
+                    preparedFiles.push(await compressVideo(file));
+                    continue;
+                }
+
                 preparedFiles.push(await compressImage(file));
             }
 
@@ -635,7 +773,7 @@ $buyerHasReviewedProduct = auth()->check()
                 }
 
                 input.disabled = true;
-                setUploadStatus('Optimizing selected images before upload...');
+                setUploadStatus('Optimizing selected media before upload...');
 
                 const preparedFiles = await prepareFiles(pickedFiles.slice(0, remainingSlots));
                 const nextFiles = preparedFiles.filter(function (newFile) {
@@ -650,7 +788,7 @@ $buyerHasReviewedProduct = auth()->check()
                 syncInputFiles(input);
                 renderPreviews();
                 input.disabled = false;
-                setUploadStatus('Ready to submit. Images are optimized for faster upload.');
+                setUploadStatus('Ready to submit. Media is optimized for faster upload.');
             });
         });
 

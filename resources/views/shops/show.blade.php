@@ -50,9 +50,11 @@
 
                     <h1>{{ $user->sellerProfile?->store_name ?? 'My Shop' }}</h1>
 
-                    <p class="shop-description">
-                        {{ $user->sellerProfile?->store_description ?? 'No shop description available yet.' }}
-                    </p>
+                        @if(filled($user->sellerProfile?->store_description))
+                        <p class="shop-description">
+                            {{ $user->sellerProfile?->store_description }}
+                        </p>
+                        @endif
 
                     <div class="shop-meta">
                         <span>

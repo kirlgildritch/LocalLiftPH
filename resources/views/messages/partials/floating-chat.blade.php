@@ -1139,6 +1139,16 @@
                 });
             });
 
+            document.addEventListener('chat-widget:open-conversation', function (event) {
+                const conversationId = Number(event.detail?.conversationId || 0);
+
+                if (!conversationId) {
+                    return;
+                }
+
+                void openConversation(conversationId);
+            });
+
             if (attachBtn && imageInput) {
                 attachBtn.addEventListener('click', function () {
                     imageInput.click();

@@ -32,9 +32,11 @@
 
                                 <div class="shop-main-info">
                                     <h3>{{ $seller->store_name ?? 'My Shop' }}</h3>
+                                    @if(filled($seller->store_description))
                                     <p class="shop-description">
-                                        {{ $seller->store_description ?? 'No shop description available yet.' }}
+                                        {{ $seller->store_description }}
                                     </p>
+                                    @endif
 
                                     <div class="shop-meta">
                                         <span><i class="fa-solid fa-phone"></i>
