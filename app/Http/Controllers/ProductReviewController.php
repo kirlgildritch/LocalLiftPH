@@ -18,6 +18,8 @@ class ProductReviewController extends Controller
             'order_item_id' => ['required', 'integer'],
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:1500'],
+            'review_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp', 'max:5120'],
+            'review_video' => ['nullable', 'file', 'mimes:mp4,mov,avi,webm,mkv,3gp,m4v'],
         ]);
 
         $orderItem = OrderItem::with('order')
@@ -36,12 +38,21 @@ class ProductReviewController extends Controller
                 ->with('error', 'You can only review products from your delivered purchases, once per order item.');
         }
 
+        $imagePath = $request->hasFile('review_image')
+            ? $request->file('review_image')->store('reviews/images', 'public')
+            : null;
+        $videoPath = $request->hasFile('review_video')
+            ? $request->file('review_video')->store('reviews/videos', 'public')
+            : null;
+
         Review::create([
             'product_id' => $product->id,
             'user_id' => Auth::id(),
             'order_item_id' => $orderItem->id,
             'rating' => $validated['rating'],
             'comment' => trim((string) ($validated['comment'] ?? '')) ?: null,
+            'image_path' => $imagePath,
+            'video_path' => $videoPath,
         ]);
 
         return redirect()

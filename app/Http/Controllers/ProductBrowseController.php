@@ -151,12 +151,12 @@ class ProductBrowseController extends Controller
         $suggestions = $products
             ->concat($shops)
             ->concat($categories)
-            ->map(fn ($value) => trim((string) $value))
+            ->map(fn($value) => trim((string) $value))
             ->filter()
             ->unique()
             ->values()
             ->take(8)
-            ->map(fn ($label) => [
+            ->map(fn($label) => [
                 'label' => $label,
                 'selectable' => true,
             ])
@@ -178,8 +178,8 @@ class ProductBrowseController extends Controller
     {
         abort_if(
             $product->status !== Product::STATUS_APPROVED
-            || !$product->is_active
-            || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED,
+                || !$product->is_active
+                || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED,
             404
         );
 
