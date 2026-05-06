@@ -829,7 +829,7 @@
 
 .review-upload-inputs {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 14px;
 }
 
@@ -850,6 +850,12 @@
 .review-upload-input input[type="file"] {
     width: 100%;
     color: var(--text-soft);
+}
+
+.review-upload-input input[type="file"]:disabled,
+.review-submit-btn:disabled {
+    cursor: wait;
+    opacity: 0.68;
 }
 
 .review-upload-preview {
@@ -1020,6 +1026,63 @@
     background: rgba(7, 15, 27, 0.78);
 }
 
+.review-media-item,
+.review-media-video {
+    cursor: zoom-in;
+}
+
+.review-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 28px;
+    background: rgba(2, 6, 12, 0.86);
+    backdrop-filter: blur(8px);
+}
+
+.review-lightbox[hidden] {
+    display: none;
+}
+
+.review-lightbox-dialog {
+    display: grid;
+    place-items: center;
+    width: min(100%, 1040px);
+    max-height: 88vh;
+}
+
+.review-lightbox-media {
+    display: block;
+    max-width: 100%;
+    max-height: 88vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 16px;
+    border: 1px solid rgba(187, 222, 251, 0.18);
+    background: rgba(7, 15, 27, 0.92);
+    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.5);
+}
+
+.review-lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    background: rgba(7, 15, 27, 0.88);
+    color: var(--text);
+    cursor: pointer;
+    z-index: 1001;
+}
+
 .seller-review-reply {
     display: grid;
     gap: 6px;
@@ -1082,6 +1145,15 @@
 
     .review-upload-header {
         display: grid;
+    }
+
+    .review-lightbox {
+        padding: 16px;
+    }
+
+    .review-lightbox-close {
+        top: 12px;
+        right: 12px;
     }
 
     .review-card,

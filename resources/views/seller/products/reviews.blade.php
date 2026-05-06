@@ -90,17 +90,26 @@
 
                             <p>{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
 
-                            @if($review->image_path || $review->video_path)
-                            <div class="seller-review-media-grid">
-                                @if($review->image_path)
-                                <img src="{{ asset('storage/' . $review->image_path) }}" alt="Review picture">
-                                @endif
+                            @php
+                            $reviewMedia = $review->media->isNotEmpty()
+                            ? $review->media
+                            : collect([
+                            $review->image_path ? (object) ['type' => 'image', 'path' => $review->image_path] : null,
+                            $review->video_path ? (object) ['type' => 'video', 'path' => $review->video_path] : null,
+                            ])->filter();
+                            @endphp
 
-                                @if($review->video_path)
+                            @if($reviewMedia->isNotEmpty())
+                            <div class="seller-review-media-grid">
+                                @foreach($reviewMedia as $media)
+                                @if($media->type === 'video')
                                 <video controls>
-                                    <source src="{{ asset('storage/' . $review->video_path) }}">
+                                    <source src="{{ asset('storage/' . $media->path) }}">
                                 </video>
+                                @else
+                                <img src="{{ asset('storage/' . $media->path) }}" alt="Review picture">
                                 @endif
+                                @endforeach
                             </div>
                             @endif
 

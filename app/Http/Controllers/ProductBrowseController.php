@@ -187,7 +187,7 @@ class ProductBrowseController extends Controller
             'user',
             'category',
             'reviews' => function ($query) {
-                $query->with('user')->latest();
+                $query->with(['user', 'media'])->latest();
             },
         ])->loadAvg('reviews', 'rating')
             ->loadCount('reviews');

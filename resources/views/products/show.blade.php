@@ -278,18 +278,13 @@ $buyerHasReviewedProduct = auth()->check()
                         <div class="review-form-field review-form-field-full review-upload-section">
                             <div class="review-upload-header">
                                 <label>Upload media</label>
-                                <span>Photos and videos can be previewed before submitting.</span>
+                                <span data-review-upload-status>Photos and videos can be previewed before submitting.</span>
                             </div>
 
                             <div class="review-upload-inputs">
                                 <div class="review-upload-input">
-                                    <label for="review_image">Upload picture</label>
-                                    <input type="file" name="review_image" id="review_image" accept="image/*,video/*" multiple data-review-preview-input>
-                                </div>
-
-                                <div class="review-upload-input">
-                                    <label for="review_video">Upload video</label>
-                                    <input type="file" name="review_video" id="review_video" accept="image/*,video/*" multiple data-review-preview-input>
+                                    <label for="review_media">Upload photos or videos</label>
+                                    <input type="file" name="review_media[]" id="review_media" accept="image/*,video/*" multiple data-review-preview-input>
                                 </div>
                             </div>
 
@@ -348,32 +343,31 @@ $buyerHasReviewedProduct = auth()->check()
 
                         <p class="review-card-comment">{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
 
-                        @if($review->image_path || $review->video_path)
+                        @php
+                        $reviewMedia = $review->media->isNotEmpty()
+                        ? $review->media
+                        : collect([
+                        $review->image_path ? (object) ['type' => 'image', 'path' => $review->image_path] : null,
+                        $review->video_path ? (object) ['type' => 'video', 'path' => $review->video_path] : null,
+                        ])->filter();
+                        @endphp
+
+                        @if($reviewMedia->isNotEmpty())
                         <div class="review-media-grid">
-                            @if($review->image_path)
-                            <a href="{{ asset('storage/' . $review->image_path) }}" target="_blank" rel="noopener" class="review-media-item review-media-image">
-                                <img src="{{ asset('storage/' . $review->image_path) }}" alt="Review picture from {{ $review->user->name ?? 'buyer' }}">
-                            </a>
-                            @endif
-
-                            <!-- @if($review->image_path)
-                        <img src="{{ asset('storage/' . $review->image_path) }}" alt="Review picture" style="max-width: 180px; border-radius: 12px;">
-                        @endif -->
-
-                            <!-- @if($review->video_path)
-                            <video controls style="max-width: 260px; border-radius: 12px;">
-                                <source src="{{ asset('storage/' . $review->video_path) }}">
-                            </video>
-                            @endif -->
-
-                            @if($review->video_path)
+                            @foreach($reviewMedia as $media)
+                            @if($media->type === 'video')
                             <div class="review-media-item review-media-video-wrap">
-                                <video class="review-media-video" controls preload="metadata">
-                                    <source src="{{ asset('storage/' . $review->video_path) }}">
+                                <video class="review-media-video" controls preload="metadata" data-review-lightbox-trigger data-review-lightbox-type="video" data-review-lightbox-src="{{ asset('storage/' . $media->path) }}">
+                                    <source src="{{ asset('storage/' . $media->path) }}">
                                     Your browser does not support the video tag.
                                 </video>
                             </div>
+                            @else
+                            <a href="{{ asset('storage/' . $media->path) }}" target="_blank" rel="noopener" class="review-media-item review-media-image" data-review-lightbox-trigger data-review-lightbox-type="image" data-review-lightbox-src="{{ asset('storage/' . $media->path) }}">
+                                <img src="{{ asset('storage/' . $media->path) }}" alt="Review picture from {{ $review->user->name ?? 'buyer' }}">
+                            </a>
                             @endif
+                            @endforeach
                         </div>
                         @endif
 
@@ -425,6 +419,14 @@ $buyerHasReviewedProduct = auth()->check()
         </div>
     </div>
 </section>
+
+<div class="review-lightbox" data-review-lightbox hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="Review media preview">
+    <button type="button" class="review-lightbox-close" data-review-lightbox-close aria-label="Close preview">
+        <i class="fa-solid fa-xmark"></i>
+    </button>
+    <div class="review-lightbox-dialog" data-review-lightbox-dialog></div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const form = document.getElementById('buyer-review-form');
@@ -435,8 +437,103 @@ $buyerHasReviewedProduct = auth()->check()
 
         const inputs = Array.from(form.querySelectorAll('[data-review-preview-input]'));
         const previewGrid = form.querySelector('[data-review-preview-grid]');
+        const uploadStatus = form.querySelector('[data-review-upload-status]');
+        const submitButton = form.querySelector('.review-submit-btn');
         const selectedFiles = new Map();
         const objectUrls = new Map();
+        const maxFiles = 5;
+        const maxImageDimension = 1600;
+        const imageQuality = 0.82;
+
+        const setUploadStatus = function (message) {
+            if (uploadStatus) {
+                uploadStatus.textContent = message;
+            }
+        };
+
+        const bytesToSize = function (bytes) {
+            if (bytes < 1024 * 1024) {
+                return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+            }
+
+            return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        };
+
+        const compressedFileName = function (file, mimeType) {
+            const extension = mimeType === 'image/webp' ? 'webp' : 'jpg';
+            return file.name.replace(/\.[^.]+$/, '') + '.' + extension;
+        };
+
+        const loadImage = function (file) {
+            return new Promise(function (resolve, reject) {
+                const url = URL.createObjectURL(file);
+                const image = new Image();
+
+                image.onload = function () {
+                    URL.revokeObjectURL(url);
+                    resolve(image);
+                };
+
+                image.onerror = function () {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('Unable to read selected image.'));
+                };
+
+                image.src = url;
+            });
+        };
+
+        const compressImage = async function (file) {
+            if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+                return file;
+            }
+
+            try {
+                const image = await loadImage(file);
+                const scale = Math.min(maxImageDimension / image.width, maxImageDimension / image.height, 1);
+                const width = Math.max(1, Math.round(image.width * scale));
+                const height = Math.max(1, Math.round(image.height * scale));
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+
+                if (!context) {
+                    return file;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(image, 0, 0, width, height);
+
+                const outputType = file.type === 'image/png' || file.type === 'image/webp'
+                    ? 'image/webp'
+                    : 'image/jpeg';
+
+                const blob = await new Promise(function (resolve) {
+                    canvas.toBlob(resolve, outputType, imageQuality);
+                });
+
+                if (!blob || blob.size >= file.size) {
+                    return file;
+                }
+
+                return new File([blob], compressedFileName(file, outputType), {
+                    type: outputType,
+                    lastModified: Date.now(),
+                });
+            } catch (error) {
+                return file;
+            }
+        };
+
+        const prepareFiles = async function (files) {
+            const preparedFiles = [];
+
+            for (const file of files) {
+                preparedFiles.push(await compressImage(file));
+            }
+
+            return preparedFiles;
+        };
 
         const syncInputFiles = function (input) {
             const transfer = new DataTransfer();
@@ -498,7 +595,7 @@ $buyerHasReviewedProduct = auth()->check()
 
                 const meta = document.createElement('div');
                 meta.className = 'review-upload-preview-meta';
-                meta.textContent = item.file.name;
+                meta.textContent = item.file.name + ' (' + bytesToSize(item.file.size) + ')';
 
                 const removeButton = document.createElement('button');
                 removeButton.type = 'button';
@@ -523,11 +620,45 @@ $buyerHasReviewedProduct = auth()->check()
         inputs.forEach(function (input) {
             selectedFiles.set(input, []);
 
-            input.addEventListener('change', function () {
-                selectedFiles.set(input, Array.from(input.files || []));
+            input.addEventListener('change', async function () {
+                const currentFiles = selectedFiles.get(input) || [];
+                const pickedFiles = Array.from(input.files || []);
+                const totalSelected = inputs.reduce(function (total, previewInput) {
+                    return total + (selectedFiles.get(previewInput) || []).length;
+                }, 0);
+                const remainingSlots = Math.max(maxFiles - totalSelected, 0);
+
+                if (pickedFiles.length === 0 || remainingSlots === 0) {
+                    syncInputFiles(input);
+                    return;
+                }
+
+                input.disabled = true;
+                setUploadStatus('Optimizing selected images before upload...');
+
+                const preparedFiles = await prepareFiles(pickedFiles.slice(0, remainingSlots));
+                const nextFiles = preparedFiles.filter(function (newFile) {
+                    return !currentFiles.some(function (currentFile) {
+                        return currentFile.name === newFile.name
+                            && currentFile.size === newFile.size
+                            && currentFile.lastModified === newFile.lastModified;
+                    });
+                });
+
+                selectedFiles.set(input, currentFiles.concat(nextFiles));
                 syncInputFiles(input);
                 renderPreviews();
+                input.disabled = false;
+                setUploadStatus('Ready to submit. Images are optimized for faster upload.');
             });
+        });
+
+        form.addEventListener('submit', function () {
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Submitting...';
+            }
+            setUploadStatus('Uploading your review media...');
         });
 
         form.addEventListener('reset', function () {
@@ -539,6 +670,78 @@ $buyerHasReviewedProduct = auth()->check()
         });
 
         window.addEventListener('beforeunload', revokePreviewUrls);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const lightbox = document.querySelector('[data-review-lightbox]');
+        const dialog = document.querySelector('[data-review-lightbox-dialog]');
+        const closeButton = document.querySelector('[data-review-lightbox-close]');
+        const triggers = document.querySelectorAll('[data-review-lightbox-trigger]');
+        let previousOverflow = '';
+
+        if (!lightbox || !dialog || !closeButton) {
+            return;
+        }
+
+        const closeLightbox = function () {
+            lightbox.hidden = true;
+            lightbox.setAttribute('aria-hidden', 'true');
+            dialog.innerHTML = '';
+            document.body.style.overflow = previousOverflow;
+        };
+
+        const openLightbox = function (type, src, alt) {
+            previousOverflow = document.body.style.overflow;
+            dialog.innerHTML = '';
+
+            if (type === 'video') {
+                const video = document.createElement('video');
+                video.src = src;
+                video.controls = true;
+                video.autoplay = true;
+                video.className = 'review-lightbox-media';
+                dialog.appendChild(video);
+            } else {
+                const image = document.createElement('img');
+                image.src = src;
+                image.alt = alt || 'Review picture';
+                image.className = 'review-lightbox-media';
+                dialog.appendChild(image);
+            }
+
+            lightbox.hidden = false;
+            lightbox.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            closeButton.focus();
+        };
+
+        triggers.forEach(function (trigger) {
+            trigger.addEventListener('click', function (event) {
+                event.preventDefault();
+
+                const type = trigger.dataset.reviewLightboxType || 'image';
+                const src = trigger.dataset.reviewLightboxSrc || trigger.getAttribute('href') || trigger.currentSrc || trigger.src;
+                const alt = trigger.querySelector('img')?.alt || trigger.alt || '';
+
+                if (src) {
+                    openLightbox(type, src, alt);
+                }
+            });
+        });
+
+        closeButton.addEventListener('click', closeLightbox);
+
+        lightbox.addEventListener('click', function (event) {
+            if (event.target === lightbox) {
+                closeLightbox();
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && !lightbox.hidden) {
+                closeLightbox();
+            }
+        });
     });
 </script>
 @endsection

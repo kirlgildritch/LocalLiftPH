@@ -334,7 +334,7 @@ class ProductController extends Controller
             ->findOrFail($id);
 
         $reviews = $product->reviews()
-            ->with('user')
+            ->with(['user', 'media'])
             ->latest()
             ->paginate(10);
 

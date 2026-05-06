@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 class Review extends Model
@@ -27,16 +28,20 @@ class Review extends Model
         'seller_replied_at' => 'datetime',
     ];
 
-    // protected static function booted(): void
-    // {
-    //     static::deleting(function (Review $review) {
-    //         foreach ([$review->image_path, $review->video_path] as $path) {
-    //             if ($path) {
-    //                 Storage::disk('public')->delete($path);
-    //             }
-    //         }
-    //     });
-    // }
+    protected static function booted(): void
+    {
+        static::deleting(function (Review $review) {
+            $review->media()->get()->each(function (ReviewMedia $media) {
+                Storage::disk('public')->delete($media->path);
+            });
+
+            foreach ([$review->image_path, $review->video_path] as $path) {
+                if ($path) {
+                    Storage::disk('public')->delete($path);
+                }
+            }
+        });
+    }
 
     public function product(): BelongsTo
     {
@@ -51,5 +56,10 @@ class Review extends Model
     public function orderItem(): BelongsTo
     {
         return $this->belongsTo(OrderItem::class);
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(ReviewMedia::class)->orderBy('sort_order');
     }
 }
