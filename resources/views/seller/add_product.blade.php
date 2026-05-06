@@ -9,10 +9,7 @@
         <div class="dashboard-layout">
             @include('seller.partials.sidebar')
 
-<<<<<<< HEAD
             <main class="dashboard-main">
-                @include('seller.partials.success-toast')
-
                 <section class="seller-page-panel panel">
                     <div class="page-header">
                         <div>
@@ -25,29 +22,9 @@
                             Back
                         </a>
                     </div>
-=======
-                <main class="dashboard-main">
-                    <section class="seller-page-panel panel">
-                        <div class="page-header">
-                            <div>
-                                <span class="section-kicker">Catalog</span>
-                                <h2>Add Product</h2>
-                            </div>
-
-                            <a href="{{ route('seller.products.index') }}" class="table-action secondary">
-                                <i class="fa-solid fa-arrow-left"></i>
-                                Back
-                            </a>
-                        </div>
-
-                        <form class="product-form" action="{{ route('seller.products.store') }}" method="POST"
-                            data-enable-loading
-                            enctype="multipart/form-data">
-                            @csrf
->>>>>>> origin/main
 
                     <form class="product-form" action="{{ route('seller.products.store') }}" method="POST"
-                        enctype="multipart/form-data">
+                        data-enable-loading enctype="multipart/form-data">
                         @csrf
 
                         <input type="hidden" name="weight" id="shipping_weight" value="{{ old('weight') }}">
@@ -61,7 +38,7 @@
                                 <label for="name">Product Name</label>
                                 <input type="text" id="name" name="name" value="{{ old('name') }}">
                                 @error('name')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -70,7 +47,7 @@
                                 <div id="editor" style="height: 220px;">{!! old('description') !!}</div>
                                 <input type="hidden" name="description" id="description">
                                 @error('description')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -79,7 +56,7 @@
                                 <input type="number" id="price" name="price" step="0.01" min="0"
                                     value="{{ old('price') }}" placeholder="&#8369; ">
                                 @error('price')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -87,7 +64,7 @@
                                 <label for="stock">Stock Quantity</label>
                                 <input type="number" id="stock" name="stock" min="0" value="{{ old('stock') }}">
                                 @error('stock')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -96,14 +73,14 @@
                                 <select name="category_id" id="category_id">
                                     <option value="">Select category</option>
                                     @foreach ($categories as $category)
-                                    <option value="{{ $category->id }}"
-                                        {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
+                                        <option value="{{ $category->id }}"
+                                            {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                            {{ $category->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                                 @error('category_id')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -115,7 +92,7 @@
                                     <option value="used" {{ old('condition') === 'used' ? 'selected' : '' }}>Used</option>
                                 </select>
                                 @error('condition')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -123,7 +100,7 @@
                                 <label for="image">Product Image</label>
                                 <input type="file" id="image" name="image">
                                 @error('image')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
 
@@ -132,8 +109,7 @@
                                 <div class="shipping-summary">
                                     <div class="shipping-summary-copy">
                                         <strong id="shippingSummaryFee">Shipping fee not set</strong>
-                                        <span id="shippingSummaryMeta">Add package size and weight to calculate
-                                            shipping.</span>
+                                        <span id="shippingSummaryMeta">Add package size and weight to calculate shipping.</span>
                                     </div>
 
                                     <button type="button" class="page-action-btn shipping-open-btn"
@@ -142,82 +118,27 @@
                                     </button>
                                 </div>
                                 @error('weight')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                                 @error('width_cm')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                                 @error('length_cm')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                                 @error('height_cm')
-                                <small class="error-text">{{ $message }}</small>
+                                    <small class="error-text">{{ $message }}</small>
                                 @enderror
                             </div>
                         </div>
 
-<<<<<<< HEAD
                         <div class="form-actions">
-                            <button type="submit" class="page-action-btn">Add Product</button>
+                            <button type="submit" class="page-action-btn" data-enable-loading
+                                data-loading-text="Adding Product...">Add Product</button>
                         </div>
                     </form>
                 </section>
             </main>
-=======
-                            <div class="form-actions">
-                                <button type="submit" class="page-action-btn" data-enable-loading
-                                    data-loading-text="Adding Product...">Add Product</button>
-                            </div>
-                        </form>
-                    </section>
-                </main>
-            </div>
-        </div>
-    </section>
-
-    <div class="shipping-modal-overlay" id="shippingModal" style="display: none;">
-        <div class="shipping-modal panel">
-            <div class="shipping-modal-header">
-                <div>
-                    <span class="section-kicker">Shipping Setup</span>
-                    <h3>Package details</h3>
-                </div>
-                <button type="button" class="shipping-close-btn" id="closeShippingModal">&times;</button>
-            </div>
-
-            <div class="shipping-modal-grid">
-                <div class="form-group">
-                    <label for="modal_weight">Weight (kg)</label>
-                    <input type="number" id="modal_weight" step="0.01" min="0.01" value="{{ old('weight') }}">
-                </div>
-
-                <div class="form-group">
-                    <label for="modal_width">Width (cm)</label>
-                    <input type="number" id="modal_width" step="0.01" min="0.01" value="{{ old('width_cm') }}">
-                </div>
-
-                <div class="form-group">
-                    <label for="modal_length">Length (cm)</label>
-                    <input type="number" id="modal_length" step="0.01" min="0.01" value="{{ old('length_cm') }}">
-                </div>
-
-                <div class="form-group">
-                    <label for="modal_height">Height (cm)</label>
-                    <input type="number" id="modal_height" step="0.01" min="0.01" value="{{ old('height_cm') }}">
-                </div>
-            </div>
-
-            <div class="shipping-fee-preview">
-                <span>Calculated Shipping Fee</span>
-                <strong id="shippingFeePreview">&#8369; 0.00</strong>
-                <small>Formula: &#8369; 60 base fee + &#8369; 35 x billable weight.</small>
-            </div>
-
-            <div class="shipping-modal-actions">
-                <button type="button" class="table-action secondary" id="cancelShippingModal">Cancel</button>
-                <button type="button" class="page-action-btn" id="saveShippingSetup">Save</button>
-            </div>
->>>>>>> origin/main
         </div>
     </div>
 </section>
@@ -273,8 +194,6 @@
         font-size: 14px;
     }
 
-
-
     .shipping-modal-overlay.show {
         display: flex !important;
     }
@@ -283,7 +202,7 @@
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const quill = new Quill('#editor', {
             theme: 'snow',
             modules: {
@@ -303,7 +222,7 @@
         });
 
         const form = document.querySelector('.product-form');
-        form.addEventListener('submit', function() {
+        form.addEventListener('submit', function () {
             document.getElementById('description').value = quill.root.innerHTML;
         });
 
@@ -355,7 +274,7 @@
             }
 
             summaryFee.innerHTML = `&#8369; ${fee.toFixed(2)}`;
-            summaryMeta.textContent = `${weight} kg • ${width}cm x ${length}cm x ${height}cm`;
+            summaryMeta.textContent = `${weight} kg | ${width}cm x ${length}cm x ${height}cm`;
         }
 
         function openModal() {
@@ -374,13 +293,13 @@
         closeButton.addEventListener('click', closeModal);
         cancelButton.addEventListener('click', closeModal);
 
-        modal.addEventListener('click', function(event) {
+        modal.addEventListener('click', function (event) {
             if (event.target === modal) {
                 closeModal();
             }
         });
 
-        saveButton.addEventListener('click', function() {
+        saveButton.addEventListener('click', function () {
             const fee = calculateFee();
 
             hiddenWeight.value = modalWeight.value;

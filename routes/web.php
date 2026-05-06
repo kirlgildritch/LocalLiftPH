@@ -109,10 +109,7 @@ Route::middleware('seller')->group(function () {
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
     Route::patch('/seller-orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus'])->name('seller.orders.shipping-status');
     Route::get('/seller-earnings', [EarningsController::class, 'index'])->name('seller.earnings');
-<<<<<<< HEAD
-=======
     Route::post('/seller-payouts', [SellerPayoutController::class, 'store'])->name('seller.payouts.store');
->>>>>>> origin/main
     Route::get('/seller-search', [SellerSearchController::class, 'index'])->name('seller.search');
     Route::get('/seller-search/suggestions', [SellerSearchController::class, 'suggestions'])->name('seller.search.suggestions');
     Route::get('/seller-messages', [MessageController::class, 'index'])->name('seller.messages');

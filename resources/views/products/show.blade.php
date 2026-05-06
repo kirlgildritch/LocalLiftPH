@@ -116,20 +116,20 @@ $buyerHasReviewedProduct = auth()->check()
                     <span class="section-kicker">Purchase</span>
                     <h2>Order summary</h2>
 
-<<<<<<< HEAD
-                    <div class="quantity-box">
+                    <div class="quantity-box" data-purchase-quantity-box data-max-stock="{{ max(0, (int) $product->stock) }}">
                         <span>Quantity</span>
                         <div class="quantity-control">
-                            <button type="button">-</button>
-                            <input type="text" value="1" readonly>
-                            <button type="button">+</button>
+                            <button type="button" data-quantity-decrement aria-label="Decrease quantity">-</button>
+                            <input type="text" value="{{ $product->stock > 0 ? 1 : 0 }}" readonly data-quantity-display>
+                            <button type="button" data-quantity-increment aria-label="Increase quantity">+</button>
                         </div>
+                        <small class="quantity-note" data-quantity-note hidden></small>
                     </div>
 
                     <div class="purchase-meta">
                         <div>
                             <span>Price</span>
-                            <strong>&#8369; {{ number_format($product->price, 2) }}</strong>
+                            <strong data-purchase-total>&#8369; {{ number_format($product->stock > 0 ? $product->price : 0, 2) }}</strong>
                         </div>
                         <div>
                             <span>Delivery</span>
@@ -140,60 +140,20 @@ $buyerHasReviewedProduct = auth()->check()
                     <div class="purchase-actions">
                         @auth
                         @if($ownsProduct)
-                        <span class="action-btn secondary-btn" aria-disabled="true">This is your product</span>
+                            <span class="action-btn secondary-btn" aria-disabled="true">This is your product</span>
                         @else
-                        <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
-                            @csrf
-                            <input type="hidden" name="quantity" value="1">
-                            <button type="submit" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></button>
-                        </form>
-                        <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
-                            @csrf
-                            <input type="hidden" name="quantity" value="1">
-                            <input type="hidden" name="buy_now" value="1">
-                            <button type="submit" class="action-btn secondary-btn">Buy Now</button>
-                        </form>
+                            <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
+                                @csrf
+                                <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
+                                <button type="submit" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></button>
+                            </form>
+                            <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
+                                @csrf
+                                <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
+                                <input type="hidden" name="buy_now" value="1">
+                                <button type="submit" class="action-btn secondary-btn">Buy Now</button>
+                            </form>
                         @endif
-=======
-                                            <div class="quantity-box" data-purchase-quantity-box data-max-stock="{{ max(0, (int) $product->stock) }}">
-                                                <span>Quantity</span>
-                                                <div class="quantity-control">
-                                                    <button type="button" data-quantity-decrement aria-label="Decrease quantity">-</button>
-                                                    <input type="text" value="{{ $product->stock > 0 ? 1 : 0 }}" readonly data-quantity-display>
-                                                    <button type="button" data-quantity-increment aria-label="Increase quantity">+</button>
-                                                </div>
-                                                <small class="quantity-note" data-quantity-note hidden></small>
-                                            </div>
-
-                                            <div class="purchase-meta">
-                                                <div>
-                                                    <span>Price</span>
-                                                    <strong data-purchase-total>&#8369; {{ number_format($product->stock > 0 ? $product->price : 0, 2) }}</strong>
-                                                </div>
-                                                <div>
-                                                    <span>Delivery</span>
-                                                    <strong>Nationwide ready</strong>
-                                                </div>
-                                            </div>
-
-                                            <div class="purchase-actions">
-                                                @auth
-                                                    @if($ownsProduct)
-                                                        <span class="action-btn secondary-btn" aria-disabled="true">This is your product</span>
-                                                    @else
-                                                        <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
-                                                            @csrf
-                                                            <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
-                                                            <button type="submit" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></button>
-                                                        </form>
-                                                        <form action="{{ route('cart.add', $product->id) }}" method="POST" style="display:inline;">
-                                                            @csrf
-                                                            <input type="hidden" name="quantity" value="{{ $product->stock > 0 ? 1 : 0 }}" data-purchase-quantity>
-                                                            <input type="hidden" name="buy_now" value="1">
-                                                            <button type="submit" class="action-btn secondary-btn">Buy Now</button>
-                                                        </form>
-                                                    @endif
->>>>>>> origin/main
 
                         @else
                         <a href="{{ route('login') }}" class="action-btn primary-btn"><i class="fa-solid fa-cart-shopping"></i></a>
@@ -208,11 +168,11 @@ $buyerHasReviewedProduct = auth()->check()
                     <a href="{{ route('shops.show', $product->user->id) }}"
                         class="action-btn secondary-btn full-btn">View Shop</a>
 
-<<<<<<< HEAD
                     @auth
                     @if(!$ownsProduct)
                     <form action="{{ route('messages.start', $product->user) }}" method="POST" data-chat-start-form>
                         @csrf
+                        <input type="hidden" name="product_id" value="{{ $product->id }}">
                         <button type="submit" class="action-btn secondary-btn full-btn">Message Seller</button>
                     </form>
                     @else
@@ -222,22 +182,6 @@ $buyerHasReviewedProduct = auth()->check()
                     <a href="{{ route('login') }}" class="action-btn secondary-btn full-btn">Message Seller</a>
                     @endauth
                 </div>
-=======
-                                            @auth
-                                                @if(!$ownsProduct)
-                                                    <form action="{{ route('messages.start', $product->user) }}" method="POST" data-chat-start-form>
-                                                        @csrf
-                                                        <input type="hidden" name="product_id" value="{{ $product->id }}">
-                                                        <button type="submit" class="action-btn secondary-btn full-btn">Message Seller</button>
-                                                    </form>
-                                                @else
-                                                    <span class="action-btn secondary-btn full-btn" aria-disabled="true">This is your product</span>
-                                                @endif
-                                            @else
-                                                <a href="{{ route('login') }}" class="action-btn secondary-btn full-btn">Message Seller</a>
-                                            @endauth
-                                        </div>
->>>>>>> origin/main
 
 
             </aside>
@@ -283,7 +227,6 @@ $buyerHasReviewedProduct = auth()->check()
                             @endfor
                     </div> -->
 
-<<<<<<< HEAD
                     @if(auth()->check() && auth()->user()->isBuyer() && !$buyerHasReviewedProduct && $reviewableOrderItems->isNotEmpty())
                     <a href="#buyer-review-form" class="review-write-chip">
                         <i class="fa-solid fa-pen"></i>
@@ -291,20 +234,6 @@ $buyerHasReviewedProduct = auth()->check()
                     </a>
                     @endif
                 </div>
-
-=======
-                                                <div class="review-form-header">
-                                                    <div>
-                                                        <strong>Leave a review</strong>
-                                                        <p>Only buyers with completed purchases can rate this product.</p>
-                                                    </div>
-
-                                                    @if($reviewableOrderItems->count() > 1)
-                                                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} completed purchases
-                                                            eligible</span>
-                                                    @endif
-                                                </div>
->>>>>>> origin/main
 
                 @if(auth()->check() && auth()->user()->isBuyer() && !$buyerHasReviewedProduct && $reviewableOrderItems->isNotEmpty())
                 @php
@@ -319,7 +248,7 @@ $buyerHasReviewedProduct = auth()->check()
                     <div class="review-form-header">
                         <div>
                             <strong>Leave a review</strong>
-                            <p>Only buyers with delivered purchases can rate this product.</p>
+                            <p>Only buyers with completed purchases can rate this product.</p>
                         </div>
 
                         @if($reviewableOrderItems->count() > 1)
@@ -359,7 +288,6 @@ $buyerHasReviewedProduct = auth()->check()
                                     <input type="file" name="review_media[]" id="review_media" accept="image/*,video/*" multiple data-review-preview-input>
                                 </div>
                             </div>
-<<<<<<< HEAD
 
                             <div class="review-upload-preview" data-review-preview-grid hidden></div>
                         </div>
@@ -817,9 +745,7 @@ $buyerHasReviewedProduct = auth()->check()
         });
     });
 </script>
-=======
-                        </section>
-                        <script>
+<script>
                             document.addEventListener('DOMContentLoaded', function () {
                                 const quantityBox = document.querySelector('[data-purchase-quantity-box]');
 
@@ -858,7 +784,10 @@ $buyerHasReviewedProduct = auth()->check()
                                     const quantity = clampQuantity(nextQuantity);
 
                                     display.value = quantity;
-                                    totalDisplay.textContent = formatPeso(unitPrice * quantity);
+                                    totalDisplay.innerHTML = '&#8369; ' + Number(unitPrice * quantity).toLocaleString('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    });
                                     quantityInputs.forEach((input) => {
                                         input.value = String(quantity);
                                     });
@@ -892,6 +821,5 @@ $buyerHasReviewedProduct = auth()->check()
 
                                 updateQuantity(Number(display.value || minQuantity));
                             });
-                        </script>
->>>>>>> origin/main
+</script>
 @endsection

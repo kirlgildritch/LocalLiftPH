@@ -177,11 +177,7 @@ class AdminNotificationController extends Controller
     {
         abort_unless(
             $notification->notifiable_type === get_class(auth('admin')->user())
-<<<<<<< HEAD
                 && (string) $notification->notifiable_id === (string) auth('admin')->id(),
-=======
-            && (string) $notification->notifiable_id === (string) auth('admin')->id(),
->>>>>>> origin/main
             403
         );
     }

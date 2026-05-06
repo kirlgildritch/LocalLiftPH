@@ -200,16 +200,11 @@ class ProductBrowseController extends Controller
     {
         abort_if(
             $product->status !== Product::STATUS_APPROVED
-<<<<<<< HEAD
                 || !$product->is_active
-                || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED,
-=======
-            || !$product->is_active
-            || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
-            || $product->user?->sellerProfile?->suspended_at
-            || ! $product->user?->sellerProfile?->isVisibleToBuyers()
-            || ((int) $product->stock <= 0 && (bool) ($product->user?->sellerProfile?->hide_out_of_stock ?? false)),
->>>>>>> origin/main
+                || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
+                || $product->user?->sellerProfile?->suspended_at
+                || ! $product->user?->sellerProfile?->isVisibleToBuyers()
+                || ((int) $product->stock <= 0 && (bool) ($product->user?->sellerProfile?->hide_out_of_stock ?? false)),
             404
         );
 

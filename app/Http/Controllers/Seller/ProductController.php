@@ -5,15 +5,10 @@ namespace App\Http\Controllers\Seller;
 use App\Models\Category;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-<<<<<<< HEAD
 use App\Models\Review;
 use App\Models\User;
 use App\Notifications\AdminActivityNotification;
-=======
-use App\Models\User;
-use App\Notifications\AdminActivityNotification;
 use App\Notifications\SellerNotificationService;
->>>>>>> origin/main
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -183,10 +178,7 @@ class ProductController extends Controller
     {
         $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
         $originalName = $product->name;
-<<<<<<< HEAD
-=======
         $originalStock = (int) $product->stock;
->>>>>>> origin/main
         $sellerName = auth()->user()?->name ?? 'a seller';
         $changedFields = [];
         $originalValues = [
@@ -234,22 +226,6 @@ class ProductController extends Controller
             $changedFields[] = 'image';
         }
 
-<<<<<<< HEAD
-        foreach (
-            [
-                'name' => 'name',
-                'category_id' => 'category',
-                'price' => 'price',
-                'stock' => 'stock',
-                'condition' => 'condition',
-                'description' => 'description',
-                'weight' => 'weight',
-                'width_cm' => 'width',
-                'length_cm' => 'length',
-                'height_cm' => 'height',
-            ] as $field => $label
-        ) {
-=======
         foreach ([
             'name' => 'name',
             'category_id' => 'category',
@@ -262,7 +238,6 @@ class ProductController extends Controller
             'length_cm' => 'length',
             'height_cm' => 'height',
         ] as $field => $label) {
->>>>>>> origin/main
             if ((string) ($validated[$field] ?? '') !== (string) $originalValues[$field]) {
                 $changedFields[] = $label;
             }
@@ -283,14 +258,10 @@ class ProductController extends Controller
             'image' => $validated['image'] ?? $product->image,
         ]);
 
-<<<<<<< HEAD
-=======
         $product->refresh();
 
         $sellerNotifications->productEdited($product, $changedFields);
         $sellerNotifications->checkProductStock($product, $originalStock);
-
->>>>>>> origin/main
         $updatedProductName = $validated['name'];
         if ($changedFields !== []) {
             $message = $originalName !== $updatedProductName
@@ -336,11 +307,7 @@ class ProductController extends Controller
         }
 
         $product->carts()->delete();
-<<<<<<< HEAD
         $product->reviews()->get()->each->delete();
-=======
-        $product->reviews()->delete();
->>>>>>> origin/main
         $product->reports()->delete();
 
         if (! empty($product->image)) {
@@ -379,8 +346,8 @@ class ProductController extends Controller
         return view('seller.products.reviews', compact('product', 'reviews'));
     }
 
-<<<<<<< HEAD
-    public function replyToReview(Request $request, Product $product, Review $review){
+    public function replyToReview(Request $request, Product $product, Review $review)
+    {
         abort_unless((int) $product->user_id === (int) Auth::guard('seller')->id(), 403);
         abort_unless((int) $review->product_id === (int) $product->id, 404);
 
@@ -394,35 +361,10 @@ class ProductController extends Controller
         ]);
 
         return redirect()
-                ->route('seller.products.reviews', $product)
-                ->with('success', 'Reply posted under the buyer review.');
+            ->route('seller.products.reviews', $product)
+            ->with('success', 'Reply posted under the buyer review.');
     }
 
-    private function notifyAdmins(AdminActivityNotification $notification): void{
-        User::query()
-        ->where(function($query){
-            $query->where('is_admin', true)
-            ->orWhere('role', 'admin');
-        })
-        ->get()
-        ->each
-        ->notify($notification);
-    }
-
-    private function formatFieldlist(array $fields): string{
-        $fields = array_values(array_unique($fields));
-        $count = count($fields);
-
-        if($count === 0){
-            return 'details';
-        }
-
-        if($count === 1){
-            return $fields[0];
-        }
-
-        if($count === 2){
-=======
     private function notifyAdmins(AdminActivityNotification $notification): void
     {
         User::query()
@@ -447,9 +389,8 @@ class ProductController extends Controller
         if ($count === 1) {
             return $fields[0];
         }
-
+        
         if ($count === 2) {
->>>>>>> origin/main
             return $fields[0] . ' and ' . $fields[1];
         }
 

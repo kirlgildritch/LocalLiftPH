@@ -6,11 +6,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Review;
-<<<<<<< HEAD
 use Illuminate\Http\UploadedFile;
-=======
 use App\Notifications\SellerNotificationService;
->>>>>>> origin/main
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -63,7 +60,6 @@ class ProductReviewController extends Controller
                 ->with('error', 'You can only review products from your completed purchases, once per order item.');
         }
 
-<<<<<<< HEAD
         $storedMedia = [];
 
         foreach ($uploadedFiles as $file) {
@@ -76,9 +72,6 @@ class ProductReviewController extends Controller
 
         $imagePath = collect($storedMedia)->firstWhere('type', 'image')['path'] ?? null;
         $videoPath = collect($storedMedia)->firstWhere('type', 'video')['path'] ?? null;
-
-=======
->>>>>>> origin/main
         $review = Review::create([
             'product_id' => $product->id,
             'user_id' => Auth::id(),
@@ -89,7 +82,6 @@ class ProductReviewController extends Controller
             'video_path' => $videoPath,
         ]);
 
-<<<<<<< HEAD
         foreach ($storedMedia as $index => $media) {
             $review->media()->create([
                 'type' => $media['type'],
@@ -97,9 +89,8 @@ class ProductReviewController extends Controller
                 'sort_order' => $index,
             ]);
         }
-=======
+
         $sellerNotifications->buyerLeftReview($review->fresh(['product.user.sellerProfile', 'user']));
->>>>>>> origin/main
 
         return redirect()
             ->route('products.show', $product)
