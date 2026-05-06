@@ -162,16 +162,14 @@ footer {
 }
 
 .logo {
-  display: inline-flex;
-  align-items: center;
- 
-  grid-area: logo;
-  justify-self: start;
-}
+    display: inline-flex;
+    align-items: center;
+  gap: 0.75rem;
+    grid-area: logo;
+    justify-self: start;
+  }
 
 .logo-icon {
-  width: 68px;
-  min-width: 68px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -179,8 +177,8 @@ footer {
 }
 
 .logo-icon img{
-  width: 68px;
-  height: 52px;
+  width: auto;
+  height: 60px;
   object-fit: contain;
   display: block;
   filter:
@@ -190,19 +188,19 @@ footer {
 
 
 .logo-text {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 0.88;
+  letter-spacing: -0.04em;
 }
 
 .logo-text span {
   display: block;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: 0;
+  font-size: 12px;
   color: var(--accent);
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.26em;
 }
 
 .header-menu-toggle {
@@ -1542,27 +1540,26 @@ body.report-modal-open {
   }
 
   .logo {
-    gap: 9px;
+    gap: 0.5rem;
   }
 
   .logo-icon {
-    width: 50px;
-    min-width: 50px;
+    width: auto;
   }
 
   .logo-icon img {
-    width: 50px;
-    height: 36px;
+    width: auto;
+    height: 46px;
   }
 
   .logo-text {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .logo-text span {
-    margin-top: 4px;
+    margin-top: 0;
     font-size: 10px;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.22em;
   }
 
   .topbar {
