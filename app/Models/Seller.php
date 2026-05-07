@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -80,6 +81,11 @@ class Seller extends Model
         return $this->suspended_at !== null;
     }
 
+    public function isApproved(): bool
+    {
+        return $this->application_status === self::STATUS_APPROVED;
+    }
+
     public function shopStatusLabel(): string
     {
         return match ($this->effectiveShopStatus()) {
@@ -120,5 +126,43 @@ class Seller extends Model
             self::SHOP_STATUS_OPEN => true,
             default => false,
         };
+    }
+
+    public function isMarketplaceVisible(): bool
+    {
+        return $this->isApproved()
+            && ! $this->isSuspended()
+            && $this->isVisibleToBuyers();
+    }
+
+    public function showsOutOfStockProducts(): bool
+    {
+        return ! (bool) $this->hide_out_of_stock;
+    }
+
+    public function scopeVisibleToBuyers(Builder $query): Builder
+    {
+        return $query
+            ->where('application_status', self::STATUS_APPROVED)
+            ->whereNull('suspended_at')
+            ->where(function (Builder $statusQuery) {
+                $statusQuery
+                    ->where('shop_status', self::SHOP_STATUS_OPEN)
+                    ->orWhereNull('shop_status')
+                    ->orWhere(function (Builder $temporaryQuery) {
+                        $temporaryQuery
+                            ->whereIn('shop_status', ['paused', self::SHOP_STATUS_TEMPORARILY_CLOSED])
+                            ->whereDate('shop_status_until', '<', now()->toDateString());
+                    });
+            });
+    }
+
+    public function scopeShowsOutOfStockProducts(Builder $query): Builder
+    {
+        return $query->where(function (Builder $visibilityQuery) {
+            $visibilityQuery
+                ->where('hide_out_of_stock', false)
+                ->orWhereNull('hide_out_of_stock');
+        });
     }
 }

@@ -76,29 +76,13 @@ class Product extends Model
         return $query->approved()
             ->where('is_active', 1)
             ->whereHas('user.sellerProfile', function (Builder $sellerQuery) {
-                $sellerQuery
-                    ->where('application_status', Seller::STATUS_APPROVED)
-                    ->whereNull('suspended_at')
-                    ->where(function (Builder $statusQuery) {
-                        $statusQuery
-                            ->where('shop_status', Seller::SHOP_STATUS_OPEN)
-                            ->orWhereNull('shop_status')
-                            ->orWhere(function (Builder $temporaryQuery) {
-                                $temporaryQuery
-                                    ->whereIn('shop_status', ['paused', Seller::SHOP_STATUS_TEMPORARILY_CLOSED])
-                                    ->whereDate('shop_status_until', '<', now()->toDateString());
-                            });
-                    });
+                $sellerQuery->visibleToBuyers();
             })
             ->where(function (Builder $stockQuery) {
                 $stockQuery
                     ->where('stock', '>', 0)
                     ->orWhereHas('user.sellerProfile', function (Builder $sellerQuery) {
-                        $sellerQuery->where(function (Builder $visibilityQuery) {
-                            $visibilityQuery
-                                ->where('hide_out_of_stock', false)
-                                ->orWhereNull('hide_out_of_stock');
-                        });
+                        $sellerQuery->showsOutOfStockProducts();
                     });
             });
     }

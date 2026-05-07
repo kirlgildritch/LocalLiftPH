@@ -194,8 +194,8 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                     <span class="section-kicker">Ratings & Reviews</span>
 
                     <div class="review-summary-chip">
-                        <strong>{{ $averageRating > 0 ? number_format($averageRating, 1) : '0.0' }}</strong>
-                        <span>{{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
+                        <strong data-review-average>{{ $averageRating > 0 ? number_format($averageRating, 1) : '0.0' }}</strong>
+                        <span data-review-count>{{ $product->reviews_count }} review{{ $product->reviews_count !== 1 ? 's' : '' }}</span>
                     </div>
                 </div>
 
@@ -212,7 +212,7 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                     </div> -->
 
                     @if(auth()->check() && auth()->user()->isBuyer() && $reviewableOrderItems->isNotEmpty())
-                    <a href="#buyer-review-form" class="review-write-chip">
+                    <a href="#buyer-review-form" class="review-write-chip" data-review-write-chip>
                         <i class="fa-solid fa-pen"></i>
                         Write a review
                     </a>
@@ -223,9 +223,20 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                 @php
                 $selectedReviewableOrderItem = $reviewableOrderItems->firstWhere('id', (int) request('review_order_item'))
                 ?? $reviewableOrderItems->first();
+                $reviewMediaMaxFiles = \App\Support\ReviewUploadLimit::maxFiles();
+                $reviewMediaEffectiveFileBytes = \App\Support\ReviewUploadLimit::effectiveSingleFileBytes()
+                    ?? \App\Support\ReviewUploadLimit::appMaxFileBytes();
+                $reviewMediaRequestBytes = \App\Support\ReviewUploadLimit::effectiveRequestBytes();
+                $reviewMediaEffectiveFileLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMediaEffectiveFileBytes);
+                $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMediaRequestBytes);
                 @endphp
 
-                <form action="{{ route('products.reviews.store', $product) }}" method="POST" enctype="multipart/form-data" class="review-form panel" id="buyer-review-form">
+                <form action="{{ route('products.reviews.store', $product) }}" method="POST" enctype="multipart/form-data" class="review-form panel" id="buyer-review-form"
+                    data-review-max-files="{{ $reviewMediaMaxFiles }}"
+                    data-review-max-file-bytes="{{ $reviewMediaEffectiveFileBytes }}"
+                    data-review-max-total-bytes="{{ $reviewMediaRequestBytes ?? 0 }}"
+                    data-review-max-file-label="{{ $reviewMediaEffectiveFileLabel }}"
+                    data-review-max-total-label="{{ $reviewMediaRequestLabel }}">
                     @csrf
                     <input type="hidden" name="order_item_id" value="{{ $selectedReviewableOrderItem?->id }}">
 
@@ -236,7 +247,7 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                         </div>
 
                         @if($reviewableOrderItems->count() > 1)
-                        <span class="review-order-note">{{ $reviewableOrderItems->count() }} completed purchases
+                        <span class="review-order-note" data-review-order-note>{{ $reviewableOrderItems->count() }} completed purchases
                             eligible</span>
                         @endif
                     </div>
@@ -263,7 +274,7 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                         <div class="review-form-field review-form-field-full review-upload-section">
                             <div class="review-upload-header">
                                 <label>Upload media</label>
-                                <span data-review-upload-status>Photos and videos can be previewed before submitting.</span>
+                                <span data-review-upload-status>Up to {{ $reviewMediaMaxFiles }} files, {{ $reviewMediaEffectiveFileLabel }} each, {{ $reviewMediaRequestLabel }} total per upload.</span>
                             </div>
 
                             <div class="review-upload-inputs">
@@ -298,77 +309,12 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                 </form>
                  -->
 
-                <div class="review-list">
+                <div class="review-list" data-review-list>
                     @forelse($product->reviews as $review)
-                    <article class="review-card">
-                        <div class="review-card-header">
-                            <div class="review-author">
-                                <div class="review-author-avatar">
-                                    @if($review->user?->profile_image)
-                                    <img src="{{ asset('storage/' . $review->user->profile_image) }}" alt="{{ $review->user->name ?? 'Buyer' }}">
-                                    @else
-                                    <span>{{ strtoupper(mb_substr($review->user->name ?? 'B', 0, 1)) }}</span>
-                                    @endif
-                                </div>
-                                <div>
-                                    <strong>
-                                        {{ $review->user->name ?? 'LocalLift Buyer' }}
-                                        <i class="fa-solid fa-circle-check"></i>
-                                    </strong>
-                                    <span>{{ $review->created_at->format('M d, Y') }}</span>
-                                </div>
-                            </div>
-
-                            <div class="review-card-stars" aria-label="{{ $review->rating }} out of 5 stars">
-                                @for($star = 1; $star <= 5; $star++)
-                                    <i class="fa-{{ $review->rating >= $star ? 'solid' : 'regular' }} fa-star"></i>
-                                    @endfor
-                            </div>
-                        </div>
-
-                        <p class="review-card-comment">{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
-
-                        @php
-                        $reviewMedia = $review->media->isNotEmpty()
-                        ? $review->media
-                        : collect([
-                        $review->image_path ? (object) ['type' => 'image', 'path' => $review->image_path] : null,
-                        $review->video_path ? (object) ['type' => 'video', 'path' => $review->video_path] : null,
-                        ])->filter();
-                        @endphp
-
-                        @if($reviewMedia->isNotEmpty())
-                        <div class="review-media-grid">
-                            @foreach($reviewMedia as $media)
-                            @if($media->type === 'video')
-                            <div class="review-media-item review-media-video-wrap">
-                                <video class="review-media-video" controls preload="metadata" data-review-lightbox-trigger data-review-lightbox-type="video" data-review-lightbox-src="{{ asset('storage/' . $media->path) }}">
-                                    <source src="{{ asset('storage/' . $media->path) }}">
-                                    Your browser does not support the video tag.
-                                </video>
-                            </div>
-                            @else
-                            <a href="{{ asset('storage/' . $media->path) }}" target="_blank" rel="noopener" class="review-media-item review-media-image" data-review-lightbox-trigger data-review-lightbox-type="image" data-review-lightbox-src="{{ asset('storage/' . $media->path) }}">
-                                <img src="{{ asset('storage/' . $media->path) }}" alt="Review picture from {{ $review->user->name ?? 'buyer' }}">
-                            </a>
-                            @endif
-                            @endforeach
-                        </div>
-                        @endif
-
-                        @if($review->seller_reply)
-                        <div class="seller-review-reply">
-                            <strong>Seller reply</strong>
-                            <p>{{ $review->seller_reply }}</p>
-                            @if($review->seller_replied_at)
-                            <span>{{ $review->seller_replied_at->format('M d, Y') }}</span>
-                            @endif
-                        </div>
-                        @endif
-                    </article>
+                        @include('products.partials.review-card', ['review' => $review])
                     @empty
 
-                    <div class="review-empty-state">
+                    <div class="review-empty-state" data-review-empty-state>
                         <h3>No reviews yet</h3>
                         <p>This product has not received buyer feedback yet.</p>
                     </div>
@@ -426,7 +372,11 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
         const submitButton = form.querySelector('.review-submit-btn');
         const selectedFiles = new Map();
         const objectUrls = new Map();
-        const maxFiles = 5;
+        const maxFiles = Math.max(1, Number(form.dataset.reviewMaxFiles || 5));
+        const maxFileBytes = Math.max(0, Number(form.dataset.reviewMaxFileBytes || 0));
+        const maxTotalBytes = Math.max(0, Number(form.dataset.reviewMaxTotalBytes || 0));
+        const maxFileLabel = form.dataset.reviewMaxFileLabel || '';
+        const maxTotalLabel = form.dataset.reviewMaxTotalLabel || '';
         const maxImageDimension = 1600;
         const imageQuality = 0.82;
         const targetVideoBitrate = 900000;
@@ -438,12 +388,49 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
             }
         };
 
+        const setSubmitIdle = function () {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Review';
+            }
+        };
+
+        const setSubmitBusy = function (message) {
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = message;
+            }
+        };
+
         const bytesToSize = function (bytes) {
             if (bytes < 1024 * 1024) {
                 return Math.max(1, Math.round(bytes / 1024)) + ' KB';
             }
 
             return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+        };
+
+        const totalSelectedBytes = function () {
+            return inputs.reduce(function (total, input) {
+                return total + (selectedFiles.get(input) || []).reduce(function (size, file) {
+                    return size + (file.size || 0);
+                }, 0);
+            }, 0);
+        };
+
+        const clearSelectedFiles = function () {
+            selectedFiles.clear();
+            inputs.forEach(function (input) {
+                selectedFiles.set(input, []);
+                syncInputFiles(input);
+            });
+            renderPreviews();
+        };
+
+        const batchTotalBytes = function (files) {
+            return files.reduce(function (total, file) {
+                return total + (file.size || 0);
+            }, 0);
         };
 
         const compressedFileName = function (file, mimeType) {
@@ -472,6 +459,10 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
 
         const compressImage = async function (file) {
             if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+                return file;
+            }
+
+            if (maxFileBytes > 0 && file.size <= maxFileBytes) {
                 return file;
             }
 
@@ -537,6 +528,10 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
 
         const compressVideo = async function (file) {
             if (!file.type.startsWith('video/')) {
+                return file;
+            }
+
+            if (maxFileBytes > 0 && file.size <= maxFileBytes) {
                 return file;
             }
 
@@ -756,6 +751,25 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
             });
         };
 
+        const firstErrorMessage = function (payload) {
+            if (!payload || typeof payload !== 'object') {
+                return 'Unable to submit your review right now.';
+            }
+
+            if (payload.message) {
+                return payload.message;
+            }
+
+            const errors = payload.errors || {};
+            const firstKey = Object.keys(errors)[0];
+
+            if (firstKey && Array.isArray(errors[firstKey]) && errors[firstKey][0]) {
+                return errors[firstKey][0];
+            }
+
+            return 'Unable to submit your review right now.';
+        };
+
         inputs.forEach(function (input) {
             selectedFiles.set(input, []);
 
@@ -766,46 +780,142 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
                     return total + (selectedFiles.get(previewInput) || []).length;
                 }, 0);
                 const remainingSlots = Math.max(maxFiles - totalSelected, 0);
+                const selectedBatch = pickedFiles.slice(0, remainingSlots);
 
                 if (pickedFiles.length === 0 || remainingSlots === 0) {
                     syncInputFiles(input);
                     return;
                 }
 
-                input.disabled = true;
-                setUploadStatus('Optimizing selected media before upload...');
+                const baseTotalBytes = totalSelectedBytes();
+                const rawBatchTotalBytes = batchTotalBytes(selectedBatch);
+                const batchNeedsOptimization = selectedBatch.some(function (file) {
+                    return maxFileBytes > 0 && file.size > maxFileBytes;
+                }) || (maxTotalBytes > 0 && baseTotalBytes + rawBatchTotalBytes > maxTotalBytes);
 
-                const preparedFiles = await prepareFiles(pickedFiles.slice(0, remainingSlots));
+                input.disabled = true;
+
+                let preparedFiles = selectedBatch;
+
+                if (batchNeedsOptimization) {
+                    setUploadStatus('Optimizing selected media before upload...');
+                    preparedFiles = await prepareFiles(selectedBatch);
+                }
+
+                let runningTotalBytes = baseTotalBytes;
+                const rejectedMessages = [];
                 const nextFiles = preparedFiles.filter(function (newFile) {
+                    if (maxFileBytes > 0 && newFile.size > maxFileBytes) {
+                        rejectedMessages.push(newFile.name + ' exceeds the current file limit of ' + maxFileLabel + '.');
+                        return false;
+                    }
+
                     return !currentFiles.some(function (currentFile) {
-                        return currentFile.name === newFile.name
+                        const isDuplicate = currentFile.name === newFile.name
                             && currentFile.size === newFile.size
                             && currentFile.lastModified === newFile.lastModified;
+
+                        if (isDuplicate) {
+                            rejectedMessages.push(newFile.name + ' is already selected.');
+                        }
+
+                        return isDuplicate;
                     });
+                }).filter(function (newFile) {
+                    if (maxTotalBytes > 0 && runningTotalBytes + newFile.size > maxTotalBytes) {
+                        rejectedMessages.push('The selected files exceed the current upload limit of ' + maxTotalLabel + ' per submission.');
+                        return false;
+                    }
+
+                    runningTotalBytes += newFile.size;
+
+                    return true;
                 });
 
                 selectedFiles.set(input, currentFiles.concat(nextFiles));
                 syncInputFiles(input);
                 renderPreviews();
                 input.disabled = false;
-                setUploadStatus('Ready to submit. Media is optimized for faster upload.');
+
+                if (rejectedMessages.length > 0) {
+                    setUploadStatus(rejectedMessages[0]);
+                    return;
+                }
+
+                setUploadStatus(batchNeedsOptimization
+                    ? 'Ready to submit. Media is optimized for faster upload.'
+                    : 'Ready to submit. Files are already within the current upload limit.');
             });
         });
 
-        form.addEventListener('submit', function () {
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.textContent = 'Submitting...';
+        form.addEventListener('submit', function (event) {
+            const currentTotalBytes = totalSelectedBytes();
+
+            if (maxTotalBytes > 0 && currentTotalBytes > maxTotalBytes) {
+                event.preventDefault();
+                setSubmitIdle();
+                setUploadStatus('The selected files exceed the current upload limit of ' + maxTotalLabel + ' per submission.');
+                return;
             }
-            setUploadStatus('Uploading your review media...');
+
+            event.preventDefault();
+            setSubmitBusy('Uploading...');
+            setUploadStatus('Uploading your review media... 0%');
+
+            const formData = new FormData(form);
+            const request = new XMLHttpRequest();
+
+            request.open('POST', form.action, true);
+            request.setRequestHeader('Accept', 'application/json');
+            request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            request.upload.addEventListener('progress', function (progressEvent) {
+                if (!progressEvent.lengthComputable) {
+                    return;
+                }
+
+                const percent = Math.max(0, Math.min(100, Math.round((progressEvent.loaded / progressEvent.total) * 100)));
+                setUploadStatus('Uploading your review media... ' + percent + '%');
+                setSubmitBusy('Uploading ' + percent + '%');
+            });
+
+            request.addEventListener('load', function () {
+                let payload = null;
+
+                try {
+                    payload = JSON.parse(request.responseText || '{}');
+                } catch (error) {
+                    payload = null;
+                }
+
+                if (request.status >= 200 && request.status < 300) {
+                    setSubmitBusy('Refreshing...');
+                    setUploadStatus((payload?.message || 'Review submitted successfully.') + ' Refreshing page...');
+                    window.setTimeout(function () {
+                        window.location.reload();
+                    }, 250);
+                    return;
+                }
+
+                setSubmitIdle();
+                setUploadStatus(firstErrorMessage(payload));
+            });
+
+            request.addEventListener('error', function () {
+                setSubmitIdle();
+                setUploadStatus('Upload failed. Please check your connection and try again.');
+            });
+
+            request.addEventListener('abort', function () {
+                setSubmitIdle();
+                setUploadStatus('Upload canceled.');
+            });
+
+            request.send(formData);
         });
 
         form.addEventListener('reset', function () {
-            selectedFiles.clear();
-            inputs.forEach(function (input) {
-                selectedFiles.set(input, []);
-            });
-            renderPreviews();
+            clearSelectedFiles();
         });
 
         window.addEventListener('beforeunload', revokePreviewUrls);
@@ -815,7 +925,6 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
         const lightbox = document.querySelector('[data-review-lightbox]');
         const dialog = document.querySelector('[data-review-lightbox-dialog]');
         const closeButton = document.querySelector('[data-review-lightbox-close]');
-        const triggers = document.querySelectorAll('[data-review-lightbox-trigger]');
         let previousOverflow = '';
 
         if (!lightbox || !dialog || !closeButton) {
@@ -854,18 +963,22 @@ $canReportProduct = auth('web')->check() && !$ownsProduct;
             closeButton.focus();
         };
 
-        triggers.forEach(function (trigger) {
-            trigger.addEventListener('click', function (event) {
-                event.preventDefault();
+        document.addEventListener('click', function (event) {
+            const trigger = event.target.closest('[data-review-lightbox-trigger]');
 
-                const type = trigger.dataset.reviewLightboxType || 'image';
-                const src = trigger.dataset.reviewLightboxSrc || trigger.getAttribute('href') || trigger.currentSrc || trigger.src;
-                const alt = trigger.querySelector('img')?.alt || trigger.alt || '';
+            if (!trigger) {
+                return;
+            }
 
-                if (src) {
-                    openLightbox(type, src, alt);
-                }
-            });
+            event.preventDefault();
+
+            const type = trigger.dataset.reviewLightboxType || 'image';
+            const src = trigger.dataset.reviewLightboxSrc || trigger.getAttribute('href') || trigger.currentSrc || trigger.src;
+            const alt = trigger.querySelector('img')?.alt || trigger.alt || '';
+
+            if (src) {
+                openLightbox(type, src, alt);
+            }
         });
 
         closeButton.addEventListener('click', closeLightbox);

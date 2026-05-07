@@ -139,7 +139,7 @@ class CheckoutController extends Controller
             ->unique()
             ->values();
 
-        $cartItems = Cart::with('product.user')
+        $cartItems = Cart::with('product.user.sellerProfile')
             ->where('user_id', Auth::id())
             ->when($selectedCartItemIds->isNotEmpty(), function ($query) use ($selectedCartItemIds) {
                 $query->whereIn('id', $selectedCartItemIds);
@@ -242,16 +242,23 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
-        $createdOrders->each(function (Order $order) use ($sellerNotifications): void {
-            $sellerNotifications->newOrder($order->fresh(['seller.sellerProfile', 'user', 'items']));
-        });
+        Order::with(['seller.sellerProfile', 'user', 'items'])
+            ->whereIn('id', $createdOrders->pluck('id'))
+            ->get()
+            ->each(function (Order $order) use ($sellerNotifications): void {
+                $sellerNotifications->newOrder($order);
+            });
 
-        $stockChecks
-            ->unique('product_id')
-            ->each(function (array $stockCheck) use ($sellerNotifications): void {
-                $product = Product::with('user.sellerProfile')->find($stockCheck['product_id']);
+        $uniqueStockChecks = $stockChecks->unique('product_id')->values();
 
-                if ($product) {
+        Product::with('user.sellerProfile')
+            ->whereIn('id', $uniqueStockChecks->pluck('product_id'))
+            ->get()
+            ->keyBy('id')
+            ->each(function (Product $product) use ($uniqueStockChecks, $sellerNotifications): void {
+                $stockCheck = $uniqueStockChecks->firstWhere('product_id', $product->id);
+
+                if ($stockCheck) {
                     $sellerNotifications->checkProductStock($product, (int) $stockCheck['previous_stock']);
                 }
             });

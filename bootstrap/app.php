@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\ReviewUploadLimit;
+use Illuminate\Http\Exceptions\PostTooLargeException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,5 +25,19 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
-    })->create();
+        $exceptions->render(function (PostTooLargeException $exception, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => ReviewUploadLimit::tooLargeMessage(),
+                ], 413);
+            }
+
+            return response()->view('errors.413', [
+                'uploadErrorMessage' => ReviewUploadLimit::tooLargeMessage(),
+                'serverUploadMax' => ReviewUploadLimit::humanSize(ReviewUploadLimit::phpUploadMaxBytes()),
+                'serverPostMax' => ReviewUploadLimit::humanSize(ReviewUploadLimit::phpPostMaxBytes()),
+                'reviewFileMax' => ReviewUploadLimit::humanSize(ReviewUploadLimit::appMaxFileBytes()),
+            ], 413);
+        });
+    })
+    ->create();

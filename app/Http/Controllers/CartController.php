@@ -9,17 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class CartController extends Controller
 {
-    protected function ensureNotOwnProduct(Product $product): ?\Illuminate\Http\RedirectResponse
-    {
-        if ((int) $product->user_id !== (int) Auth::id()) {
-            return null;
-        }
-
-        return redirect()
-            ->back()
-            ->with('error', 'You cannot add your own product to the cart.');
-    }
-
     protected function miniCartPayload(): array
     {
         $previewItems = Cart::with(['product.user'])
@@ -52,7 +41,7 @@ class CartController extends Controller
 
     public function index()
     {
-        $cartItems = Cart::with('product')
+        $cartItems = Cart::with('product.user.sellerProfile')
             ->where('user_id', Auth::id())
             ->get();
 

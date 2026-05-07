@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Report;
 use App\Models\Seller;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
@@ -15,19 +16,13 @@ class AdminDashboardController extends Controller
 {
     public function index(): View
     {
-        $orders = Order::with(['user', 'seller.sellerProfile', 'items.product.user.sellerProfile'])
-            ->latest()
-            ->get();
-
-        $completedOrders = $orders->filter(fn (Order $order) => $order->isCompleted() && ! $order->isCancelled());
-        $todayCompletedOrders = $completedOrders->filter(fn (Order $order) => $order->updated_at?->isToday());
-        $monthlyCompletedOrders = $completedOrders->filter(
-            fn (Order $order) => $order->updated_at?->isSameMonth(now())
-        );
-
-        $reports = Report::with(['product', 'seller.sellerProfile', 'user'])
-            ->latest()
-            ->get();
+        $completedOrdersQuery = Order::query()
+            ->where(function (Builder $query) {
+                $this->applyCompletedOrderConstraints($query);
+            })
+            ->where(function (Builder $query) {
+                $this->applyNotCancelledOrderConstraints($query);
+            });
 
         $pendingSellers = Seller::with('user')
             ->where('application_status', Seller::STATUS_PENDING)
@@ -44,28 +39,49 @@ class AdminDashboardController extends Controller
             ->take(5)
             ->get();
 
-        $recentOrders = $orders->take(6);
+        $recentOrders = Order::with('user')
+            ->latest()
+            ->take(6)
+            ->get();
 
-        $salesOverview = [
-            ['label' => 'Total Sales', 'value' => $completedOrders->sum('total_price'), 'note' => 'Completed only', 'tone' => 'primary', 'currency' => true],
-            ['label' => 'Today Sales', 'value' => $todayCompletedOrders->sum('total_price'), 'note' => 'Completed today', 'tone' => 'success', 'currency' => true],
-            ['label' => 'Monthly Sales', 'value' => $monthlyCompletedOrders->sum('total_price'), 'note' => now()->format('F'), 'tone' => 'warning', 'currency' => true],
-            ['label' => 'Completed Orders', 'value' => $completedOrders->count(), 'note' => 'Fulfilled orders', 'tone' => 'danger', 'currency' => false],
-        ];
-
-        $orderMonitoring = [
-            ['label' => 'Pending', 'value' => $orders->where('shipping_status', Order::SHIPPING_PENDING)->count(), 'tone' => 'warning'],
-            ['label' => 'To Ship', 'value' => $orders->where('shipping_status', Order::SHIPPING_TO_SHIP)->count(), 'tone' => 'primary'],
-            ['label' => 'Completed', 'value' => $orders->filter(fn (Order $order) => $order->isCompleted() && ! $order->isCancelled())->count(), 'tone' => 'success'],
-            ['label' => 'Cancelled', 'value' => $orders->filter(fn (Order $order) => $order->isCancelled())->count(), 'tone' => 'danger'],
-        ];
-
-        $flaggedUserIds = $reports
-            ->where('status', Report::STATUS_PENDING)
+        $totalSales = (clone $completedOrdersQuery)->sum('total_price');
+        $todaySales = (clone $completedOrdersQuery)
+            ->whereDate('updated_at', today())
+            ->sum('total_price');
+        $monthlySales = (clone $completedOrdersQuery)
+            ->whereYear('updated_at', now()->year)
+            ->whereMonth('updated_at', now()->month)
+            ->sum('total_price');
+        $completedOrdersCount = (clone $completedOrdersQuery)->count();
+        $pendingReportsQuery = Report::query()->where('status', Report::STATUS_PENDING);
+        $pendingReports = (clone $pendingReportsQuery)
+            ->with('product:id,user_id')
+            ->get(['id', 'seller_id', 'product_id']);
+        $flaggedUserIds = $pendingReports
             ->map(fn (Report $report) => $report->seller_id ?: $report->product?->user_id)
             ->filter()
             ->unique()
             ->count();
+        $reportedProductsCount = (clone $pendingReportsQuery)
+            ->whereNotNull('product_id')
+            ->distinct('product_id')
+            ->count('product_id');
+
+        $salesOverview = [
+            ['label' => 'Total Sales', 'value' => $totalSales, 'note' => 'Completed only', 'tone' => 'primary', 'currency' => true],
+            ['label' => 'Today Sales', 'value' => $todaySales, 'note' => 'Completed today', 'tone' => 'success', 'currency' => true],
+            ['label' => 'Monthly Sales', 'value' => $monthlySales, 'note' => now()->format('F'), 'tone' => 'warning', 'currency' => true],
+            ['label' => 'Completed Orders', 'value' => $completedOrdersCount, 'note' => 'Fulfilled orders', 'tone' => 'danger', 'currency' => false],
+        ];
+
+        $orderMonitoring = [
+            ['label' => 'Pending', 'value' => Order::query()->where('shipping_status', Order::SHIPPING_PENDING)->count(), 'tone' => 'warning'],
+            ['label' => 'To Ship', 'value' => Order::query()->where('shipping_status', Order::SHIPPING_TO_SHIP)->count(), 'tone' => 'primary'],
+            ['label' => 'Completed', 'value' => $completedOrdersCount, 'tone' => 'success'],
+            ['label' => 'Cancelled', 'value' => Order::query()->where(function (Builder $query) {
+                $this->applyCancelledOrderConstraints($query);
+            })->count(), 'tone' => 'danger'],
+        ];
 
         $userManagement = [
             ['label' => 'Total Buyers', 'value' => User::query()->where('is_admin', false)->where('is_seller', false)->count(), 'tone' => 'primary'],
@@ -78,14 +94,14 @@ class AdminDashboardController extends Controller
             ['label' => 'Pending', 'value' => Product::query()->where('status', Product::STATUS_PENDING)->count(), 'tone' => 'warning'],
             ['label' => 'Approved', 'value' => Product::query()->where('status', Product::STATUS_APPROVED)->count(), 'tone' => 'success'],
             ['label' => 'Rejected', 'value' => Product::query()->where('status', Product::STATUS_REJECTED)->count(), 'tone' => 'danger'],
-            ['label' => 'Reported', 'value' => $reports->where('status', Report::STATUS_PENDING)->pluck('product_id')->filter()->unique()->count(), 'tone' => 'primary'],
+            ['label' => 'Reported', 'value' => $reportedProductsCount, 'tone' => 'primary'],
         ];
 
         $recentActivity = $this->buildRecentActivity(
             Seller::with('user')->latest('submitted_at')->take(4)->get(),
             Product::with('user')->latest()->take(4)->get(),
-            $completedOrders->sortByDesc('updated_at')->take(4)->values(),
-            $reports->whereNotNull('product_id')->take(4)->values()
+            (clone $completedOrdersQuery)->with('user')->latest('updated_at')->take(4)->get(),
+            Report::with('product:id,name')->whereNotNull('product_id')->latest()->take(4)->get()
         )->take(10)->values();
 
         $stats = [
@@ -106,6 +122,48 @@ class AdminDashboardController extends Controller
             'recentOrders' => $recentOrders,
             'recentActivity' => $recentActivity,
         ]);
+    }
+
+    protected function applyCompletedOrderConstraints(Builder $query): void
+    {
+        $query->where(function (Builder $completedQuery) {
+            $completedQuery
+                ->whereIn('shipping_status', [
+                    Order::SHIPPING_COMPLETED,
+                    Order::SHIPPING_OUT_FOR_DELIVERY,
+                    Order::SHIPPING_DELIVERED,
+                ])
+                ->orWhere(function (Builder $legacyQuery) {
+                    $legacyQuery
+                        ->whereNull('shipping_status')
+                        ->whereIn('status', [
+                            Order::STATUS_COMPLETED,
+                            Order::STATUS_DELIVERED,
+                        ]);
+                });
+        });
+    }
+
+    protected function applyCancelledOrderConstraints(Builder $query): void
+    {
+        $query->where(function (Builder $cancelledQuery) {
+            $cancelledQuery
+                ->where('shipping_status', Order::SHIPPING_CANCELLED)
+                ->orWhere(function (Builder $legacyQuery) {
+                    $legacyQuery
+                        ->whereNull('shipping_status')
+                        ->where('status', Order::STATUS_CANCELLED);
+                });
+        });
+    }
+
+    protected function applyNotCancelledOrderConstraints(Builder $query): void
+    {
+        $query->where(function (Builder $notCancelledQuery) {
+            $notCancelledQuery
+                ->whereNull('shipping_status')
+                ->where('status', '!=', Order::STATUS_CANCELLED);
+        })->orWhere('shipping_status', '!=', Order::SHIPPING_CANCELLED);
     }
 
     protected function buildRecentActivity(Collection $sellers, Collection $products, Collection $completedOrders, Collection $reports): Collection

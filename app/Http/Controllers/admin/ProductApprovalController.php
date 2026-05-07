@@ -140,7 +140,8 @@ class ProductApprovalController extends Controller
             'rejection_reason' => null,
         ]);
 
-        $sellerNotifications->productApproved($product->fresh(['user.sellerProfile']));
+        $product->loadMissing('user.sellerProfile');
+        $sellerNotifications->productApproved($product);
 
         return back()->with('success', $product->name . ' approved successfully.');
     }
@@ -163,7 +164,8 @@ class ProductApprovalController extends Controller
             'rejection_reason' => $rejectionReason,
         ]);
 
-        $sellerNotifications->productRejected($product->fresh(['user.sellerProfile']));
+        $product->loadMissing('user.sellerProfile');
+        $sellerNotifications->productRejected($product);
 
         return back()->with('success', 'Product rejected.');
     }
@@ -188,7 +190,7 @@ class ProductApprovalController extends Controller
                     'rejection_reason' => null,
                 ]);
 
-                $sellerNotifications->productApproved($product->fresh(['user.sellerProfile']));
+                $sellerNotifications->productApproved($product);
             }
 
             return back()->with('success', 'Selected products approved.');
@@ -206,7 +208,7 @@ class ProductApprovalController extends Controller
                 'rejection_reason' => $rejectionReason,
             ]);
 
-            $sellerNotifications->productRejected($product->fresh(['user.sellerProfile']));
+            $sellerNotifications->productRejected($product);
         }
 
         return back()->with('success', 'Selected products rejected.');

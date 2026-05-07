@@ -172,10 +172,13 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/reports', [AdminReportController::class, 'index'])->name('reports');
     Route::patch('/reports/{report}/action', [AdminReportController::class, 'action'])->name('reports.action');
     Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
-    Route::patch('/reports/{report}/resolve', [AdminReportController::class, 'resolve'])->name('reports.resolve');
 });
 
 Route::middleware('buyer')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'buyerEdit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'buyerUpdate'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/add/{productId}', [CartController::class, 'store'])->name('cart.add');
     Route::patch('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');

@@ -11,6 +11,7 @@ use App\Models\Review;
 use App\Models\Seller;
 use App\Models\User;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Facades\Cache;
 
 class SellerNotificationService
 {
@@ -416,8 +417,20 @@ class SellerNotificationService
         );
     }
 
-    public function syncPendingOrdersNotShipped(User $seller): void
+    public function syncPendingOrdersNotShipped(User $seller, bool $force = false): void
     {
+        if (! $seller->isSeller()) {
+            return;
+        }
+
+        $cacheKey = 'seller:pending-order-sync:' . $seller->id;
+
+        if (! $force && Cache::has($cacheKey)) {
+            return;
+        }
+
+        Cache::put($cacheKey, true, now()->addMinutes(10));
+
         Order::with(['seller.sellerProfile', 'user'])
             ->where('seller_id', $seller->id)
             ->whereIn('shipping_status', [Order::SHIPPING_PENDING, Order::SHIPPING_TO_SHIP])

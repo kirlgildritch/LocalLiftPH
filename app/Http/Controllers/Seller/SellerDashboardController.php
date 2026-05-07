@@ -216,24 +216,23 @@ class SellerDashboardController extends Controller
 
     private function buildApprovedDashboardStats(int $sellerId): array
     {
-        $approvedProductIds = Product::where('user_id', $sellerId)
+        $approvedProducts = Product::query()
+            ->where('user_id', $sellerId)
             ->where('status', Product::STATUS_APPROVED)
-            ->where('is_active', 1)
-            ->pluck('id');
+            ->where('is_active', 1);
 
-        $orderItems = OrderItem::whereIn('product_id', $approvedProductIds);
+        $productsListed = (clone $approvedProducts)->count();
+        $approvedProductIds = (clone $approvedProducts)->select('id');
+        $orderItems = OrderItem::query()->whereIn('product_id', $approvedProductIds);
 
         return [
             'total_sales' => (float) $orderItems->sum(\DB::raw('quantity * price')),
             'orders_received' => (clone $orderItems)->distinct('order_id')->count('order_id'),
-            'products_listed' => (int) $approvedProductIds->count(),
+            'products_listed' => $productsListed,
             'pending_orders' => (clone $orderItems)->whereHas('order', function ($query) {
                 $query->whereIn('status', ['pending', 'processing']);
             })->distinct('order_id')->count('order_id'),
-            'active_products' => Product::where('user_id', $sellerId)
-                ->where('status', Product::STATUS_APPROVED)
-                ->where('is_active', 1)
-                ->count(),
+            'active_products' => $productsListed,
             'open_conversations' => Conversation::where('seller_id', $sellerId)->count(),
         ];
     }

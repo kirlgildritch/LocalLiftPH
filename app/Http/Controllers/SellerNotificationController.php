@@ -15,7 +15,7 @@ class SellerNotificationController extends Controller
     public function index(Request $request, SellerNotificationService $sellerNotifications): View
     {
         $seller = auth('seller')->user();
-        $sellerNotifications->syncPendingOrdersNotShipped($seller);
+        $sellerNotifications->syncPendingOrdersNotShipped($seller, true);
         $perPage = 4;
 
         $filter = $this->normalizeFilter((string) $request->query('filter', 'all'));
@@ -36,7 +36,7 @@ class SellerNotificationController extends Controller
     public function feed(SellerNotificationService $sellerNotifications): JsonResponse
     {
         $seller = auth('seller')->user();
-        $sellerNotifications->syncPendingOrdersNotShipped($seller);
+        $sellerNotifications->syncPendingOrdersNotShipped($seller, true);
 
         $notifications = $seller->notifications()->latest()->limit(4)->get();
 

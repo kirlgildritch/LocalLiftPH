@@ -7,13 +7,39 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    protected function updateProductIdNullability(bool $nullable): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('order_items', function (Blueprint $table) use ($nullable) {
+                $column = $table->unsignedBigInteger('product_id');
+
+                if ($nullable) {
+                    $column->nullable();
+                } else {
+                    $column->nullable(false);
+                }
+
+                $column->change();
+            });
+
+            return;
+        }
+
+        DB::statement(
+            sprintf(
+                'ALTER TABLE order_items MODIFY product_id BIGINT UNSIGNED %s',
+                $nullable ? 'NULL' : 'NOT NULL'
+            )
+        );
+    }
+
     public function up(): void
     {
         Schema::table('order_items', function (Blueprint $table) {
             $table->dropForeign(['product_id']);
         });
 
-        DB::statement('ALTER TABLE order_items MODIFY product_id BIGINT UNSIGNED NULL');
+        $this->updateProductIdNullability(true);
 
         Schema::table('order_items', function (Blueprint $table) {
             $table->foreign('product_id')->references('id')->on('products')->nullOnDelete();
@@ -28,7 +54,7 @@ return new class extends Migration
             $table->dropForeign(['product_id']);
         });
 
-        DB::statement('ALTER TABLE order_items MODIFY product_id BIGINT UNSIGNED NOT NULL');
+        $this->updateProductIdNullability(false);
 
         Schema::table('order_items', function (Blueprint $table) {
             $table->foreign('product_id')->references('id')->on('products')->cascadeOnDelete();

@@ -9,7 +9,7 @@ class HomeController extends Controller
 {
     public function index()
     {
-        $featuredProducts = Product::with(['user', 'category'])
+        $featuredProducts = Product::with(['user.sellerProfile', 'category'])
             ->withRatings()
             ->visibleToBuyers()
             ->latest()

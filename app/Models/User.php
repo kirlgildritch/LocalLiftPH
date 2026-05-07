@@ -4,6 +4,7 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -72,6 +73,15 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return (bool) $this->is_admin || $this->role === 'admin';
+    }
+
+    public function scopeVisibleSellerShops(Builder $query): Builder
+    {
+        return $query
+            ->where('is_seller', true)
+            ->whereHas('sellerProfile', function (Builder $sellerQuery) {
+                $sellerQuery->visibleToBuyers();
+            });
     }
 
     public function carts(): HasMany

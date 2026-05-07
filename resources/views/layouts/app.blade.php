@@ -17,7 +17,9 @@
         <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
     @endif
     <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
-    @vite(['resources/js/app.js'])
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/js/app.js'])
+    @endif
 </head>
 
 <body data-loading-scope="explicit">

@@ -21,7 +21,7 @@ class ProductBrowseController extends Controller
         $maxPrice = $request->filled('max_price') ? (float) $request->get('max_price') : null;
         $sort = $request->get('sort', 'newest');
 
-        $productsQuery = Product::with(['user', 'category'])
+        $productsQuery = Product::with(['user.sellerProfile', 'category'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->visibleToBuyers();
@@ -79,21 +79,7 @@ class ProductBrowseController extends Controller
                 $query->visibleToBuyers();
             }
         ])
-            ->where('is_seller', 1)
-            ->whereHas('sellerProfile', function ($query) {
-                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
-                    ->whereNull('suspended_at')
-                    ->where(function ($statusQuery) {
-                        $statusQuery
-                            ->where('shop_status', \App\Models\Seller::SHOP_STATUS_OPEN)
-                            ->orWhereNull('shop_status')
-                            ->orWhere(function ($temporaryQuery) {
-                                $temporaryQuery
-                                    ->whereIn('shop_status', ['paused', \App\Models\Seller::SHOP_STATUS_TEMPORARILY_CLOSED])
-                                    ->whereDate('shop_status_until', '<', now()->toDateString());
-                            });
-                    });
-            })
+            ->visibleSellerShops()
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nestedQuery) use ($search) {
                     $nestedQuery->where('name', 'like', '%' . $search . '%')
@@ -135,21 +121,7 @@ class ProductBrowseController extends Controller
             ->pluck('name');
 
         $shops = User::query()
-            ->where('is_seller', 1)
-            ->whereHas('sellerProfile', function ($query) {
-                $query->where('application_status', \App\Models\Seller::STATUS_APPROVED)
-                    ->whereNull('suspended_at')
-                    ->where(function ($statusQuery) {
-                        $statusQuery
-                            ->where('shop_status', \App\Models\Seller::SHOP_STATUS_OPEN)
-                            ->orWhereNull('shop_status')
-                            ->orWhere(function ($temporaryQuery) {
-                                $temporaryQuery
-                                    ->whereIn('shop_status', ['paused', \App\Models\Seller::SHOP_STATUS_TEMPORARILY_CLOSED])
-                                    ->whereDate('shop_status_until', '<', now()->toDateString());
-                            });
-                    });
-            })
+            ->visibleSellerShops()
             ->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
                     ->orWhereHas('sellerProfile', function ($sellerProfileQuery) use ($search) {
@@ -201,15 +173,13 @@ class ProductBrowseController extends Controller
         abort_if(
             $product->status !== Product::STATUS_APPROVED
                 || !$product->is_active
-                || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
-                || $product->user?->sellerProfile?->suspended_at
-                || ! $product->user?->sellerProfile?->isVisibleToBuyers()
-                || ((int) $product->stock <= 0 && (bool) ($product->user?->sellerProfile?->hide_out_of_stock ?? false)),
+                || ! $product->user?->sellerProfile?->isMarketplaceVisible()
+                || ((int) $product->stock <= 0 && ! ($product->user?->sellerProfile?->showsOutOfStockProducts() ?? false)),
             404
         );
 
         $product->load([
-            'user',
+            'user.sellerProfile',
             'category',
             'reviews' => function ($query) {
                 $query->with(['user', 'media'])->latest();
@@ -231,7 +201,7 @@ class ProductBrowseController extends Controller
                 ->get();
         }
 
-        $relatedProducts = Product::with(['user', 'category'])
+        $relatedProducts = Product::with(['user.sellerProfile', 'category'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->where('id', '!=', $product->id)

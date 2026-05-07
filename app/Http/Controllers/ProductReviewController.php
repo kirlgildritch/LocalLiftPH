@@ -6,16 +6,21 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Review;
+use App\Support\ReviewUploadLimit;
 use Illuminate\Http\UploadedFile;
 use App\Notifications\SellerNotificationService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ProductReviewController extends Controller
 {
-    public function store(Request $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
+    public function store(Request $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
     {
+        $maxFiles = ReviewUploadLimit::maxFiles();
+        $maxFileKilobytes = ReviewUploadLimit::appMaxFileKilobytes();
+
         $this->normalizeFileInput($request, 'review_media');
         $this->normalizeFileInput($request, 'review_image');
         $this->normalizeFileInput($request, 'review_video');
@@ -24,12 +29,12 @@ class ProductReviewController extends Controller
             'order_item_id' => ['required', 'integer'],
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:1500'],
-            'review_media' => ['nullable', 'array', 'max:5'],
-            'review_media.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:51200'],
-            'review_image' => ['nullable', 'array', 'max:5'],
-            'review_image.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:51200'],
-            'review_video' => ['nullable', 'array', 'max:5'],
-            'review_video.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:51200'],
+            'review_media' => ['nullable', 'array', 'max:' . $maxFiles],
+            'review_media.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:' . $maxFileKilobytes],
+            'review_image' => ['nullable', 'array', 'max:' . $maxFiles],
+            'review_image.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:' . $maxFileKilobytes],
+            'review_video' => ['nullable', 'array', 'max:' . $maxFiles],
+            'review_video.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:' . $maxFileKilobytes],
         ]);
 
         $uploadedFiles = [
@@ -38,26 +43,29 @@ class ProductReviewController extends Controller
             ...$this->uploadedFiles($request, 'review_video'),
         ];
 
-        if (count($uploadedFiles) > 5) {
+        if (count($uploadedFiles) > $maxFiles) {
             return back()
-                ->withErrors(['review_image' => 'You may upload up to 5 review media files.'])
+                ->withErrors(['review_image' => "You may upload up to {$maxFiles} review media files."])
                 ->withInput();
         }
 
         $orderItem = OrderItem::with('order')
-            ->where('id', $validated['order_item_id'])
-            ->where('product_id', $product->id)
-            ->whereDoesntHave('review')
-            ->whereHas('order', function ($query) {
-                $query->where('user_id', Auth::id())
-                    ->where('shipping_status', Order::SHIPPING_COMPLETED);
-            })
+            ->whereKey($validated['order_item_id'])
+            ->tap(fn ($query) => $this->applyReviewableOrderItemConstraints($query, $product))
             ->first();
 
         if (! $orderItem) {
+            $message = 'You can only review products from your completed purchases, once per order item.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $message,
+                ], 422);
+            }
+
             return redirect()
                 ->route('products.show', $product)
-                ->with('error', 'You can only review products from your completed purchases, once per order item.');
+                ->with('error', $message);
         }
 
         $storedMedia = [];
@@ -90,7 +98,34 @@ class ProductReviewController extends Controller
             ]);
         }
 
-        $sellerNotifications->buyerLeftReview($review->fresh(['product.user.sellerProfile', 'user']));
+        $freshReview = $review->fresh(['product.user.sellerProfile', 'user', 'media']);
+
+        $sellerNotifications->buyerLeftReview($freshReview);
+
+        if ($request->expectsJson()) {
+            $productSummary = Product::query()
+                ->withAvg('reviews', 'rating')
+                ->withCount('reviews')
+                ->findOrFail($product->getKey());
+
+            $nextReviewableOrderItem = OrderItem::with('order')
+                ->tap(fn ($query) => $this->applyReviewableOrderItemConstraints($query, $product))
+                ->latest()
+                ->first();
+
+            return response()->json([
+                'message' => 'Review submitted successfully.',
+                'review_html' => view('products.partials.review-card', [
+                    'review' => $freshReview,
+                ])->render(),
+                'reviews_count' => (int) $productSummary->reviews_count,
+                'average_rating' => round((float) ($productSummary->reviews_avg_rating ?? 0), 1),
+                'remaining_reviewable_count' => OrderItem::query()
+                    ->tap(fn ($query) => $this->applyReviewableOrderItemConstraints($query, $product))
+                    ->count(),
+                'next_order_item_id' => $nextReviewableOrderItem?->id,
+            ], 201);
+        }
 
         return redirect()
             ->route('products.show', $product)
@@ -125,5 +160,15 @@ class ProductReviewController extends Controller
         if ($files instanceof UploadedFile) {
             $request->files->set($key, [$files]);
         }
+    }
+
+    private function applyReviewableOrderItemConstraints($query, Product $product): void
+    {
+        $query->where('product_id', $product->id)
+            ->whereDoesntHave('review')
+            ->whereHas('order', function ($orderQuery) {
+                $orderQuery->where('user_id', Auth::id())
+                    ->where('shipping_status', Order::SHIPPING_COMPLETED);
+            });
     }
 }

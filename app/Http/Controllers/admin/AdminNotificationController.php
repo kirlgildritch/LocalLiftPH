@@ -94,7 +94,7 @@ class AdminNotificationController extends Controller
         $admin = auth('admin')->user();
         $markedCount = $admin->unreadNotifications()->count();
 
-        $admin->unreadNotifications->markAsRead();
+        $admin->unreadNotifications()->update(['read_at' => now()]);
 
         if ($request->expectsJson()) {
             return response()->json([

@@ -195,7 +195,11 @@ public function buyerUpdate(Request $request)
 
     $user->save();
 
-    return back()->with('success', 'Profile updated successfully.');
+    $redirectRoute = $request->routeIs('profile.*')
+        ? 'profile.edit'
+        : 'buyer.profile';
+
+    return Redirect::route($redirectRoute)->with('success', 'Profile updated successfully.');
     }
 
     private function notifyAdmins(AdminActivityNotification $notification): void

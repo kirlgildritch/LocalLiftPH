@@ -51,7 +51,7 @@ class AuthenticatedSessionController extends Controller
 
         Auth::shouldUse('web');
 
-        return redirect()->route('home');
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 
     /**
