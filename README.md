@@ -1,58 +1,148 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# LocalLift PH
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+LocalLift PH is a web-based marketplace platform for local products. It provides a centralized online environment where buyers can browse and order local products, sellers can manage their shops and product listings, and administrators can monitor and moderate marketplace activities.
 
-## About Laravel
+## About the Project
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Many local sellers still rely on scattered selling channels such as personal social media pages, chat-based ordering, and manual transaction coordination. These processes can make product discovery, seller verification, communication, order monitoring, and customer trust difficult to manage.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+LocalLift PH addresses these concerns by providing a Laravel-based marketplace system where local products, seller shops, buyer transactions, and administrator moderation are handled in one organized platform.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## User Roles
 
-## Learning Laravel
+### Buyer
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Buyers can register and log in, browse products and seller shops, view product details, add items to cart, manage delivery addresses, place orders, view order history, cancel eligible orders, confirm received orders, submit product reviews, and communicate with sellers through the messaging feature.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Seller
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+Sellers can register, submit a seller application, manage shop information, add and update product listings, monitor product stock and status, view received orders, check earnings summaries, manage buyer conversations, reply to reviews, and receive notifications for important marketplace activities.
 
-## Agentic Development
+### Administrator
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Administrators can log in through the admin access flow, view the admin dashboard, review seller applications, approve or reject seller accounts, approve or reject product listings, monitor orders, review payouts, view submitted reports, manage seller review records, and receive admin notifications.
 
-```bash
-composer require laravel/boost --dev
+## Main Features
 
-php artisan boost:install
-```
+- Buyer, seller, and administrator authentication
+- Google sign-in support for supported buyer and seller accounts
+- Seller application and approval workflow
+- Product listing management
+- Product approval and moderation
+- Category-based product browsing
+- Cart and checkout process
+- Address management
+- Order history and order tracking
+- Order cancellation with cancellation reasons
+- Product reviews with optional image and video attachments
+- Seller replies to buyer reviews
+- Buyer-seller messaging
+- Real-time chat messages
+- Typing indicators
+- Read receipts
+- Seller notifications
+- Admin notifications
+- Report monitoring
+- Payout monitoring
+- Laravel Reverb support for real-time broadcasting
+- Queue worker support for background jobs
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+## Technology Stack
 
-## Contributing
+- Laravel
+- PHP
+- Blade
+- MySQL
+- Laravel migrations and models
+- Laravel authentication guards
+- Laravel events and broadcasting
+- Laravel notifications
+- Laravel queues
+- Laravel Reverb
+- Vite
+- Tailwind CSS
+- JavaScript
+- Composer
+- NPM
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Project Structure
 
-## Code of Conduct
+### `app/`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Contains the main backend logic of the system, including models, controllers, events, notifications, policies, providers, and request validation classes.
 
-## Security Vulnerabilities
+### `app/Http/Controllers`
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Handles buyer, seller, and administrator requests. Controllers process actions such as product management, checkout, order handling, seller review, product approval, reports, payouts, and notifications.
 
-## License
+### `app/Http/Requests`
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Contains custom validation classes for user-submitted forms such as product forms, seller applications, checkout forms, profile updates, and review submissions.
+
+### `app/Models`
+
+Contains database model classes used to manage records such as users, sellers, products, categories, carts, orders, order items, reviews, review media, conversations, messages, reports, and seller payouts.
+
+### `app/Events`
+
+Contains real-time event classes used for chat messages, typing indicators, read receipts, and other broadcasted system updates.
+
+### `app/Notifications`
+
+Contains notification classes used to alert buyers, sellers, and administrators about important marketplace activities.
+
+### `app/Providers`
+
+Contains service provider classes that register and prepare application services such as policies, shared view data, authentication behavior, and system-wide configuration.
+
+### `bootstrap/`
+
+Initializes the Laravel application and contains cached framework files.
+
+### `config/`
+
+Contains configuration files for the application, authentication, database, filesystems, broadcasting, queues, mail, sessions, cache, and services.
+
+### `database/`
+
+Contains migrations, factories, and seeders used to build and populate the database.
+
+### `public/`
+
+Contains files directly accessible by the browser, including `index.php`, compiled frontend assets, public images, `favicon.ico`, `robots.txt`, and the `storage` link.
+
+### `resources/`
+
+Contains Blade views, CSS source files, and JavaScript source files used for the user interface.
+
+### `routes/`
+
+Contains route definitions for web pages, authentication, buyer pages, seller pages, admin pages, and broadcasting channels.
+
+### `storage/`
+
+Contains application-generated files such as uploaded media, logs, cache files, sessions, and compiled views.
+
+### `tests/`
+
+Contains automated test files used to verify application features and system behavior.
+
+### `vendor/`
+
+Contains Composer-installed PHP dependencies, including the Laravel framework.
+
+### `node_modules/`
+
+Contains NPM-installed frontend dependencies used by Vite, Tailwind CSS, and JavaScript build tools.
+
+## Uploaded Media Storage
+
+Uploaded images and videos are not stored directly in the database. The actual files are stored in the Laravel storage directory, while the database stores only the file path.
+
+Example storage locations:
+
+```text
+storage/app/public/products
+storage/app/public/reviews/images
+storage/app/public/reviews/videos
+storage/app/public/messages
