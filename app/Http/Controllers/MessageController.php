@@ -154,9 +154,44 @@ class MessageController extends Controller
         return "conversation:{$conversation->id}:typing:{$userId}";
     }
 
-    protected function imageUploadRules(): array
+    protected function messageAttachmentRules(): array
     {
-        return ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'];
+        return ['nullable', 'file'];
+    }
+
+    protected function storeMessageAttachment(Request $request): array
+    {
+        if (! $request->hasFile('image')) {
+            return [null, null];
+        }
+
+        $file = $request->file('image');
+        $mimeType = (string) $file->getMimeType();
+        $sizeInBytes = (int) ($file->getSize() ?: 0);
+
+        if (str_starts_with($mimeType, 'video/')) {
+            if ($sizeInBytes > 50 * 1024 * 1024) {
+                throw ValidationException::withMessages([
+                    'image' => 'Videos must be 50 MB or smaller.',
+                ]);
+            }
+
+            return [$file->store('chat_videos', 'public'), 'video'];
+        }
+
+        if (str_starts_with($mimeType, 'image/')) {
+            if ($sizeInBytes > 5 * 1024 * 1024) {
+                throw ValidationException::withMessages([
+                    'image' => 'Images must be 5 MB or smaller.',
+                ]);
+            }
+
+            return [$file->store('chat_images', 'public'), 'image'];
+        }
+
+        throw ValidationException::withMessages([
+            'image' => 'You can only upload images or videos.',
+        ]);
     }
 
     protected function formatMessage(Message $message): array
@@ -169,7 +204,12 @@ class MessageController extends Controller
             'sender_label' => $isCurrentUser ? 'You' : ($message->sender->name ?? 'User'),
             'message' => (string) ($message->message ?? ''),
             'image_url' => $message->image_url,
+            'video_url' => $message->video_url,
+            'media_url' => $message->media_url,
+            'media_type' => $message->media_type,
+            'has_media' => $message->has_media,
             'has_image' => $message->has_image,
+            'has_video' => $message->has_video,
             'has_text' => $message->has_text,
             'has_product' => ! is_null($productCard),
             'product' => $productCard,
@@ -214,12 +254,16 @@ class MessageController extends Controller
             return 'Product: ' . Str::limit($latestMessage->product->name, 40);
         }
 
-        if ($latestMessage->has_image && ! $latestMessage->has_text) {
-            return 'Sent an image';
+        if ($latestMessage->has_media && ! $latestMessage->has_text) {
+            return $latestMessage->media_type === 'video'
+                ? 'Sent a video'
+                : 'Sent an image';
         }
 
-        if ($latestMessage->has_image && $latestMessage->has_text) {
-            return 'Image: ' . Str::limit($latestMessage->message, 40);
+        if ($latestMessage->has_media && $latestMessage->has_text) {
+            $mediaLabel = $latestMessage->media_type === 'video' ? 'Video' : 'Image';
+
+            return $mediaLabel . ': ' . Str::limit($latestMessage->message, 40);
         }
 
         return Str::limit($latestMessage->message ?? 'Start chatting from a product or shop page.', 52);
@@ -479,24 +523,23 @@ class MessageController extends Controller
 
         $validated = $request->validate([
             'message' => ['nullable', 'string', 'max:2000'],
-            'image' => $this->imageUploadRules(),
+            'image' => $this->messageAttachmentRules(),
         ]);
 
         if (! filled($validated['message'] ?? null) && ! $request->hasFile('image')) {
             throw ValidationException::withMessages([
-                'message' => 'Enter a message or upload an image.',
+                'message' => 'Enter a message or upload an image or video.',
             ]);
         }
 
-        $imagePath = $request->hasFile('image')
-            ? $request->file('image')->store('chat_images', 'public')
-            : null;
+        [$attachmentPath, $attachmentType] = $this->storeMessageAttachment($request);
 
         $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $this->currentUserId(),
             'message' => trim((string) ($validated['message'] ?? '')) ?: null,
-            'image_path' => $imagePath,
+            'image_path' => $attachmentType === 'image' ? $attachmentPath : null,
+            'video_path' => $attachmentType === 'video' ? $attachmentPath : null,
         ]);
 
         $message->load(['sender', 'product.user.sellerProfile']);

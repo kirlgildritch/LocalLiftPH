@@ -6,6 +6,9 @@
 @php($ownsShop = auth()->check() && (int) $user->id === (int) auth()->id())
 @php($shopCategories = $products->groupBy(fn($product) => $product->category?->name ?? 'Uncategorized'))
 @php($canReportSeller = auth('web')->check() && !$ownsShop)
+@php($shopReviewsToggleUrl = $showAllReviews
+    ? route('shops.show', $user) . '#shop-reviews'
+    : route('shops.show', array_merge(request()->query(), ['user' => $user->getRouteKey(), 'show_reviews' => 'all'])) . '#shop-reviews')
 
 <section class="shop-detail-page">
     <div class="container">
@@ -33,7 +36,9 @@
 
                 <div class="shop-hero-copy">
                     <div class="shop-hero-copy-top">
-                        <span class="section-kicker">Local Seller</span>
+                        <div class="shop-kicker-row">
+                            <span class="section-kicker">Local Seller</span>
+                        </div>
                         @if($canReportSeller)
                             @include('partials.report-modal', [
                                 'modalId' => 'report-seller-modal',
@@ -48,7 +53,10 @@
                         @endif
                     </div>
 
-                    <h1>{{ $user->sellerProfile?->store_name ?? 'My Shop' }}</h1>
+                    <div class="shop-hero-title-row">
+                        <h1>{{ $user->sellerProfile?->store_name ?? 'My Shop' }}</h1>
+                        <x-seller-trust-badge :seller="$user->sellerProfile" icon-only />
+                    </div>
 
                         @if(filled($user->sellerProfile?->store_description))
                         <p class="shop-description">
@@ -118,8 +126,8 @@
                         <i class="fa-solid fa-award"></i>
                     </div>
                     <div>
-                        <strong>Trusted Seller</strong>
-                        <span>Committed to quality products and excellent service.</span>
+                        <strong>Shop trust</strong>
+                        <span>{{ $user->sellerProfile?->hasVerifiedSellerBadge() ? 'Verified shops show a check beside their name.' : 'Committed to quality products and excellent service.' }}</span>
                     </div>
                 </div>
             </div>
@@ -134,7 +142,10 @@
                         </span>
                         <div>
                             <h2>{{ $user->name }}</h2>
-                            <p>LocalLift seller</p>
+                            <p>
+                                LocalLift seller
+                                <x-seller-trust-badge :seller="$user->sellerProfile" compact icon-only />
+                            </p>
                         </div>
                     </div>
 
@@ -182,6 +193,41 @@
             </aside>
 
             <div class="shop-main">
+                <div class="panel content-panel" id="shop-reviews">
+                    <div class="content-header content-header--split">
+                        <div>
+                            <h2>Shop Reviews</h2>
+                            <p class="shop-section-copy">Recent buyer feedback from this seller’s visible products.</p>
+                        </div>
+
+                        <div class="shop-review-summary">
+                            <strong>{{ $sellerReviewAverage > 0 ? number_format($sellerReviewAverage, 1) : '0.0' }}</strong>
+                            <span>{{ $sellerReviewCount }} review{{ $sellerReviewCount !== 1 ? 's' : '' }}</span>
+                        </div>
+                    </div>
+
+                    @if($sellerReviewCount > $initialReviewsLimit)
+                        <div class="shop-review-toggle">
+                            <a href="{{ $shopReviewsToggleUrl }}" class="action-btn secondary-btn">
+                                {{ $showAllReviews ? 'Show Fewer Reviews' : 'View All Reviews' }}
+                            </a>
+                        </div>
+                    @endif
+
+                    @if($sellerReviews->isEmpty())
+                        <div class="shop-review-empty">
+                            <h3>No reviews yet</h3>
+                            <p>This shop has not received buyer feedback yet.</p>
+                        </div>
+                    @else
+                        <div class="shop-review-list">
+                            @foreach($sellerReviews as $review)
+                                @include('shops.partials.review-card', ['review' => $review])
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
                 <div class="panel content-panel">
                     <div class="content-header" id="shop-products">
                         <div>

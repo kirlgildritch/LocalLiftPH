@@ -74,6 +74,10 @@
 
             <div class="inbox-thread-messages" data-inbox-messages>
                 @forelse($activeConversation['messages'] as $message)
+                    @php
+                        $messageMediaType = $message['media_type'] ?? (!empty($message['has_video']) ? 'video' : (!empty($message['has_image']) ? 'image' : null));
+                        $messageMediaUrl = $message['media_url'] ?? $message['video_url'] ?? $message['image_url'] ?? null;
+                    @endphp
                     <div class="inbox-message-row {{ !empty($message['is_current_user']) ? 'is-current-user' : '' }}">
                         <div class="inbox-message-bubble">
                             <strong>{{ $message['sender_label'] }}</strong>
@@ -93,8 +97,12 @@
                             @if(!empty($message['has_text']))
                                 <p>{{ $message['message'] }}</p>
                             @endif
-                            @if(!empty($message['has_image']))
-                                <img src="{{ $message['image_url'] }}" alt="Shared image" class="inbox-message-image">
+                            @if(!empty($messageMediaUrl))
+                                @if($messageMediaType === 'video')
+                                    <video src="{{ $messageMediaUrl }}" controls preload="metadata" class="inbox-message-media inbox-message-media--video"></video>
+                                @else
+                                    <img src="{{ $messageMediaUrl }}" alt="Shared image" class="inbox-message-media">
+                                @endif
                             @endif
                         </div>
                         <span class="inbox-message-meta">
@@ -115,7 +123,7 @@
             <form action="{{ $activeConversation['send_url'] }}" method="POST" enctype="multipart/form-data" class="inbox-reply-form" data-inbox-form>
                 @csrf
                 <input type="text" name="message" placeholder="Type a message..." value="{{ old('message') }}">
-                <input type="file" name="image" accept="image/*">
+                <input type="file" name="image" accept="image/*,video/*">
                 <button type="submit" class="page-action-btn">Send</button>
             </form>
         @else

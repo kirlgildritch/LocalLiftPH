@@ -8,6 +8,7 @@
 @section('content')
     @php
         $avatarClasses = ['gold', 'teal', 'rose', 'slate', 'olive'];
+        $publicMediaUrl = fn (?string $path) => \App\Support\PublicAssetUrl::for($path);
         $statusOptions = [
             '' => 'All Statuses',
             'active' => 'Active',
@@ -62,6 +63,7 @@
                             @php
                                 $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
                                 $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
+                                $shopLogoUrl = $publicMediaUrl($seller->shop_logo);
                                 $products = $seller->user?->products ?? collect();
                                 $productsCount = $products->count();
                                 $categoryCounts = $products
@@ -96,7 +98,11 @@
                                 <td>
                                     <div class="seller-cell">
                                         <div class="avatar-photo avatar-photo--{{ $avatarClass }}">
-                                            {{ strtoupper(substr($displayName, 0, 2)) }}
+                                            @if ($shopLogoUrl)
+                                                <img src="{{ $shopLogoUrl }}" alt="{{ $displayName }}">
+                                            @else
+                                                {{ strtoupper(substr($displayName, 0, 2)) }}
+                                            @endif
                                         </div>
                                         <div class="seller-cell__text">
                                             <div class="seller-name">{{ $displayName }}</div>
@@ -280,11 +286,13 @@
 
             <div class="modal-card__footer">
                 <div class="footer-actions">
-                    <button class="action-button action-button--success" type="button" data-status-submit="approved">Verify
+                    <button class="action-button action-button--success" type="button" data-status-submit="approved"
+                        id="seller-approve-button">Verify
                         Seller</button>
-                    <button class="action-button action-button--danger" type="button" data-status-submit="rejected">Reject
+                    <button class="action-button action-button--danger" type="button" data-status-submit="rejected"
+                        id="seller-reject-button">Reject
                         Seller</button>
-                    <button class="button" type="button" data-status-submit="pending">Save as Pending</button>
+                    <button class="button" type="button" data-status-submit="pending" id="seller-pending-button">Save as Pending</button>
                 </div>
             </div>
         </div>
@@ -318,7 +326,7 @@
 
 @push('scripts')
     @php
-        $sellerModalData = $sellers->getCollection()->values()->map(function ($seller, $index) use ($avatarClasses, $sellers) {
+        $sellerModalData = $sellers->getCollection()->values()->map(function ($seller, $index) use ($avatarClasses, $sellers, $publicMediaUrl) {
             $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
             $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
             $productsCount = $seller->user?->products->count() ?? 0;
@@ -344,12 +352,13 @@
                 'date' => optional($seller->submitted_at ?? $seller->created_at)->format('m/d/Y'),
                 'products' => $productsCount . ' product' . ($productsCount === 1 ? '' : 's'),
                 'valid_id_type' => $seller->valid_id_type ?: 'ID / Passport',
-                'valid_id_url' => $seller->valid_id_path ? asset('storage/' . $seller->valid_id_path) : null,
-                'business_permit_url' => $seller->business_permit_path ? asset('storage/' . $seller->business_permit_path) : null,
+                'valid_id_url' => $publicMediaUrl($seller->valid_id_path),
+                'business_permit_url' => $publicMediaUrl($seller->business_permit_path),
                 'review_notes' => $seller->review_notes,
                 'status' => $seller->application_status,
                 'update_url' => route('admin.sellers.status', $seller),
                 'avatar' => strtoupper(substr($displayName, 0, 2)),
+                'avatar_url' => $publicMediaUrl($seller->shop_logo),
                 'avatar_class' => $avatarClasses[(($sellers->firstItem() ?? 1) + $index - 1) % count($avatarClasses)],
                 'latest_request_reason' => $latestRequest?->reason,
                 'latest_request_reason_label' => $requestReasonLabel,
@@ -357,7 +366,7 @@
                 'latest_request_status' => $latestRequest?->status,
                 'latest_request_status_label' => $requestStatusLabel,
                 'latest_request_date' => optional($latestRequest?->requested_at)->format('m/d/Y h:i A'),
-                'latest_request_document_url' => $latestRequest?->response_document_path ? asset('storage/' . $latestRequest->response_document_path) : null,
+                'latest_request_document_url' => $publicMediaUrl($latestRequest?->response_document_path),
             ];
         })->values();
     @endphp
@@ -375,6 +384,9 @@
             const sellerRequestEmptyState = document.getElementById('seller-request-empty-state');
             const sellerRequestDetails = document.getElementById('seller-request-details');
             const sellerRequestCurrentStatus = document.getElementById('seller-request-current-status');
+            const sellerApproveButton = document.getElementById('seller-approve-button');
+            const sellerRejectButton = document.getElementById('seller-reject-button');
+            const sellerPendingButton = document.getElementById('seller-pending-button');
 
             const openModal = (id) => {
                 const modal = document.getElementById(id);
@@ -427,6 +439,54 @@
                 }
             };
 
+            const renderAvatar = (element, seller) => {
+                if (!element || !seller) return;
+
+                element.className = `avatar-photo avatar-photo--${seller.avatar_class}`;
+
+                if (seller.avatar_url) {
+                    element.textContent = '';
+                    const image = document.createElement('img');
+                    image.src = seller.avatar_url;
+                    image.alt = seller.name;
+                    element.replaceChildren(image);
+                    return;
+                }
+
+                element.textContent = seller.avatar;
+            };
+
+            const resetButtonState = (button) => {
+                if (!(button instanceof HTMLElement)) return;
+                window.LocalLiftActionLoading?.stop(button);
+                button.disabled = false;
+                button.classList.remove('is-static');
+            };
+
+            const syncSellerActionButtons = (seller) => {
+                resetButtonState(sellerApproveButton);
+                resetButtonState(sellerRejectButton);
+                resetButtonState(sellerPendingButton);
+
+                if (sellerApproveButton) {
+                    sellerApproveButton.textContent = seller.status === 'approved' ? 'Verified' : 'Verify Seller';
+                    sellerApproveButton.disabled = seller.status === 'approved';
+                    sellerApproveButton.classList.toggle('is-static', seller.status === 'approved');
+                }
+
+                if (sellerRejectButton) {
+                    sellerRejectButton.textContent = seller.status === 'rejected' ? 'Rejected' : 'Reject Seller';
+                    sellerRejectButton.disabled = seller.status === 'rejected';
+                    sellerRejectButton.classList.toggle('is-static', seller.status === 'rejected');
+                }
+
+                if (sellerPendingButton) {
+                    sellerPendingButton.textContent = seller.status === 'pending' ? 'Pending Review' : 'Save as Pending';
+                    sellerPendingButton.disabled = seller.status === 'pending';
+                    sellerPendingButton.classList.toggle('is-static', seller.status === 'pending');
+                }
+            };
+
             const openDocumentModal = (title, label, url) => {
                 if (!url || !documentPreviewStage || !documentOpenLink) return;
 
@@ -459,9 +519,9 @@
                     const seller = sellerMap[button.dataset.sellerView];
                     if (!seller) return;
 
+                    syncSellerActionButtons(seller);
                     const avatar = document.getElementById('seller-detail-avatar');
-                    avatar.className = `avatar-photo avatar-photo--${seller.avatar_class}`;
-                    avatar.textContent = seller.avatar;
+                    renderAvatar(avatar, seller);
 
                     document.getElementById('seller-detail-name').textContent = seller.name;
                     document.getElementById('seller-detail-handle').textContent = seller.handle;
@@ -495,18 +555,18 @@
 
                     if (seller.valid_id_url) {
                         idStatus.textContent = 'Uploaded';
-                        idLink.addEventListener('click', function handleIdClick() {
+                        idLink.onclick = function handleIdClick() {
                             openDocumentModal('Uploaded Document', seller.valid_id_type || 'ID / Passport', seller.valid_id_url);
-                        }, { once: true });
+                        };
                     } else {
                         idStatus.textContent = 'Not uploaded';
                     }
 
                     if (seller.business_permit_url) {
                         permitStatus.textContent = 'Uploaded';
-                        permitLink.addEventListener('click', function handlePermitClick() {
+                        permitLink.onclick = function handlePermitClick() {
                             openDocumentModal('Uploaded Document', 'Business License', seller.business_permit_url);
-                        }, { once: true });
+                        };
                     } else {
                         permitStatus.textContent = 'Optional / Not uploaded';
                     }
@@ -533,12 +593,10 @@
 
                     if (seller.latest_request_document_url) {
                         requestedDocumentStatus.textContent = seller.latest_request_status_label || 'Uploaded';
-                        requestedDocumentLink.addEventListener('click', function handleRequestedDocumentClick() {
+                        requestedDocumentLink.onclick = function handleRequestedDocumentClick() {
                             openDocumentModal('Requested Document', seller.latest_request_reason_label ||
                                 'Requested Document', seller.latest_request_document_url);
-                        }, {
-                            once: true
-                        });
+                        };
                     } else {
                         requestedDocumentStatus.textContent = seller.latest_request_status === 'pending' ? 'Awaiting upload' :
                             'Not uploaded';
@@ -783,6 +841,25 @@
         .seller-request-notes {
             min-height: 120px;
             line-height: 1.6;
+        }
+
+        .avatar-photo img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            border-radius: inherit;
+        }
+
+        .action-button.is-static,
+        .button.is-static,
+        .action-button:disabled.is-static,
+        .button:disabled.is-static {
+            opacity: 1;
+            cursor: default;
+            transform: none;
+            box-shadow: none;
+            filter: saturate(0.7);
         }
 
         .seller-request-note {

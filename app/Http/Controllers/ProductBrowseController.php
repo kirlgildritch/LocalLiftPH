@@ -7,6 +7,9 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
 use App\Models\Category;
+use App\Models\Review;
+use App\Models\Wishlist;
+use App\Support\LocationBrowsing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
@@ -19,9 +22,23 @@ class ProductBrowseController extends Controller
         $categorySlug = trim((string) $request->get('category'));
         $minPrice = $request->filled('min_price') ? (float) $request->get('min_price') : null;
         $maxPrice = $request->filled('max_price') ? (float) $request->get('max_price') : null;
+        $province = LocationBrowsing::normalized($request->get('province'));
+        $city = LocationBrowsing::normalized($request->get('city'));
+        $nearMe = $request->boolean('near_me');
         $sort = $request->get('sort', 'newest');
+        $defaultAddress = Auth::guard('web')->check()
+            ? Auth::user()?->addresses()->orderByDesc('is_default')->latest('id')->first()
+            : null;
 
-        $productsQuery = Product::with(['user.sellerProfile', 'category'])
+        if ($nearMe && $defaultAddress) {
+            $sort = 'nearest';
+        } elseif ($nearMe) {
+            $nearMe = false;
+        }
+
+        $productsQuery = Product::query()
+            ->select('products.*')
+            ->with(['user.sellerProfile', 'category'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->visibleToBuyers();
@@ -57,10 +74,19 @@ class ProductBrowseController extends Controller
             $productsQuery->where('price', '<=', $maxPrice);
         }
 
+        LocationBrowsing::applySellerLocationFilter($productsQuery, $province, $city);
+
+        if ($sort === 'nearest' && $defaultAddress) {
+            $productsQuery->leftJoin('sellers as seller_locations', 'seller_locations.user_id', '=', 'products.user_id');
+        }
+
         $sortedProductsQuery = match ($sort) {
             'price_asc' => $productsQuery->orderBy('price'),
             'price_desc' => $productsQuery->orderByDesc('price'),
             'oldest' => $productsQuery->oldest(),
+            'nearest' => $defaultAddress
+                ? LocationBrowsing::orderByNearest($productsQuery, 'seller_locations', $defaultAddress)->latest('products.created_at')
+                : $productsQuery->latest(),
             default => $productsQuery->latest(),
         };
 
@@ -74,12 +100,25 @@ class ProductBrowseController extends Controller
             }
         ])->orderBy('name')->get();
 
+        $locationOptions = User::query()
+            ->visibleSellerShops()
+            ->whereHas('products', fn ($query) => $query->visibleToBuyers())
+            ->whereHas('sellerProfile', fn ($query) => $query->whereNotNull('province'))
+            ->with('sellerProfile:id,user_id,province,city')
+            ->get()
+            ->pluck('sellerProfile')
+            ->filter()
+            ->groupBy('province')
+            ->map(fn ($profiles) => $profiles->pluck('city')->filter()->unique()->sort()->values())
+            ->sortKeys();
+
         $shops = User::withCount([
             'products' => function ($query) {
                 $query->visibleToBuyers();
             }
         ])
             ->visibleSellerShops()
+            ->with('sellerProfile')
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nestedQuery) use ($search) {
                     $nestedQuery->where('name', 'like', '%' . $search . '%')
@@ -89,9 +128,12 @@ class ProductBrowseController extends Controller
                         });
                 });
             })
+            ->when($province || $city, fn ($query) => LocationBrowsing::applyShopLocationFilter($query, $province, $city))
             ->latest()
             ->take(6)
             ->get();
+
+        $buyerLocation = $defaultAddress;
 
         return view('products.index', compact(
             'products',
@@ -101,7 +143,12 @@ class ProductBrowseController extends Controller
             'categorySlug',
             'minPrice',
             'maxPrice',
-            'sort'
+            'sort',
+            'province',
+            'city',
+            'nearMe',
+            'buyerLocation',
+            'locationOptions'
         ));
     }
 
@@ -168,7 +215,7 @@ class ProductBrowseController extends Controller
         return response()->json($suggestions);
     }
 
-    public function show(Product $product)
+    public function show(Request $request, Product $product)
     {
         abort_if(
             $product->status !== Product::STATUS_APPROVED
@@ -181,11 +228,22 @@ class ProductBrowseController extends Controller
         $product->load([
             'user.sellerProfile',
             'category',
-            'reviews' => function ($query) {
-                $query->with(['user', 'media'])->latest();
-            },
+            'media',
+            'variants',
         ])->loadAvg('reviews', 'rating')
             ->loadCount('reviews');
+
+        $initialReviewsLimit = 3;
+        $showAllReviews = $request->query('show_reviews') === 'all';
+
+        $reviewsQuery = Review::query()
+            ->where('product_id', $product->id)
+            ->with(['user', 'media'])
+            ->latest();
+
+        $reviews = $showAllReviews
+            ? $reviewsQuery->get()
+            : (clone $reviewsQuery)->limit($initialReviewsLimit)->get();
 
         $reviewableOrderItems = collect();
 
@@ -201,6 +259,13 @@ class ProductBrowseController extends Controller
                 ->get();
         }
 
+        $isWishlisted = Auth::guard('web')->check()
+            ? Wishlist::query()
+                ->where('user_id', Auth::id())
+                ->where('product_id', $product->id)
+                ->exists()
+            : false;
+
         $relatedProducts = Product::with(['user.sellerProfile', 'category'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
@@ -211,6 +276,14 @@ class ProductBrowseController extends Controller
             ->take(3)
             ->get();
 
-        return view('products.show', compact('product', 'relatedProducts', 'reviewableOrderItems'));
+        return view('products.show', compact(
+            'product',
+            'relatedProducts',
+            'reviewableOrderItems',
+            'reviews',
+            'showAllReviews',
+            'initialReviewsLimit',
+            'isWishlisted'
+        ));
     }
 }

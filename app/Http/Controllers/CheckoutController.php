@@ -5,16 +5,36 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Seller;
+use App\Support\DeliveryEstimate;
 use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
+    protected function ensureHasDeliveryAddress(Collection $selectedCartItemIds)
+    {
+        $hasSavedAddress = Auth::user()?->addresses()->exists() ?? false;
+
+        if ($hasSavedAddress) {
+            return null;
+        }
+
+        $checkoutReturnUrl = route('checkout.index', [
+            'selected_cart_items' => $selectedCartItemIds->all(),
+        ]);
+
+        return redirect()
+            ->route('buyer.addresses', ['return_to' => $checkoutReturnUrl])
+            ->with('error', 'Please add a delivery address before placing an order.');
+    }
+
     protected function containsOwnedProducts($cartItems): bool
     {
         return $cartItems->contains(function ($item) {
@@ -31,7 +51,8 @@ class CheckoutController extends Controller
                 || $product->status !== \App\Models\Product::STATUS_APPROVED
                 || !$product->is_active
                 || $product->user?->sellerProfile?->application_status !== \App\Models\Seller::STATUS_APPROVED
-                || (int) $product->stock < (int) $item->quantity;
+                || ($product->activeVariants->isNotEmpty() && ! $item->variant)
+                || (int) ($item->variant?->stock ?? $product->stock) < (int) $item->quantity;
         });
     }
 
@@ -41,7 +62,7 @@ class CheckoutController extends Controller
         $shippingFee = 0;
 
         foreach ($cartItems as $item) {
-            $price = (float) ($item->product->price ?? 0);
+            $price = (float) ($item->variant?->price ?? $item->product->price ?? 0);
             $itemShipping = (float) ($item->product->shipping_fee ?? 0);
             $quantity = (int) $item->quantity;
 
@@ -77,7 +98,7 @@ class CheckoutController extends Controller
             ->unique()
             ->values();
 
-        $cartQuery = Cart::with(['product.user.sellerProfile'])
+        $cartQuery = Cart::with(['product.user.sellerProfile', 'product.activeVariants', 'variant'])
             ->where('user_id', Auth::id())
             ->when($selectedCartItemIds->isNotEmpty(), function ($query) use ($selectedCartItemIds) {
                 $query->whereIn('id', $selectedCartItemIds);
@@ -106,23 +127,37 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
+        if ($addressRedirect = $this->ensureHasDeliveryAddress($selectedCartItemIds)) {
+            return $addressRedirect;
+        }
+
         $totals = $this->calculateCartTotals($cartItems);
         $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
 
         $defaultAddress = Auth::user()->addresses()
-            ->where('is_default', 1)
+            ->orderByDesc('is_default')
+            ->latest('id')
             ->first();
+
+        $deliveryEstimates = $groupedCartItems
+            ->map(fn (Collection $sellerCartItems) => DeliveryEstimate::forSellerCartItems($sellerCartItems, $defaultAddress));
+        $overallDeliveryEstimate = DeliveryEstimate::combined($deliveryEstimates);
 
         $selectedCartItemIds = $cartItems->pluck('id')->values();
 
         return view('checkout.index', [
             'cartItems' => $cartItems,
             'groupedCartItems' => $groupedCartItems,
+            'deliveryEstimates' => $deliveryEstimates,
+            'overallDeliveryEstimate' => $overallDeliveryEstimate,
             'subtotal' => $totals['subtotal'],
             'shippingFee' => $totals['shippingFee'],
             'total' => $totals['total'],
             'defaultAddress' => $defaultAddress,
+            'hasSavedAddress' => true,
             'selectedCartItemIds' => $selectedCartItemIds,
+            'paymentMethods' => Order::paymentMethods(),
+            'selectedPaymentMethod' => old('payment_method', Order::PAYMENT_METHOD_COD),
         ]);
     }
 
@@ -131,6 +166,7 @@ class CheckoutController extends Controller
         $validated = $request->validate([
             'selected_cart_items' => ['nullable', 'array'],
             'selected_cart_items.*' => ['integer'],
+            'payment_method' => ['required', Rule::in(array_keys(Order::paymentMethods()))],
         ]);
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
@@ -139,7 +175,7 @@ class CheckoutController extends Controller
             ->unique()
             ->values();
 
-        $cartItems = Cart::with('product.user.sellerProfile')
+        $cartItems = Cart::with(['product.user.sellerProfile', 'product.activeVariants', 'variant'])
             ->where('user_id', Auth::id())
             ->when($selectedCartItemIds->isNotEmpty(), function ($query) use ($selectedCartItemIds) {
                 $query->whereIn('id', $selectedCartItemIds);
@@ -167,16 +203,26 @@ class CheckoutController extends Controller
                 ->with('selected_cart_item_ids', $selectedCartItemIds->all());
         }
 
+        if ($addressRedirect = $this->ensureHasDeliveryAddress($selectedCartItemIds)) {
+            return $addressRedirect;
+        }
+
         $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
         $checkoutGroup = (string) Str::uuid();
         $createdOrders = collect();
         $stockChecks = collect();
 
         try {
-            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, &$createdOrders, &$stockChecks) {
+            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, $validated, &$createdOrders, &$stockChecks) {
                 $lockedProducts = Product::query()
-                    ->with('user.sellerProfile')
+                    ->with(['user.sellerProfile', 'activeVariants'])
                     ->whereIn('id', $cartItems->pluck('product_id')->filter()->unique()->values())
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                $lockedVariants = ProductVariant::query()
+                    ->whereIn('id', $cartItems->pluck('product_variant_id')->filter()->unique()->values())
                     ->lockForUpdate()
                     ->get()
                     ->keyBy('id');
@@ -192,20 +238,25 @@ class CheckoutController extends Controller
                         'total_price' => $totals['total'],
                         'status' => Order::STATUS_PENDING,
                         'shipping_status' => Order::SHIPPING_PENDING,
-                        'payment_method' => Order::PAYMENT_METHOD_COD,
+                        'payment_method' => $validated['payment_method'],
                         'payment_status' => Order::PAYMENT_PENDING,
                         'seller_earning_status' => Order::EARNING_PENDING,
                     ]);
 
                     foreach ($sellerCartItems as $item) {
                         $product = $lockedProducts->get($item->product_id);
+                        $variant = $item->product_variant_id
+                            ? $lockedVariants->get($item->product_variant_id)
+                            : null;
 
                         if (
                             ! $product
                             || $product->status !== Product::STATUS_APPROVED
                             || ! $product->is_active
                             || $product->user?->sellerProfile?->application_status !== Seller::STATUS_APPROVED
-                            || (int) $product->stock < (int) $item->quantity
+                            || ($product->activeVariants->isNotEmpty() && ! $variant)
+                            || ($variant && ((int) $variant->product_id !== (int) $product->id || ! $variant->is_active))
+                            || (int) ($variant?->stock ?? $product->stock) < (int) $item->quantity
                         ) {
                             throw new \RuntimeException('One or more selected products are no longer available in the requested quantity.');
                         }
@@ -214,10 +265,17 @@ class CheckoutController extends Controller
 
                         $order->items()->create([
                             'product_id' => $product->id,
+                            'product_variant_id' => $variant?->id,
+                            'variant_name' => $variant?->displayName(),
+                            'variant_options' => $variant?->option_values,
                             'quantity' => $item->quantity,
-                            'price' => $product->price,
+                            'price' => $variant?->price ?? $product->price,
                             'shipping_fee' => $product->shipping_fee ?? 0,
                         ]);
+
+                        if ($variant) {
+                            $variant->decrement('stock', (int) $item->quantity);
+                        }
 
                         $product->decrement('stock', (int) $item->quantity);
 
@@ -267,6 +325,6 @@ class CheckoutController extends Controller
 
         return redirect()
             ->route('buyer.orders.show', $primaryOrder)
-            ->with('success', 'Order placed successfully!');
+            ->with('success', 'Order placed successfully using ' . $primaryOrder->paymentMethodLabel() . '.');
     }
 }

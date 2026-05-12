@@ -26,6 +26,8 @@ class Order extends Model
     public const SHIPPING_CANCELLED = 'cancelled';
 
     public const PAYMENT_METHOD_COD = 'cod';
+    public const PAYMENT_METHOD_EWALLET = 'ewallet';
+    public const PAYMENT_METHOD_BANK_TRANSFER = 'bank_transfer';
 
     public const PAYMENT_PENDING = 'pending';
     public const PAYMENT_PAID = 'paid';
@@ -78,6 +80,11 @@ class Order extends Model
         return $this->hasOne(OrderCancellation::class);
     }
 
+    public function returnRequest()
+    {
+        return $this->hasOne(OrderReturnRequest::class);
+    }
+
     public function sellerPayout()
     {
         return $this->belongsTo(SellerPayout::class);
@@ -111,6 +118,33 @@ class Order extends Model
             self::PAYMENT_PENDING => 'Pending',
             self::PAYMENT_PAID => 'Paid',
             self::PAYMENT_CANCELLED => 'Cancelled',
+        ];
+    }
+
+    public static function paymentMethods(): array
+    {
+        return [
+            self::PAYMENT_METHOD_COD => [
+                'label' => 'Cash on Delivery',
+                'short_label' => 'COD',
+                'icon' => 'fa-money-bill-wave',
+                'description' => 'Pay in cash when your order arrives.',
+                'instructions' => 'Prepare the exact amount and pay the courier or seller when your package is delivered.',
+            ],
+            self::PAYMENT_METHOD_EWALLET => [
+                'label' => 'GCash / E-Wallet Transfer',
+                'short_label' => 'E-Wallet',
+                'icon' => 'fa-mobile-screen-button',
+                'description' => 'Use GCash or another wallet after the seller confirms payment details.',
+                'instructions' => 'Keep your wallet ready. The seller may send payment instructions before shipment or collect via QR/payment link on delivery.',
+            ],
+            self::PAYMENT_METHOD_BANK_TRANSFER => [
+                'label' => 'Bank Transfer',
+                'short_label' => 'Bank',
+                'icon' => 'fa-building-columns',
+                'description' => 'Pay through bank transfer once the seller sends their account details.',
+                'instructions' => 'Wait for the seller to confirm transfer details, then keep your proof of payment until the order is marked paid.',
+            ],
         ];
     }
 
@@ -160,10 +194,20 @@ class Order extends Model
 
     public function paymentMethodLabel(): string
     {
-        return match ($this->payment_method ?? self::PAYMENT_METHOD_COD) {
-            self::PAYMENT_METHOD_COD => 'Cash on Delivery',
-            default => strtoupper(str_replace('_', ' ', (string) $this->payment_method)),
-        };
+        return static::paymentMethods()[$this->payment_method ?? self::PAYMENT_METHOD_COD]['label']
+            ?? strtoupper(str_replace('_', ' ', (string) $this->payment_method));
+    }
+
+    public function paymentMethodShortLabel(): string
+    {
+        return static::paymentMethods()[$this->payment_method ?? self::PAYMENT_METHOD_COD]['short_label']
+            ?? $this->paymentMethodLabel();
+    }
+
+    public function paymentInstruction(): string
+    {
+        return static::paymentMethods()[$this->payment_method ?? self::PAYMENT_METHOD_COD]['instructions']
+            ?? 'Please coordinate with the seller to complete payment.';
     }
 
     public function paymentStatusLabel(): string
@@ -230,6 +274,35 @@ class Order extends Model
         return $this->shippingStatus() === self::SHIPPING_SHIPPED
             && !$this->isCancelled()
             && !$this->isCompleted();
+    }
+
+    public function returnWindowEndsAt()
+    {
+        $completedAt = $this->paid_at ?? $this->updated_at;
+
+        return $completedAt?->copy()->addDays(7);
+    }
+
+    public function isReturnWindowOpen(): bool
+    {
+        $windowEnd = $this->returnWindowEndsAt();
+
+        return $this->isCompleted()
+            && $windowEnd !== null
+            && now()->lessThanOrEqualTo($windowEnd);
+    }
+
+    public function canRequestReturnRefund(): bool
+    {
+        if (! $this->isReturnWindowOpen()) {
+            return false;
+        }
+
+        if ($this->relationLoaded('returnRequest')) {
+            return $this->returnRequest === null;
+        }
+
+        return ! $this->returnRequest()->exists();
     }
 
     public static function shippingFlow(): array

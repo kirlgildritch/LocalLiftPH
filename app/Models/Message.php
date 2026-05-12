@@ -13,6 +13,7 @@ class Message extends Model
         'product_id',
         'message',
         'image_path',
+        'video_path',
         'read_at',
     ];
 
@@ -22,7 +23,12 @@ class Message extends Model
 
     protected $appends = [
         'image_url',
+        'video_url',
+        'media_url',
+        'media_type',
         'has_image',
+        'has_video',
+        'has_media',
         'has_text',
         'is_seen',
     ];
@@ -47,9 +53,42 @@ class Message extends Model
         return $this->image_path ? asset('storage/' . $this->image_path) : null;
     }
 
+    public function getVideoUrlAttribute(): ?string
+    {
+        return $this->video_path ? asset('storage/' . $this->video_path) : null;
+    }
+
     public function getHasImageAttribute(): bool
     {
         return ! empty($this->image_path);
+    }
+
+    public function getHasVideoAttribute(): bool
+    {
+        return ! empty($this->video_path);
+    }
+
+    public function getHasMediaAttribute(): bool
+    {
+        return $this->has_image || $this->has_video;
+    }
+
+    public function getMediaUrlAttribute(): ?string
+    {
+        return $this->image_url ?: $this->video_url;
+    }
+
+    public function getMediaTypeAttribute(): ?string
+    {
+        if ($this->has_image) {
+            return 'image';
+        }
+
+        if ($this->has_video) {
+            return 'video';
+        }
+
+        return null;
     }
 
     public function getHasTextAttribute(): bool

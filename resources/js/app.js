@@ -8,9 +8,16 @@ window.Alpine = Alpine;
 window.Pusher = Pusher;
 
 const reverbKey = import.meta.env.VITE_REVERB_APP_KEY;
-const reverbHost = import.meta.env.VITE_REVERB_HOST || window.location.hostname;
+const browserHost = window.location.hostname;
+const configuredReverbHost = import.meta.env.VITE_REVERB_HOST;
+const localHostnames = new Set(['localhost', '127.0.0.1', '::1']);
+const browserUsesRemoteHost = browserHost && !localHostnames.has(browserHost);
+const configuredHostIsLocalOnly = !configuredReverbHost || localHostnames.has(configuredReverbHost);
+const reverbHost = browserUsesRemoteHost && configuredHostIsLocalOnly
+    ? browserHost
+    : (configuredReverbHost || browserHost);
 const reverbPort = Number(import.meta.env.VITE_REVERB_PORT || 8080);
-const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || 'http';
+const reverbScheme = import.meta.env.VITE_REVERB_SCHEME || window.location.protocol.replace(':', '') || 'http';
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
 if (reverbKey) {

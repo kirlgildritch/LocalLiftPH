@@ -50,6 +50,7 @@
                         $hasRateableItems = $order->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED
                             && $order->items->contains(fn($item) => $item->product && !$item->review);
                         $groupShopCount = $checkoutGroupCounts->get($order->checkoutGroupKey(), 1);
+                        $returnRequest = $order->returnRequest;
                     @endphp
                     <article class="order-card panel">
                         <div class="order-card-top">
@@ -69,14 +70,23 @@
 
                         <div class="order-items">
                             @foreach($order->items as $item)
+                                @php
+                                    $variant = $item->variant;
+                                    $orderProductImage = $variant?->image ?: ($item->product->image ?? null);
+                                    $variantLabel = $item->variant_name ?: $variant?->displayName();
+                                @endphp
                                 <div class="order-card-body">
-                                    <img src="{{ $item->product && $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}"
+                                    <img src="{{ $orderProductImage ? asset('storage/' . $orderProductImage) : asset('assets/images/default-product.png') }}"
                                         alt="{{ $item->product->name ?? 'Product' }}" class="order-product-img">
 
                                     <div class="order-product-info">
                                         <h3>{{ $item->product->name ?? 'Product no longer available' }}</h3>
+                                        @if($variantLabel)
+                                            <p>Option: {{ $variantLabel }}</p>
+                                        @endif
                                         <p>Shop: {{ $order->shopDisplayName() }}</p>
                                         <p>Date: {{ $order->created_at->format('M d, Y') }}</p>
+                                        <p>Payment: {{ $order->paymentMethodLabel() }} | {{ $order->paymentStatusLabel() }}</p>
                                         <p>Quantity: {{ $item->quantity }}</p>
 
                                         @if($order->shippingStatus() === \App\Models\Order::SHIPPING_COMPLETED && $item->product)
@@ -102,6 +112,7 @@
 
                         <div class="order-card-footer">
                             <div class="total-text">
+                                <span>{{ $order->paymentMethodShortLabel() }} | {{ $order->paymentStatusLabel() }}</span>
                                 <span>Total</span>
                                 <strong>P{{ number_format($order->total_price, 2) }}</strong>
                             </div>
@@ -124,6 +135,17 @@
                                         <button type="submit" class="order-btn primary-btn">Order Received</button>
                                     </form>
                                 @elseif(in_array($order->shippingStatus(), [\App\Models\Order::SHIPPING_COMPLETED, \App\Models\Order::SHIPPING_CANCELLED], true))
+                                    @if($returnRequest)
+                                        <span class="order-btn secondary-btn is-static">
+                                            Return: {{ $returnRequest->statusLabel() }}
+                                        </span>
+                                    @elseif($order->canRequestReturnRefund())
+                                        <button type="button" class="order-btn danger-btn open-return-request"
+                                            data-order-action="{{ route('buyer.orders.return-request', $order) }}">
+                                            Return / Refund
+                                        </button>
+                                    @endif
+
                                     @if($hasRateableItems)
                                         <a href="{{ route('buyer.orders.show', $order) }}#rate-products"
                                             class="order-btn secondary-btn">
@@ -155,6 +177,7 @@
     </section>
 
     @include('buyer.partials.cancel-order-modal')
+    @include('buyer.partials.return-request-modal')
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -200,6 +223,38 @@
             });
 
             syncOtherReason();
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('returnRequestModal');
+            const form = document.getElementById('returnRequestForm');
+
+            if (!modal || !form) {
+                return;
+            }
+
+            document.querySelectorAll('.open-return-request').forEach((button) => {
+                button.addEventListener('click', function () {
+                    form.action = this.dataset.orderAction;
+                    modal.classList.add('show');
+                    document.body.classList.add('modal-open');
+                });
+            });
+
+            modal.querySelectorAll('[data-close-return-modal]').forEach((button) => {
+                button.addEventListener('click', function () {
+                    modal.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                });
+            });
+
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    modal.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                }
+            });
         });
     </script>
 @endsection

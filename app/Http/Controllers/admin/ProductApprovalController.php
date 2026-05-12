@@ -70,6 +70,7 @@ class ProductApprovalController extends Controller
         $baseQuery = Product::with([
             'user.sellerProfile',
             'category',
+            'media',
             'user.products' => fn ($query) => $query->with('category')->latest(),
         ])
             ->withCount([

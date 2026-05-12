@@ -38,6 +38,11 @@
   padding: 24px;
 }
 
+.settings-card form {
+  display: grid;
+  gap: 16px;
+}
+
 .settings-card h3 {
   margin: 0;
 }
@@ -64,6 +69,38 @@
   border: 1px solid rgba(187, 222, 251, 0.16);
 }
 
+.seller-location-block {
+  padding: 14px 16px;
+  border: 1px solid rgba(187, 222, 251, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(66, 165, 245, 0.08), rgba(255, 255, 255, 0.025)),
+    rgba(7, 15, 27, 0.45);
+}
+
+.seller-location-block strong {
+  display: block;
+  color: #f5f9ff;
+  margin-bottom: 6px;
+}
+
+.seller-location-block p {
+  margin: 0;
+  color: #8fa7c4;
+  line-height: 1.6;
+}
+
+.settings-location-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.settings-location-grid .form-group,
+.settings-card form > .form-group {
+  margin: 0;
+}
+
 .settings-inline-date {
   max-width: 220px;
 }
@@ -76,5 +113,9 @@
   .tab-btn {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .settings-location-grid {
+    grid-template-columns: 1fr;
   }
 }

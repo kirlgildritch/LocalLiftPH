@@ -14,6 +14,23 @@
                 </div>
             </div>
 
+            @php
+                $baseProductQuery = array_filter([
+                    'search' => $search,
+                    'category' => $categorySlug,
+                    'sort' => $sort,
+                    'min_price' => $minPrice,
+                    'max_price' => $maxPrice,
+                    'province' => $province,
+                    'city' => $city,
+                    'near_me' => $nearMe ? 1 : null,
+                ], fn ($value) => filled($value));
+                $allCities = collect($locationOptions ?? collect())->flatten()->unique()->sort()->values();
+                $availableCities = filled($province)
+                    ? collect(($locationOptions ?? collect())->get($province, []))
+                    : $allCities;
+            @endphp
+
             <div class="market-layout">
                 <aside class="market-sidebar">
                     <div class="panel sidebar-panel">
@@ -22,13 +39,13 @@
                         <div class="mobile-category-dropdown">
                             <select onchange="if(this.value) window.location.href=this.value">
                                 <option
-                                    value="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                    value="{{ route('products.index', array_filter(array_merge($baseProductQuery, ['category' => null]), fn ($value) => filled($value))) }}"
                                     {{ empty($categorySlug) ? 'selected' : '' }}>
                                     All ({{ $categories->sum('products_count') }})
                                 </option>
                                 @foreach($categories as $categoryOption)
                                     <option
-                                        value="{{ route('products.index', array_filter(['search' => $search, 'category' => $categoryOption->slug, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                        value="{{ route('products.index', array_filter(array_merge($baseProductQuery, ['category' => $categoryOption->slug]), fn ($value) => filled($value))) }}"
                                         {{ $categorySlug === $categoryOption->slug ? 'selected' : '' }}>
                                         {{ $categoryOption->name }} ({{ $categoryOption->products_count }})
                                     </option>
@@ -37,13 +54,13 @@
                         </div>
 
                         <div class="filter-list">
-                            <a href="{{ route('products.index', array_filter(['search' => $search, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                            <a href="{{ route('products.index', array_filter(array_merge($baseProductQuery, ['category' => null]), fn ($value) => filled($value))) }}"
                                 class="filter-item {{ empty($categorySlug) ? 'active' : '' }}">
                                 <div class="filter-label"><span class="dot"></span> All</div>
                                 <span class="count">{{ $categories->sum('products_count') }}</span>
                             </a>
                             @foreach($categories as $categoryOption)
-                                <a href="{{ route('products.index', array_filter(['search' => $search, 'category' => $categoryOption->slug, 'sort' => $sort, 'min_price' => $minPrice, 'max_price' => $maxPrice])) }}"
+                                <a href="{{ route('products.index', array_filter(array_merge($baseProductQuery, ['category' => $categoryOption->slug]), fn ($value) => filled($value))) }}"
                                     class="filter-item {{ $categorySlug === $categoryOption->slug ? 'active' : '' }}">
                                     <div class="filter-label"><span class="dot"></span> {{ $categoryOption->name }}</div>
                                     <span class="count">{{ $categoryOption->products_count }}</span>
@@ -65,6 +82,15 @@
                         @if(!empty($categorySlug))
                             <input type="hidden" name="category" value="{{ $categorySlug }}">
                         @endif
+                        @if(!empty($province))
+                            <input type="hidden" name="province" value="{{ $province }}">
+                        @endif
+                        @if(!empty($city))
+                            <input type="hidden" name="city" value="{{ $city }}">
+                        @endif
+                        @if($nearMe)
+                            <input type="hidden" name="near_me" value="1">
+                        @endif
                         <input type="hidden" name="sort" value="{{ $sort }}">
 
                         <div class="price-filter-inputs">
@@ -75,6 +101,68 @@
                         </div>
 
                         <button class="action-btn primary-btn full-btn" type="submit">Filter</button>
+                    </form>
+
+                    <form action="{{ route('products.index') }}" method="GET" class="panel sidebar-panel location-filter-panel">
+                        <h3>Browse By Location</h3>
+                        @if(!empty($search))
+                            <input type="hidden" name="search" value="{{ $search }}">
+                        @endif
+                        @if(!empty($categorySlug))
+                            <input type="hidden" name="category" value="{{ $categorySlug }}">
+                        @endif
+                        @if($minPrice !== null)
+                            <input type="hidden" name="min_price" value="{{ $minPrice }}">
+                        @endif
+                        @if($maxPrice !== null)
+                            <input type="hidden" name="max_price" value="{{ $maxPrice }}">
+                        @endif
+                        <input type="hidden" name="sort" value="{{ $sort }}">
+
+                        <div class="location-filter-stack">
+                            <select name="province">
+                                <option value="">All provinces</option>
+                                @foreach(($locationOptions ?? collect())->keys() as $provinceOption)
+                                    <option value="{{ $provinceOption }}" {{ $province === $provinceOption ? 'selected' : '' }}>
+                                        {{ $provinceOption }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            <select name="city">
+                                <option value="">All cities / municipalities</option>
+                                @foreach($availableCities as $cityOption)
+                                    <option value="{{ $cityOption }}" {{ $city === $cityOption ? 'selected' : '' }}>
+                                        {{ $cityOption }}
+                                    </option>
+                                @endforeach
+                            </select>
+
+                            @if($buyerLocation)
+                                <label class="near-me-toggle">
+                                    <input type="checkbox" name="near_me" value="1" {{ $nearMe ? 'checked' : '' }}>
+                                    <span>Prioritize shops near my saved address</span>
+                                </label>
+                            @else
+                                <small class="location-helper">Save a buyer address to enable nearest sorting.</small>
+                            @endif
+                        </div>
+
+                        <div class="location-filter-actions">
+                            <button class="action-btn primary-btn full-btn" type="submit">Apply Location</button>
+                            @if($province || $city || $nearMe)
+                                <a class="action-btn secondary-btn full-btn"
+                                    href="{{ route('products.index', array_filter([
+                                        'search' => $search,
+                                        'category' => $categorySlug,
+                                        'sort' => $sort === 'nearest' ? 'newest' : $sort,
+                                        'min_price' => $minPrice,
+                                        'max_price' => $maxPrice,
+                                    ], fn ($value) => filled($value))) }}">
+                                    Clear Location
+                                </a>
+                            @endif
+                        </div>
                     </form>
 
                     <form action="{{ route('products.index') }}" method="GET" class="panel sidebar-panel">
@@ -91,8 +179,17 @@
                         @if($maxPrice !== null)
                             <input type="hidden" name="max_price" value="{{ $maxPrice }}">
                         @endif
+                        @if(!empty($province))
+                            <input type="hidden" name="province" value="{{ $province }}">
+                        @endif
+                        @if(!empty($city))
+                            <input type="hidden" name="city" value="{{ $city }}">
+                        @endif
                         <select name="sort" onchange="this.form.submit()">
                             <option value="newest" {{ $sort === 'newest' ? 'selected' : '' }}>Newest</option>
+                            @if($buyerLocation)
+                                <option value="nearest" {{ $sort === 'nearest' ? 'selected' : '' }}>Nearest to Me</option>
+                            @endif
                             <option value="oldest" {{ $sort === 'oldest' ? 'selected' : '' }}>Oldest</option>
                             <option value="price_asc" {{ $sort === 'price_asc' ? 'selected' : '' }}>Price Low to High</option>
                             <option value="price_desc" {{ $sort === 'price_desc' ? 'selected' : '' }}>Price High to Low
@@ -112,6 +209,25 @@
                     @if(!empty($search))
                         <div class="panel" style="padding: 10px; margin-bottom: 16px;">
                             <p>Search results for: <strong>{{ $search }}</strong></p>
+                        </div>
+                    @endif
+
+                    @if($province || $city || $nearMe)
+                        <div class="panel location-results-banner">
+                            <div>
+                                <strong>Location browsing active</strong>
+                                <p>
+                                    @if($nearMe && $buyerLocation)
+                                        Prioritizing sellers near {{ $buyerLocation->city }}, {{ $buyerLocation->province }}.
+                                    @elseif($city && $province)
+                                        Showing sellers in {{ $city }}, {{ $province }}.
+                                    @elseif($province)
+                                        Showing sellers in {{ $province }}.
+                                    @else
+                                        Showing sellers in {{ $city }}.
+                                    @endif
+                                </p>
+                            </div>
                         </div>
                     @endif
 
@@ -145,7 +261,7 @@
 
                     <div class="product-grid product-card-grid" data-skeleton-group data-skeleton-delay="420">
                         @forelse($products as $product)
-                            <x-product-card :product="$product" />
+                            <x-product-card :product="$product" :buyer-location="$buyerLocation" />
                         @empty
                             <div class="panel" style="padding: 20px;">
                                 <p>

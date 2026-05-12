@@ -9,10 +9,12 @@ use App\Http\Controllers\Admin\AdminAuthenticatedSessionController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderReturnRequestController;
 use App\Http\Controllers\ProductBrowseController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\SellerNotificationController;
 use App\Http\Controllers\Seller\ProductController;
 use App\Http\Controllers\Seller\SellerAuthenticatedSessionController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\Seller\SellerCenterEntryController;
 use App\Http\Controllers\Seller\SellerDashboardController;
 use App\Http\Controllers\Seller\SellerGoogleAuthController;
 use App\Http\Controllers\Seller\SellerOrderController;
+use App\Http\Controllers\Seller\OrderReturnRequestController as SellerOrderReturnRequestController;
 use App\Http\Controllers\Seller\SellerRegisteredUserController;
 use App\Http\Controllers\Seller\SellerSearchController;
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -108,6 +111,7 @@ Route::middleware('seller')->group(function () {
 
     Route::get('/seller-orders', [SellerOrderController::class, 'index'])->name('seller.orders');
     Route::patch('/seller-orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus'])->name('seller.orders.shipping-status');
+    Route::patch('/seller-return-requests/{returnRequest}', [SellerOrderReturnRequestController::class, 'update'])->name('seller.return-requests.update');
     Route::get('/seller-earnings', [EarningsController::class, 'index'])->name('seller.earnings');
     Route::post('/seller-payouts', [SellerPayoutController::class, 'store'])->name('seller.payouts.store');
     Route::get('/seller-search', [SellerSearchController::class, 'index'])->name('seller.search');
@@ -202,7 +206,11 @@ Route::middleware('buyer')->group(function () {
     Route::post('/my-orders/{order}/buy-again', [OrderController::class, 'buyAgain'])->name('buyer.orders.buyAgain');
     Route::patch('/my-orders/{order}/cancel', [OrderController::class, 'cancel'])->name('buyer.orders.cancel');
     Route::patch('/my-orders/{order}/received', [OrderController::class, 'confirmReceived'])->name('buyer.orders.received');
+    Route::post('/my-orders/{order}/return-request', [OrderReturnRequestController::class, 'store'])->name('buyer.orders.return-request');
     Route::post('/products/{product}/reviews', [ProductReviewController::class, 'store'])->name('products.reviews.store');
+    Route::get('/wishlist', [WishlistController::class, 'index'])->name('buyer.wishlist.index');
+    Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('buyer.wishlist.store');
+    Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->name('buyer.wishlist.destroy');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');

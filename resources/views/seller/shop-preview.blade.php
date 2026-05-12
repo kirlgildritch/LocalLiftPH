@@ -33,16 +33,16 @@
                                 <div class="shop-main-info">
                                     <h3>{{ $seller->store_name ?? 'My Shop' }}</h3>
                                     @if(filled($seller->store_description))
-                                    <p class="shop-description">
-                                        {{ $seller->store_description }}
-                                    </p>
+                                        <p class="shop-description">
+                                            {{ $seller->store_description }}
+                                        </p>
                                     @endif
 
                                     <div class="shop-meta">
                                         <span><i class="fa-solid fa-phone"></i>
                                             {{ $seller->contact_number ?? 'No contact number' }}</span>
                                         <span><i class="fa-solid fa-location-dot"></i>
-                                            {{ $seller->address ?? 'No address set' }}</span>
+                                            {{ $seller?->formattedLocation() ?: 'No address set' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -54,34 +54,7 @@
                                 <span class="product-count">{{ $products->count() }} items</span>
                             </div>
 
-                            <div class="product-preview-grid">
-                                @forelse($products as $product)
-                                    <div class="product-preview-card panel">
-                                        <div class="product-image-wrap">
-                                            @if($product->image)
-                                                <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
-                                            @else
-                                                <div class="product-image-placeholder">
-                                                    <i class="fa-solid fa-image"></i>
-                                                </div>
-                                            @endif
-                                        </div>
 
-                                        <div class="product-preview-content">
-                                            <h4>{{ $product->name }}</h4>
-                                            <p class="product-category">{{ $product->category?->name ?? 'Uncategorized' }}</p>
-                                            <div class="product-preview-bottom">
-                                                <span class="product-price">&#8369; {{ number_format($product->price, 2) }}</span>
-                                                <span class="product-stock">Stock: {{ $product->stock }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="empty-preview panel">
-                                        No products to preview yet.
-                                    </div>
-                                @endforelse
-                            </div>
                         </div>
                     </section>
                 </main>

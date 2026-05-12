@@ -593,13 +593,20 @@
   overflow-wrap: anywhere;
 }
 
-.chat-widget-image {
+.chat-widget-image,
+.chat-widget-media {
   display: block;
   width: min(100%, 230px);
   margin-top: 8px;
   border-radius: 12px;
   object-fit: cover;
+  background: #000;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+}
+
+.chat-widget-media--video {
+  max-height: 320px;
+  object-fit: contain;
 }
 
 .chat-widget-product-card {
@@ -752,11 +759,18 @@
   background: rgba(20, 31, 48, 0.88);
 }
 
-.chat-widget-preview-image {
+.chat-widget-preview-image,
+.chat-widget-preview-media {
   width: 50px;
   height: 50px;
   border-radius: 12px;
   object-fit: cover;
+  background: #000;
+  flex-shrink: 0;
+}
+
+.chat-widget-preview-media--video {
+  object-fit: contain;
 }
 
 .chat-widget-preview-copy {

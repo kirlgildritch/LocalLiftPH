@@ -250,7 +250,32 @@
             padding: 18px 20px;
         }
 
-        .seller-notification-pagination :is(nav, ul, ol) {
+        .seller-notification-pagination nav {
+            display: grid;
+            gap: 14px;
+        }
+
+        .seller-notification-pagination nav > div:first-child {
+            display: none;
+        }
+
+        .seller-notification-pagination nav > div:last-child {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .seller-notification-pagination nav > div:last-child > div:last-child > span,
+        .seller-notification-pagination nav > div:last-child > div:last-child > span > span,
+        .seller-notification-pagination nav > div:last-child > div:last-child > a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .seller-notification-pagination :is(nav, ul, ol, p) {
             margin: 0;
         }
 
@@ -259,7 +284,52 @@
             color: #e8f2ff;
         }
 
+        .seller-notification-pagination nav a,
+        .seller-notification-pagination nav span[aria-current="page"] > span,
+        .seller-notification-pagination nav span[aria-disabled="true"] > span {
+            min-width: 42px;
+            min-height: 42px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(187, 222, 251, 0.14);
+            background: rgba(255, 255, 255, 0.04);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            box-sizing: border-box;
+        }
+
+        .seller-notification-pagination nav a:hover {
+            background: rgba(66, 165, 245, 0.12);
+            border-color: rgba(66, 165, 245, 0.3);
+        }
+
+        .seller-notification-pagination nav span[aria-current="page"] > span {
+            background: linear-gradient(180deg, rgba(66, 165, 245, 0.28), rgba(66, 165, 245, 0.18));
+            border-color: rgba(66, 165, 245, 0.45);
+            color: #ffffff;
+        }
+
+        .seller-notification-pagination nav span[aria-disabled="true"] > span {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .seller-notification-pagination nav p {
+            color: #8fa7c4;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .seller-notification-pagination nav p .font-medium {
+            color: #f5f9ff;
+        }
+
         .seller-notification-pagination svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+            flex: 0 0 auto;
             fill: currentColor;
         }
 
@@ -275,6 +345,11 @@
             .seller-notification-row__actions {
                 grid-column: 1 / -1;
                 justify-content: flex-start;
+            }
+
+            .seller-notification-pagination nav > div:last-child {
+                flex-direction: column;
+                align-items: stretch;
             }
         }
     </style>

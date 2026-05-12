@@ -61,6 +61,21 @@ class Product extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    public function media(): HasMany
+    {
+        return $this->hasMany(ProductMedia::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function variants(): HasMany
+    {
+        return $this->hasMany(ProductVariant::class)->orderBy('id');
+    }
+
+    public function activeVariants(): HasMany
+    {
+        return $this->variants()->where('is_active', true);
+    }
+
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class);
@@ -90,5 +105,51 @@ class Product extends Model
     {
         return $query->withAvg('reviews', 'rating')
             ->withCount('reviews');
+    }
+
+    public function getGalleryMediaAttribute()
+    {
+        $gallery = collect();
+        $seenPaths = [];
+
+        if (filled($this->image)) {
+            $gallery->push([
+                'type' => 'image',
+                'path' => $this->image,
+                'url' => asset('storage/' . $this->image),
+                'sort_order' => 0,
+                'is_legacy' => true,
+            ]);
+
+            $seenPaths[] = $this->image;
+        }
+
+        $this->media->each(function (ProductMedia $media) use (&$gallery, &$seenPaths) {
+            if (in_array($media->path, $seenPaths, true)) {
+                return;
+            }
+
+            $seenPaths[] = $media->path;
+            $gallery->push([
+                'id' => $media->id,
+                'type' => $media->type,
+                'path' => $media->path,
+                'url' => $media->url,
+                'sort_order' => $media->sort_order,
+                'is_video' => $media->type === 'video',
+            ]);
+        });
+
+        if ($gallery->isEmpty()) {
+            $gallery->push([
+                'type' => 'image',
+                'path' => null,
+                'url' => asset('assets/images/default-product.png'),
+                'sort_order' => 0,
+                'is_fallback' => true,
+            ]);
+        }
+
+        return $gallery->values();
     }
 }

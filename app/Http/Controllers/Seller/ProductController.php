@@ -5,10 +5,13 @@ namespace App\Http\Controllers\Seller;
 use App\Models\Category;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Models\Review;
 use App\Models\User;
 use App\Notifications\AdminActivityNotification;
 use App\Notifications\SellerNotificationService;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -21,6 +24,210 @@ class ProductController extends Controller
         $billableWeight = max($weight, $volumetricWeight);
 
         return round(60 + ($billableWeight * 35), 2);
+    }
+
+    private function productMediaFiles(Request $request): array
+    {
+        $files = [];
+
+        if ($request->hasFile('image')) {
+            $legacyImage = $request->file('image');
+
+            if ($legacyImage instanceof UploadedFile) {
+                $files[] = $legacyImage;
+            }
+        }
+
+        if ($request->hasFile('media')) {
+            $mediaFiles = $request->file('media');
+
+            if ($mediaFiles instanceof UploadedFile) {
+                $mediaFiles = [$mediaFiles];
+            }
+
+            foreach ((array) $mediaFiles as $file) {
+                if ($file instanceof UploadedFile) {
+                    $files[] = $file;
+                }
+            }
+        }
+
+        return $files;
+    }
+
+    private function storeProductMedia(Product $product, array $files): ?string
+    {
+        $coverImagePath = null;
+        $startingOrder = (int) ($product->media()->max('sort_order') ?? -1) + 1;
+
+        foreach ($files as $index => $file) {
+            if (! $file instanceof UploadedFile) {
+                continue;
+            }
+
+            $mimeType = (string) $file->getMimeType();
+            $type = str_starts_with($mimeType, 'video/') ? 'video' : 'image';
+            $path = $file->store($type === 'video' ? 'products/videos' : 'products/images', 'public');
+
+            $product->media()->create([
+                'type' => $type,
+                'path' => $path,
+                'sort_order' => $startingOrder + $index,
+            ]);
+
+            if ($coverImagePath === null && $type === 'image') {
+                $coverImagePath = $path;
+            }
+        }
+
+        return $coverImagePath;
+    }
+
+    private function deleteProductFiles(Product $product): void
+    {
+        $paths = collect([$product->image])
+            ->filter()
+            ->merge($product->media->pluck('path'))
+            ->merge($product->variants->pluck('image')->filter())
+            ->unique()
+            ->values();
+
+        foreach ($paths as $path) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    private function variantValidationRules(): array
+    {
+        return [
+            'has_variants' => 'nullable|boolean',
+            'variants' => 'nullable|array|max:60',
+            'variants.*.id' => 'nullable|integer',
+            'variants.*.name' => 'nullable|string|max:120',
+            'variants.*.sku' => 'nullable|string|max:80',
+            'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.stock' => 'nullable|integer|min:0',
+            'variants.*.is_active' => 'nullable|boolean',
+            'variants.*.image' => 'nullable|image|max:51200',
+        ];
+    }
+
+    private function normalizedVariantRows(Request $request): array
+    {
+        if (! $request->boolean('has_variants')) {
+            return [];
+        }
+
+        $rows = collect($request->input('variants', []))
+            ->map(function (array $row, int $index): array {
+                return [
+                    'index' => $index,
+                    'id' => filled($row['id'] ?? null) ? (int) $row['id'] : null,
+                    'name' => trim((string) ($row['name'] ?? '')),
+                    'sku' => filled($row['sku'] ?? null) ? trim((string) $row['sku']) : null,
+                    'price' => $row['price'] ?? null,
+                    'stock' => $row['stock'] ?? null,
+                    'is_active' => (bool) ($row['is_active'] ?? true),
+                ];
+            })
+            ->filter(fn (array $row): bool => $row['name'] !== '' || filled($row['price']) || filled($row['stock']) || filled($row['sku']))
+            ->values();
+
+        if ($rows->isEmpty()) {
+            throw ValidationException::withMessages([
+                'variants' => 'Add at least one product variant, or turn variants off.',
+            ]);
+        }
+
+        $errors = [];
+
+        foreach ($rows as $row) {
+            $prefix = 'variants.' . $row['index'];
+
+            if ($row['name'] === '') {
+                $errors[$prefix . '.name'] = 'Variant name is required.';
+            }
+
+            if (! filled($row['price'])) {
+                $errors[$prefix . '.price'] = 'Variant price is required.';
+            }
+
+            if (! filled($row['stock'])) {
+                $errors[$prefix . '.stock'] = 'Variant stock is required.';
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+
+        return $rows->all();
+    }
+
+    private function syncProductVariants(Product $product, Request $request): bool
+    {
+        $rows = $this->normalizedVariantRows($request);
+
+        if ($rows === []) {
+            $product->variants()->update(['is_active' => false]);
+            return false;
+        }
+
+        $keptVariantIds = [];
+        $existingVariantIds = $product->variants()->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        foreach ($rows as $row) {
+            $imagePath = null;
+            $variantImage = $request->file('variants.' . $row['index'] . '.image');
+
+            if ($variantImage instanceof UploadedFile) {
+                $imagePath = $variantImage->store('products/variants', 'public');
+            }
+
+            $payload = [
+                'name' => $row['name'],
+                'option_values' => ['Option' => $row['name']],
+                'sku' => $row['sku'],
+                'price' => (float) $row['price'],
+                'stock' => (int) $row['stock'],
+                'is_active' => $row['is_active'],
+            ];
+
+            if ($imagePath !== null) {
+                $payload['image'] = $imagePath;
+            }
+
+            if ($row['id'] && in_array($row['id'], $existingVariantIds, true)) {
+                $variant = $product->variants()->whereKey($row['id'])->first();
+
+                if ($variant) {
+                    if ($imagePath !== null && filled($variant->image)) {
+                        Storage::disk('public')->delete($variant->image);
+                    }
+
+                    $variant->update($payload);
+                    $keptVariantIds[] = (int) $variant->id;
+                }
+            } else {
+                $variant = $product->variants()->create($payload);
+                $keptVariantIds[] = (int) $variant->id;
+            }
+        }
+
+        $product->variants()
+            ->whereNotIn('id', $keptVariantIds)
+            ->update(['is_active' => false]);
+
+        $activeVariants = $product->variants()->where('is_active', true)->get();
+
+        if ($activeVariants->isNotEmpty()) {
+            $product->update([
+                'price' => $activeVariants->min('price'),
+                'stock' => $activeVariants->sum('stock'),
+            ]);
+        }
+
+        return true;
     }
 
     public function index()
@@ -109,7 +316,7 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+        $product = Product::with(['media', 'variants'])->where('user_id', Auth::guard('seller')->id())->findOrFail($id);
         $categories = Category::orderBy('name')->get();
 
         return view('seller.products.edit', compact('product', 'categories'));
@@ -128,14 +335,10 @@ class ProductController extends Controller
             'width_cm' => 'required|numeric|min:0.01',
             'length_cm' => 'required|numeric|min:0.01',
             'height_cm' => 'required|numeric|min:0.01',
-            'image' => 'nullable|image|max:2048',
-        ]);
-
-        $imagePath = null;
-
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('products', 'public');
-        }
+            'image' => 'nullable|image|max:51200',
+            'media' => 'nullable|array|max:12',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
+        ] + $this->variantValidationRules());
 
         $shippingFee = $this->calculateShippingFee(
             (float) $request->weight,
@@ -144,7 +347,7 @@ class ProductController extends Controller
             (float) $request->height_cm
         );
 
-        Product::create([
+        $product = Product::create([
             'name' => $request->name,
             'category_id' => $request->category_id,
             'price' => $request->price,
@@ -156,11 +359,19 @@ class ProductController extends Controller
             'length_cm' => $request->length_cm,
             'height_cm' => $request->height_cm,
             'shipping_fee' => $shippingFee,
-            'image' => $imagePath,
             'user_id' => auth()->id(),
             'is_active' => 0, // hidden by default
             'status' => 'pending', // for admin approval
         ]);
+
+        $mediaFiles = $this->productMediaFiles($request);
+        $coverImagePath = $this->storeProductMedia($product, $mediaFiles);
+
+        if (! empty($coverImagePath)) {
+            $product->update(['image' => $coverImagePath]);
+        }
+
+        $this->syncProductVariants($product, $request);
 
         $this->notifyAdmins(
             new AdminActivityNotification(
@@ -205,8 +416,10 @@ class ProductController extends Controller
             'width_cm' => 'required|numeric|min:0.01',
             'length_cm' => 'required|numeric|min:0.01',
             'height_cm' => 'required|numeric|min:0.01',
-            'image' => 'nullable|image|max:2048',
-        ]);
+            'image' => 'nullable|image|max:51200',
+            'media' => 'nullable|array|max:12',
+            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
+        ] + $this->variantValidationRules());
 
         $shippingFee = $this->calculateShippingFee(
             (float) $validated['weight'],
@@ -215,15 +428,20 @@ class ProductController extends Controller
             (float) $validated['height_cm']
         );
 
-        if ($request->hasFile('image')) {
-            $newImagePath = $request->file('image')->store('products', 'public');
+        $legacyCoverUpload = $request->hasFile('image');
+        $mediaFiles = $this->productMediaFiles($request);
+        $coverImagePath = $this->storeProductMedia($product, $mediaFiles);
 
-            if (! empty($product->image)) {
+        if (! empty($coverImagePath) && ($legacyCoverUpload || empty($product->image))) {
+            if ($legacyCoverUpload && ! empty($product->image) && $product->image !== $coverImagePath) {
                 Storage::disk('public')->delete($product->image);
             }
 
-            $validated['image'] = $newImagePath;
-            $changedFields[] = 'image';
+            $validated['image'] = $coverImagePath;
+
+            if (! in_array('image', $changedFields, true)) {
+                $changedFields[] = 'image';
+            }
         }
 
         foreach ([
@@ -257,6 +475,10 @@ class ProductController extends Controller
             'shipping_fee' => $shippingFee,
             'image' => $validated['image'] ?? $product->image,
         ]);
+
+        if ($this->syncProductVariants($product, $request) && ! in_array('variants', $changedFields, true)) {
+            $changedFields[] = 'variants';
+        }
 
         $product->refresh();
 
@@ -310,9 +532,7 @@ class ProductController extends Controller
         $product->reviews()->get()->each->delete();
         $product->reports()->delete();
 
-        if (! empty($product->image)) {
-            Storage::disk('public')->delete($product->image);
-        }
+        $this->deleteProductFiles($product);
 
         $product->delete();
 

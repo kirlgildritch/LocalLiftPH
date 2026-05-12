@@ -190,7 +190,7 @@
                     $productData = [
                         'id' => $product->id,
                         'name' => $product->name,
-                        'image_url' => $product->image ? asset('storage/' . $product->image) : null,
+                        'image_url' => \App\Support\PublicAssetUrl::for($product->image),
                         'category' => $product->category->name ?? 'Uncategorized',
                         'price' => $money($product->price),
                         'stock' => (string) $product->stock,
@@ -220,8 +220,8 @@
                         'products_count' => $sellerUser->products->count(),
                         'suspension_reason' => $sellerProfile?->suspension_reason ?: 'None',
                         'valid_id_type' => $sellerProfile?->valid_id_type ?: 'ID / Passport',
-                        'valid_id_url' => $sellerProfile?->valid_id_path ? asset('storage/' . $sellerProfile->valid_id_path) : null,
-                        'business_permit_url' => $sellerProfile?->business_permit_path ? asset('storage/' . $sellerProfile->business_permit_path) : null,
+                        'valid_id_url' => \App\Support\PublicAssetUrl::for($sellerProfile?->valid_id_path),
+                        'business_permit_url' => \App\Support\PublicAssetUrl::for($sellerProfile?->business_permit_path),
                     ];
                 }
 

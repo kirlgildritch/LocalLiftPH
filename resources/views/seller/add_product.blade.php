@@ -4,6 +4,13 @@
 <link rel="stylesheet" href="{{ asset('assets/css/add_products.css') }}">
 <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
+@php
+    $variantsEnabled = old('has_variants') === '1';
+    $variantRows = collect(old('variants', [
+        ['name' => '', 'sku' => '', 'price' => old('price'), 'stock' => old('stock'), 'is_active' => 1],
+    ]))->values();
+@endphp
+
 <section class="dashboard-wrapper">
     <div class="container">
         <div class="dashboard-layout">
@@ -68,6 +75,76 @@
                                 @enderror
                             </div>
 
+                            <div class="form-group form-group-wide">
+                                <div class="variant-builder" data-variant-builder data-next-index="{{ $variantRows->count() }}">
+                                    <div class="variant-builder-head">
+                                        <div>
+                                            <label class="variant-toggle-label" for="has_variants">
+                                                <input type="checkbox" id="has_variants" name="has_variants" value="1" data-variant-toggle {{ $variantsEnabled ? 'checked' : '' }}>
+                                                <span>This product has variants</span>
+                                            </label>
+                                            <small class="product-media-note">Use variants for size, color, bundles, or any option with different price or stock.</small>
+                                        </div>
+                                        <button type="button" class="table-action secondary" data-add-variant {{ $variantsEnabled ? '' : 'hidden' }}>
+                                            Add Variant
+                                        </button>
+                                    </div>
+
+                                    @error('variants')
+                                        <small class="error-text">{{ $message }}</small>
+                                    @enderror
+
+                                    <div class="variant-list" data-variant-list {{ $variantsEnabled ? '' : 'hidden' }}>
+                                        @foreach($variantRows as $index => $variantRow)
+                                            <div class="variant-row" data-variant-row>
+                                                <div class="form-group">
+                                                    <label>Variant Name</label>
+                                                    <input type="text" name="variants[{{ $index }}][name]" value="{{ $variantRow['name'] ?? '' }}" placeholder="e.g. Small / Red">
+                                                    @error("variants.$index.name")
+                                                        <small class="error-text">{{ $message }}</small>
+                                                    @enderror
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label>SKU</label>
+                                                    <input type="text" name="variants[{{ $index }}][sku]" value="{{ $variantRow['sku'] ?? '' }}" placeholder="Optional">
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label>Price</label>
+                                                    <input type="number" name="variants[{{ $index }}][price]" value="{{ $variantRow['price'] ?? '' }}" step="0.01" min="0" placeholder="0.00">
+                                                    @error("variants.$index.price")
+                                                        <small class="error-text">{{ $message }}</small>
+                                                    @enderror
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label>Stock</label>
+                                                    <input type="number" name="variants[{{ $index }}][stock]" value="{{ $variantRow['stock'] ?? '' }}" min="0" placeholder="0">
+                                                    @error("variants.$index.stock")
+                                                        <small class="error-text">{{ $message }}</small>
+                                                    @enderror
+                                                </div>
+
+                                                <div class="form-group">
+                                                    <label>Image</label>
+                                                    <input type="file" name="variants[{{ $index }}][image]" accept="image/*">
+                                                </div>
+
+                                                <div class="variant-row-actions">
+                                                    <input type="hidden" name="variants[{{ $index }}][is_active]" value="0">
+                                                    <label class="variant-active-toggle">
+                                                        <input type="checkbox" name="variants[{{ $index }}][is_active]" value="1" {{ (bool) ($variantRow['is_active'] ?? true) ? 'checked' : '' }}>
+                                                        Active
+                                                    </label>
+                                                    <button type="button" class="table-action danger" data-remove-variant>Remove</button>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="form-group">
                                 <label for="category_id">Category</label>
                                 <select name="category_id" id="category_id">
@@ -96,12 +173,20 @@
                                 @enderror
                             </div>
 
-                            <div class="form-group">
-                                <label for="image">Product Image</label>
-                                <input type="file" id="image" name="image">
+                            <div class="form-group form-group-wide">
+                                <label for="media">Product Media</label>
+                                <input type="file" id="media" name="media[]" accept="image/*,video/*" multiple data-product-media-input>
+                                <small class="product-media-note">Upload one or more images or videos. The first image will be used as the cover image.</small>
+                                @error('media')
+                                    <small class="error-text">{{ $message }}</small>
+                                @enderror
+                                @error('media.*')
+                                    <small class="error-text">{{ $message }}</small>
+                                @enderror
                                 @error('image')
                                     <small class="error-text">{{ $message }}</small>
                                 @enderror
+                                <div class="product-media-preview" data-product-media-preview hidden></div>
                             </div>
 
                             <div class="form-group form-group-wide">
@@ -314,6 +399,152 @@
 
         updateShippingSummary();
         calculateFee();
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const mediaInput = document.querySelector('[data-product-media-input]');
+        const previewGrid = document.querySelector('[data-product-media-preview]');
+        const objectUrls = [];
+
+        if (!mediaInput || !previewGrid || !window.URL?.createObjectURL) {
+            return;
+        }
+
+        const revokeObjectUrls = () => {
+            while (objectUrls.length > 0) {
+                URL.revokeObjectURL(objectUrls.pop());
+            }
+        };
+
+        const renderPreview = () => {
+            revokeObjectUrls();
+            const files = Array.from(mediaInput.files || []);
+
+            previewGrid.innerHTML = '';
+            previewGrid.hidden = files.length === 0;
+
+            files.forEach((file) => {
+                const previewUrl = URL.createObjectURL(file);
+                objectUrls.push(previewUrl);
+
+                const card = document.createElement('div');
+                card.className = 'product-media-preview-card';
+
+                const mediaWrap = document.createElement('div');
+                mediaWrap.className = 'product-media-preview-media';
+
+                if (file.type.startsWith('video/')) {
+                    const video = document.createElement('video');
+                    video.src = previewUrl;
+                    video.controls = true;
+                    video.muted = true;
+                    video.preload = 'metadata';
+                    mediaWrap.appendChild(video);
+                } else {
+                    const image = document.createElement('img');
+                    image.src = previewUrl;
+                    image.alt = file.name;
+                    mediaWrap.appendChild(image);
+                }
+
+                const meta = document.createElement('div');
+                meta.className = 'product-media-preview-meta';
+                meta.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+
+                card.appendChild(mediaWrap);
+                card.appendChild(meta);
+                previewGrid.appendChild(card);
+            });
+        };
+
+        mediaInput.addEventListener('change', renderPreview);
+        window.addEventListener('beforeunload', revokeObjectUrls);
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const builder = document.querySelector('[data-variant-builder]');
+
+        if (!builder) {
+            return;
+        }
+
+        const toggle = builder.querySelector('[data-variant-toggle]');
+        const list = builder.querySelector('[data-variant-list]');
+        const addButton = builder.querySelector('[data-add-variant]');
+        let nextIndex = Number(builder.dataset.nextIndex || 0);
+
+        const variantTemplate = (index) => `
+            <div class="variant-row" data-variant-row>
+                <div class="form-group">
+                    <label>Variant Name</label>
+                    <input type="text" name="variants[${index}][name]" placeholder="e.g. Small / Red">
+                </div>
+                <div class="form-group">
+                    <label>SKU</label>
+                    <input type="text" name="variants[${index}][sku]" placeholder="Optional">
+                </div>
+                <div class="form-group">
+                    <label>Price</label>
+                    <input type="number" name="variants[${index}][price]" step="0.01" min="0" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" name="variants[${index}][stock]" min="0" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label>Image</label>
+                    <input type="file" name="variants[${index}][image]" accept="image/*">
+                </div>
+                <div class="variant-row-actions">
+                    <input type="hidden" name="variants[${index}][is_active]" value="0">
+                    <label class="variant-active-toggle">
+                        <input type="checkbox" name="variants[${index}][is_active]" value="1" checked>
+                        Active
+                    </label>
+                    <button type="button" class="table-action danger" data-remove-variant>Remove</button>
+                </div>
+            </div>
+        `;
+
+        const syncVisibility = () => {
+            const enabled = toggle.checked;
+            list.hidden = !enabled;
+            addButton.hidden = !enabled;
+
+            if (enabled && !list.querySelector('[data-variant-row]')) {
+                list.insertAdjacentHTML('beforeend', variantTemplate(nextIndex++));
+            }
+        };
+
+        toggle.addEventListener('change', syncVisibility);
+        addButton.addEventListener('click', function () {
+            list.insertAdjacentHTML('beforeend', variantTemplate(nextIndex++));
+        });
+
+        list.addEventListener('click', function (event) {
+            const removeButton = event.target.closest('[data-remove-variant]');
+
+            if (!removeButton) {
+                return;
+            }
+
+            const rows = list.querySelectorAll('[data-variant-row]');
+
+            if (rows.length <= 1) {
+                rows[0]?.querySelectorAll('input[type="text"], input[type="number"]').forEach((input) => {
+                    input.value = '';
+                });
+                return;
+            }
+
+            removeButton.closest('[data-variant-row]')?.remove();
+        });
+
+        syncVisibility();
     });
 </script>
 @endsection

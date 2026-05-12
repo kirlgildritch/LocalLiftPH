@@ -28,7 +28,7 @@
 }
 
 .table-panel--scroll .seller-table {
-  min-width: 980px;
+  min-width: 1180px;
 }
 
 .order-products-cell {
@@ -75,6 +75,59 @@
 
 .status-chip.cancelled {
   background: rgba(255, 99, 132, 0.14);
+  color: #ffc0cb;
+}
+
+.return-request-cell {
+  min-width: 250px;
+}
+
+.return-review-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.return-review-form textarea {
+  width: 100%;
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #f8fafc;
+  resize: vertical;
+}
+
+.return-review-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.return-evidence-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.return-evidence-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(66, 165, 245, 0.22);
+  border-radius: 999px;
+  background: rgba(66, 165, 245, 0.08);
+  color: #90caf9;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.table-action.danger {
+  border-color: rgba(255, 99, 132, 0.28);
+  background: rgba(255, 99, 132, 0.1);
   color: #ffc0cb;
 }
 

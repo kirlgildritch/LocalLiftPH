@@ -14,9 +14,16 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'product_variant_id',
+        'variant_name',
+        'variant_options',
         'quantity',
         'price',
         'shipping_fee',
+    ];
+
+    protected $casts = [
+        'variant_options' => 'array',
     ];
 
     public function order(): BelongsTo
@@ -27,6 +34,11 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
     public function review(): HasOne

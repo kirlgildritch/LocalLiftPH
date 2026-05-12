@@ -17,6 +17,7 @@
                             <th>Buyer</th>
                             <th>Seller(s)</th>
                             <th>Total</th>
+                            <th>Payment</th>
                             <th>Shipping Status</th>
                         </tr>
                     </thead>
@@ -42,11 +43,15 @@
                                 <td>{{ $order->user->name ?? 'Buyer' }}</td>
                                 <td>{{ $sellerNames->isNotEmpty() ? $sellerNames->join(', ') : 'Seller unavailable' }}</td>
                                 <td>&#8369; {{ number_format($order->total_price, 2) }}</td>
+                                <td>
+                                    {{ $order->paymentMethodShortLabel() }}
+                                    <span class="sub-line">{{ $order->paymentStatusLabel() }}</span>
+                                </td>
                                 <td><span class="status-pill status-pill--{{ $statusClass }}">{{ $order->shippingStatusLabel() }}</span></td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="empty-text">No orders found.</td>
+                                <td colspan="7" class="empty-text">No orders found.</td>
                             </tr>
                         @endforelse
                     </tbody>

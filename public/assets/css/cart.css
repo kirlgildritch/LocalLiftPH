@@ -309,6 +309,22 @@ input[type="checkbox"] {
   letter-spacing: -0.04em;
 }
 
+.cart-checkout-warning {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 193, 7, 0.24);
+  border-radius: 18px;
+  background: rgba(255, 193, 7, 0.08);
+  color: #ffe29a;
+}
+
+.cart-checkout-warning strong {
+  color: #fff1c2;
+  line-height: 1.6;
+}
+
 .primary-btn {
   background: linear-gradient(135deg, var(--secondary), var(--primary));
   color: var(--white);
@@ -320,6 +336,12 @@ input[type="checkbox"] {
   min-height: 50px;
   font-size: 1rem;
   font-weight: 700;
+}
+
+.full-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .section-kicker {

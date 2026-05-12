@@ -420,12 +420,18 @@
             overflow-wrap: anywhere;
         }
 
-        .inbox-message-image {
+        .inbox-message-media {
             display: block;
             width: min(100%, 240px);
             margin-top: 10px;
             border-radius: 12px;
             object-fit: cover;
+            background: #000;
+            max-height: 320px;
+        }
+
+        .inbox-message-media--video {
+            object-fit: contain;
         }
 
         .inbox-product-card {
@@ -642,6 +648,29 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
 
+            const getMessageMediaType = (message) => message.media_type
+                || (message.has_video ? 'video' : message.has_image ? 'image' : null);
+
+            const getMessageMediaUrl = (message) => message.media_url
+                || message.video_url
+                || message.image_url
+                || '';
+
+            const renderMessageMedia = (message, className) => {
+                const mediaType = getMessageMediaType(message);
+                const mediaUrl = getMessageMediaUrl(message);
+
+                if (!mediaType || !mediaUrl) {
+                    return '';
+                }
+
+                if (mediaType === 'video') {
+                    return `<video src="${escapeHtml(mediaUrl)}" controls preload="metadata" class="${className} ${className}--video"></video>`;
+                }
+
+                return `<img src="${escapeHtml(mediaUrl)}" alt="Shared image" class="${className}">`;
+            };
+
             const renderProductCard = (message) => {
                 if (!message?.has_product || !message?.product) {
                     return '';
@@ -748,12 +777,16 @@
                     return `Product: ${String(message.product.name).slice(0, 40)}`;
                 }
 
-                if (message.has_image && !message.has_text) {
-                    return 'Sent an image';
+                const mediaType = message.media_type || (message.has_video ? 'video' : message.has_image ? 'image' : null);
+
+                if (mediaType && !message.has_text) {
+                    return mediaType === 'video' ? 'Sent a video' : 'Sent an image';
                 }
 
-                if (message.has_image && message.has_text) {
-                    return `Image: ${String(message.message || '').slice(0, 40)}`;
+                if (mediaType && message.has_text) {
+                    const mediaLabel = mediaType === 'video' ? 'Video' : 'Image';
+
+                    return `${mediaLabel}: ${String(message.message || '').slice(0, 40)}`;
                 }
 
                 return String(message.message || 'Start chatting from a product or shop page.').slice(0, 52);
@@ -778,23 +811,33 @@
                 ];
             };
 
-            const createOptimisticMessage = ({ clientMessageId, text, file }) => ({
-                id: `temp-${clientMessageId}`,
-                client_message_id: clientMessageId,
-                sender_label: 'You',
-                message: text,
-                image_url: file ? URL.createObjectURL(file) : null,
-                has_image: Boolean(file),
-                has_text: Boolean(text),
-                has_product: false,
-                product: null,
-                time: 'Sending...',
-                is_current_user: true,
-                is_seen: false,
-                status_label: 'Sending...',
-                is_pending: true,
-                is_failed: false,
-            });
+            const createOptimisticMessage = ({ clientMessageId, text, file }) => {
+                const mediaType = file ? (file.type.startsWith('video/') ? 'video' : 'image') : null;
+                const mediaUrl = file ? URL.createObjectURL(file) : null;
+
+                return {
+                    id: `temp-${clientMessageId}`,
+                    client_message_id: clientMessageId,
+                    sender_label: 'You',
+                    message: text,
+                    media_type: mediaType,
+                    media_url: mediaUrl,
+                    image_url: mediaType === 'image' ? mediaUrl : null,
+                    video_url: mediaType === 'video' ? mediaUrl : null,
+                    has_image: mediaType === 'image',
+                    has_video: mediaType === 'video',
+                    has_media: Boolean(file),
+                    has_text: Boolean(text),
+                    has_product: false,
+                    product: null,
+                    time: 'Sending...',
+                    is_current_user: true,
+                    is_seen: false,
+                    status_label: 'Sending...',
+                    is_pending: true,
+                    is_failed: false,
+                };
+            };
 
             const appendOptimisticMessage = (message) => {
                 if (!activeConversation()) {
@@ -1085,7 +1128,7 @@
                                         <strong>${escapeHtml(message.sender_label)}</strong>
                                         ${renderProductCard(message)}
                                         ${message.has_text ? `<p>${escapeHtml(message.message)}</p>` : ''}
-                                        ${message.has_image ? `<img src="${escapeHtml(message.image_url)}" alt="Shared image" class="inbox-message-image">` : ''}
+                                        ${renderMessageMedia(message, 'inbox-message-media')}
                                     </div>
                                     <span class="inbox-message-meta">
                                         ${escapeHtml(message.time)}
@@ -1112,7 +1155,7 @@
                     <form action="${escapeHtml(activeConversation.send_url)}" method="POST" enctype="multipart/form-data" class="inbox-reply-form" data-inbox-form>
                         <input type="hidden" name="_token" value="${escapeHtml(csrfToken)}">
                         <input type="text" name="message" placeholder="Type a message..." value="">
-                        <input type="file" name="image" accept="image/*">
+                        <input type="file" name="image" accept="image/*,video/*">
                         <button type="submit" class="page-action-btn">Send</button>
                     </form>
                 `;

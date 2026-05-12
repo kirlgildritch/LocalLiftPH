@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Notifications\SellerNotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class SellerOrderController extends Controller
@@ -17,7 +20,7 @@ class SellerOrderController extends Controller
     {
         $seller = Auth::guard('seller')->user();
 
-        $orders = Order::with(['user', 'seller.sellerProfile', 'items.product'])
+        $orders = Order::with(['user', 'seller.sellerProfile', 'items.product', 'items.variant', 'returnRequest.media'])
             ->where('seller_id', $seller->id)
             ->latest()
             ->paginate(10)
@@ -28,7 +31,7 @@ class SellerOrderController extends Controller
 
     public function updateShippingStatus(Request $request, Order $order, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        $order->loadMissing(['items.product', 'user']);
+        $order->loadMissing(['items.product', 'items.variant', 'user']);
 
         $this->authorize('updateShippingStatus', $order);
 
@@ -62,7 +65,43 @@ class SellerOrderController extends Controller
             $updates['seller_earning_status'] = Order::EARNING_REVERSED;
         }
 
-        $order->update($updates);
+        if ($shippingStatus === Order::SHIPPING_CANCELLED) {
+            DB::transaction(function () use ($order, $updates): void {
+                $restockByVariant = $order->items
+                    ->filter(fn ($item) => filled($item->product_variant_id))
+                    ->groupBy('product_variant_id')
+                    ->map(fn ($items) => (int) $items->sum('quantity'));
+
+                if ($restockByVariant->isNotEmpty()) {
+                    ProductVariant::query()
+                        ->whereIn('id', $restockByVariant->keys())
+                        ->lockForUpdate()
+                        ->get()
+                        ->each(function (ProductVariant $variant) use ($restockByVariant): void {
+                            $variant->increment('stock', (int) ($restockByVariant[$variant->id] ?? 0));
+                        });
+                }
+
+                $restockByProduct = $order->items
+                    ->filter(fn ($item) => filled($item->product_id))
+                    ->groupBy('product_id')
+                    ->map(fn ($items) => (int) $items->sum('quantity'));
+
+                if ($restockByProduct->isNotEmpty()) {
+                    Product::query()
+                        ->whereIn('id', $restockByProduct->keys())
+                        ->lockForUpdate()
+                        ->get()
+                        ->each(function (Product $product) use ($restockByProduct): void {
+                            $product->increment('stock', (int) ($restockByProduct[$product->id] ?? 0));
+                        });
+                }
+
+                $order->update($updates);
+            });
+        } else {
+            $order->update($updates);
+        }
 
         if ($shippingStatus === Order::SHIPPING_COMPLETED) {
             $sellerNotifications->orderCompleted($order->fresh(['seller.sellerProfile', 'user']));

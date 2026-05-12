@@ -54,7 +54,11 @@
 
                     @forelse($cartItems as $item)
                         @php
-                            $subtotal = $item->product->price * $item->quantity;
+                            $variant = $item->variant;
+                            $unitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                            $availableStock = max(0, (int) ($variant?->stock ?? $item->product->stock ?? 0));
+                            $productImage = $variant?->image ?: $item->product->image;
+                            $subtotal = $unitPrice * $item->quantity;
                             $shipping = ($item->product->shipping_fee ?? 0) * $item->quantity;
                             $total += $subtotal;
                             $isChecked = (int) $selectedCartItemId === (int) $item->id
@@ -68,10 +72,10 @@
                         <article
                             class="cart-item"
                             data-cart-item-id="{{ $item->id }}"
-                            data-max-stock="{{ max(0, (int) ($item->product->stock ?? 0)) }}"
+                            data-max-stock="{{ $availableStock }}"
                             data-subtotal="{{ $subtotal }}"
                             data-shipping="{{ $shipping }}"
-                            data-unit-price="{{ (float) $item->product->price }}"
+                            data-unit-price="{{ $unitPrice }}"
                             data-unit-shipping="{{ (float) ($item->product->shipping_fee ?? 0) }}"
                         >
                             <div class="item-select">
@@ -85,16 +89,19 @@
 
                             <div class="item-product">
                                 <div class="product-image">
-                                    <img src="{{ $item->product->image ? asset('storage/' . $item->product->image) : asset('assets/images/default-product.png') }}" alt="{{ $item->product->name }}">
+                                    <img src="{{ $productImage ? asset('storage/' . $productImage) : asset('assets/images/default-product.png') }}" alt="{{ $item->product->name }}">
                                 </div>
 
                                 <div class="product-copy">
                                     <h3>{{ $item->product->name }}</h3>
+                                    @if($variant)
+                                        <p>Option: {{ $variant->displayName() }}</p>
+                                    @endif
                                     <p>{{ $item->product->user?->sellerProfile?->store_name ?? 'LocalLift Shop' }}</p>
                                 </div>
                             </div>
 
-                            <div class="item-price">&#8369; {{ number_format($item->product->price, 2) }}</div>
+                            <div class="item-price">&#8369; {{ number_format($unitPrice, 2) }}</div>
 
                             <div class="item-quantity">
                                 <div class="qty-box">
@@ -159,9 +166,26 @@
                         <strong id="cart-summary-total">&#8369; {{ number_format($selectedSubtotal + $selectedShipping, 2) }}</strong>
                     </div>
 
+                    @unless($hasSavedAddress ?? false)
+                        <div class="cart-checkout-warning" role="alert">
+                            <strong>Please add a delivery address before placing an order.</strong>
+                            <a href="{{ route('buyer.addresses', ['return_to' => route('cart.index')]) }}" class="action-btn secondary-btn full-btn">
+                                Add Delivery Address
+                            </a>
+                        </div>
+                    @endunless
+
                     <form action="{{ route('checkout.index') }}" method="GET" id="cart-checkout-form" data-enable-loading>
                         <div id="selected-cart-items-inputs"></div>
-                        <button type="submit" class="action-btn primary-btn full-btn" data-enable-loading data-loading-text="Loading Checkout...">Checkout</button>
+                        <button
+                            type="submit"
+                            class="action-btn primary-btn full-btn"
+                            data-enable-loading
+                            data-loading-text="Loading Checkout..."
+                            {{ ($hasSavedAddress ?? false) ? '' : 'disabled' }}
+                        >
+                            Checkout
+                        </button>
                     </form>
                 </div>
             </aside>

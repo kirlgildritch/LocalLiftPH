@@ -106,7 +106,7 @@ class AddressController extends Controller
             ->with('address_success', 'Address updated successfully.');
     }
 
-    public function destroy(Address $address)
+    public function destroy(Request $request, Address $address)
     {
         $address = $this->ownedAddressOrFail($address);
         $wasDefault = $address->is_default;
@@ -126,7 +126,7 @@ class AddressController extends Controller
             ->with('address_success', 'Address deleted successfully.');
     }
 
-    public function setDefault(Address $address)
+    public function setDefault(Request $request, Address $address)
     {
         $address = $this->ownedAddressOrFail($address);
 

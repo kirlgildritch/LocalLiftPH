@@ -35,13 +35,15 @@
         };
 
         $money = fn ($value) => 'PHP ' . number_format((float) $value, 2);
+        $publicMediaUrl = fn (?string $path) => \App\Support\PublicAssetUrl::for($path);
 
         $productModalData = $products
             ->map(function ($product) use ($statusBadge, $sellerStatusBadge, $money) {
                 $seller = $product->user;
                 $sellerProfile = $seller?->sellerProfile;
                 $status = $statusBadge($product);
-                $imageUrl = $product->image ? asset('storage/' . $product->image) : null;
+                $imageUrl = \App\Support\PublicAssetUrl::for($product->image);
+                $mediaItems = ($product->gallery_media ?? collect())->values()->all();
                 $sellerDisplay = $seller?->name ?? 'Seller';
                 $shopName = $sellerProfile?->store_name ?: 'No shop name';
                 $condition = $product->condition ? ucfirst((string) $product->condition) : 'Not set';
@@ -61,7 +63,7 @@
                         return [
                             'id' => $sellerProduct->id,
                             'name' => $sellerProduct->name,
-                            'image_url' => $sellerProduct->image ? asset('storage/' . $sellerProduct->image) : null,
+                            'image_url' => \App\Support\PublicAssetUrl::for($sellerProduct->image),
                             'category' => $sellerProduct->category->name ?? 'Uncategorized',
                             'price' => $money($sellerProduct->price),
                             'stock' => (string) $sellerProduct->stock,
@@ -91,6 +93,7 @@
                     'status_class' => $status['class'],
                     'submitted_at' => optional($product->created_at)->format('M d, Y h:i A') ?: 'Unknown',
                     'image_url' => $imageUrl,
+                    'media_items' => $mediaItems,
                     'pending_reports_count' => (int) $product->pending_reports_count,
                     'rejection_reason' => $product->rejection_reason ?: 'None',
                     'approve_url' => route('admin.products.approve', $product),
@@ -98,6 +101,7 @@
                     'can_approve' => ! ($product->status === \App\Models\Product::STATUS_APPROVED && $product->is_active),
                     'can_reject' => $product->status !== \App\Models\Product::STATUS_REJECTED,
                     'avatar' => strtoupper(substr($sellerDisplay, 0, 2)),
+                    'seller_avatar_url' => \App\Support\PublicAssetUrl::for($sellerProfile?->shop_logo),
                     'seller_status_label' => ucfirst($sellerProfile?->application_status ?? 'pending'),
                     'seller_status_class' => $sellerStatusBadge($sellerProfile?->application_status),
                     'seller_email' => $sellerProfile?->email ?: $seller?->email ?: 'N/A',
@@ -109,8 +113,8 @@
                     'seller_verification_status' => ucfirst($sellerProfile?->application_status ?? 'pending'),
                     'seller_submitted_at' => optional($sellerProfile?->submitted_at ?? $sellerProfile?->created_at)->format('M d, Y h:i A') ?: 'Unknown',
                     'seller_id_type' => $sellerProfile?->valid_id_type ?: 'Government Issued ID',
-                    'seller_id_url' => $sellerProfile?->valid_id_path ? asset('storage/' . $sellerProfile->valid_id_path) : null,
-                    'seller_permit_url' => $sellerProfile?->business_permit_path ? asset('storage/' . $sellerProfile->business_permit_path) : null,
+                    'seller_id_url' => \App\Support\PublicAssetUrl::for($sellerProfile?->valid_id_path),
+                    'seller_permit_url' => \App\Support\PublicAssetUrl::for($sellerProfile?->business_permit_path),
                     'seller_products' => $sellerProducts,
                 ];
             })
@@ -230,7 +234,7 @@
                                 $sellerDisplay = $seller?->name ?? 'Seller';
                                 $shopName = $sellerProfile?->store_name ?: 'No shop name';
                                 $status = $statusBadge($product);
-                                $imageUrl = $product->image ? asset('storage/' . $product->image) : null;
+                                $imageUrl = $publicMediaUrl($product->image);
                                 $canApprove = ! ($product->status === \App\Models\Product::STATUS_APPROVED && $product->is_active);
                                 $canReject = $product->status !== \App\Models\Product::STATUS_REJECTED;
                             @endphp
@@ -332,11 +336,18 @@
             <div class="modal-card__body">
                 <div class="product-modal-grid">
                     <div class="product-gallery">
-                        <button class="hero-thumb product-image-button hero-thumb--earrings" id="product-modal-hero-button"
-                            type="button">
-                            <img id="product-modal-hero-image" alt="">
-                            <span class="product-image-fallback" id="product-modal-hero-fallback"></span>
-                        </button>
+                        <div class="admin-product-gallery" id="product-modal-gallery">
+                            <button class="admin-product-gallery__arrow admin-product-gallery__arrow--prev" id="product-modal-prev"
+                                type="button" aria-label="Previous media">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </button>
+                            <div class="admin-product-gallery__stage" id="product-modal-stage"></div>
+                            <button class="admin-product-gallery__arrow admin-product-gallery__arrow--next" id="product-modal-next"
+                                type="button" aria-label="Next media">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </button>
+                            <div class="admin-product-gallery__counter" id="product-modal-counter">1 / 1</div>
+                        </div>
                         <div class="thumb-strip" id="product-modal-thumbs"></div>
                     </div>
                     <div>
@@ -395,7 +406,7 @@
                     <form method="POST" id="product-modal-approve-form">
                         @csrf
                         @method('PATCH')
-                        <button class="action-button action-button--success" type="submit">Approve</button>
+                        <button class="action-button action-button--success" type="submit" id="product-modal-approve-button">Approve</button>
                     </form>
                 </div>
             </div>
@@ -650,7 +661,6 @@
         }
 
         .product-thumb-button,
-        .product-image-button,
         .thumb-image-button {
             border: 0;
             padding: 0;
@@ -672,8 +682,8 @@
         }
 
         .product-thumb-button img,
-        .product-image-button img,
         .thumb-image-button img,
+        .thumb-image-button video,
         .image-preview-shell img {
             width: 100%;
             height: 100%;
@@ -688,16 +698,154 @@
             overflow: hidden;
             border: 1px solid var(--border);
             background: linear-gradient(135deg, #eef3fb, #f8faff);
+            position: relative;
+            flex: 0 0 auto;
         }
 
-        .hero-thumb {
-            display: grid;
-            place-items: center;
+        .thumb-image-button.is-active {
+            border-color: #2f80ed;
+            box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.14);
+        }
+
+        .thumb-strip {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.9rem;
+            overflow-x: auto;
+            padding-bottom: 0.2rem;
+        }
+
+        .admin-product-gallery {
+            position: relative;
+            min-height: 24rem;
+            border-radius: 22px;
+            overflow: hidden;
+            border: 1px solid var(--border);
             background: linear-gradient(135deg, #eef3fb, #f8faff);
         }
 
-        .hero-thumb::before {
-            content: none;
+        .admin-product-gallery__stage {
+            position: relative;
+            min-height: 24rem;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%),
+                linear-gradient(135deg, #eef3fb, #dfe9f8);
+        }
+
+        .admin-product-gallery__stage::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 24%),
+                linear-gradient(90deg, rgba(12, 21, 39, 0.12), transparent 26%, transparent 74%, rgba(12, 21, 39, 0.12));
+            pointer-events: none;
+        }
+
+        .admin-product-gallery__slide {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            padding: 1rem;
+        }
+
+        .admin-product-gallery__media,
+        .admin-product-gallery__slide img,
+        .admin-product-gallery__slide video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+            border-radius: 18px;
+            background: #0c1527;
+        }
+
+        .admin-product-gallery__arrow {
+            position: absolute;
+            top: 50%;
+            z-index: 3;
+            width: 2.8rem;
+            height: 2.8rem;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 999px;
+            background: rgba(12, 21, 39, 0.62);
+            color: #fff;
+            transform: translateY(-50%);
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+        }
+
+        .admin-product-gallery__arrow:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .admin-product-gallery__arrow--prev {
+            left: 1rem;
+        }
+
+        .admin-product-gallery__arrow--next {
+            right: 1rem;
+        }
+
+        .admin-product-gallery__counter {
+            position: absolute;
+            left: 1rem;
+            bottom: 1rem;
+            z-index: 3;
+            min-height: 2rem;
+            padding: 0 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            background: rgba(12, 21, 39, 0.68);
+            color: #f5f8ff;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .admin-product-gallery__video {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .admin-product-gallery__video.is-playing .admin-product-gallery__play {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .admin-product-gallery__play {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            z-index: 4;
+            width: 4.25rem;
+            height: 4.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 999px;
+            background: rgba(12, 21, 39, 0.68);
+            color: #fff;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            box-shadow: 0 18px 36px rgba(0, 0, 0, 0.2);
+        }
+
+        .thumb-image-button__badge {
+            position: absolute;
+            right: 0.45rem;
+            bottom: 0.45rem;
+            width: 1.8rem;
+            height: 1.8rem;
+            border-radius: 999px;
+            background: rgba(12, 21, 39, 0.74);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            pointer-events: none;
         }
 
         .product-image-fallback {
@@ -778,6 +926,32 @@
 
         .image-preview-shell img {
             max-height: 70vh;
+        }
+
+        .avatar-circle img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            border-radius: inherit;
+        }
+
+        .action-button.is-static,
+        .button.is-static,
+        .action-button:disabled.is-static,
+        .button:disabled.is-static {
+            opacity: 1;
+            cursor: default;
+            transform: none;
+            box-shadow: none;
+            filter: saturate(0.7);
+        }
+
+        @media (max-width: 860px) {
+            .admin-product-gallery,
+            .admin-product-gallery__stage {
+                min-height: 18rem;
+            }
         }
 
         .seller-products-list {
@@ -943,10 +1117,13 @@
             const rejectModalProductIds = document.getElementById('reject-modal-product-ids');
             const rejectModalTitle = document.getElementById('reject-modal-title');
             const productModalApproveForm = document.getElementById('product-modal-approve-form');
+            const productModalApproveButton = document.getElementById('product-modal-approve-button');
             const productModalRejectButton = document.getElementById('product-modal-reject-button');
-            const productModalHeroButton = document.getElementById('product-modal-hero-button');
-            const productModalHeroImage = document.getElementById('product-modal-hero-image');
-            const productModalHeroFallback = document.getElementById('product-modal-hero-fallback');
+            const productModalStage = document.getElementById('product-modal-stage');
+            const productModalThumbs = document.getElementById('product-modal-thumbs');
+            const productModalCounter = document.getElementById('product-modal-counter');
+            const productModalPrev = document.getElementById('product-modal-prev');
+            const productModalNext = document.getElementById('product-modal-next');
             const imagePreviewTitle = document.getElementById('image-preview-title');
             const imagePreviewImage = document.getElementById('image-preview-image');
             const sellerTabButtons = Array.from(document.querySelectorAll('[data-seller-tab]'));
@@ -960,6 +1137,7 @@
             const sellerDocumentPreviewStage = document.getElementById('product-seller-document-preview-stage');
             const sellerDocumentDownload = document.getElementById('product-seller-document-download');
             let activeProduct = null;
+            let activeProductMediaIndex = 0;
 
             function openModal(id) {
                 const modal = document.getElementById(id);
@@ -971,6 +1149,9 @@
             function closeModal(id) {
                 const modal = document.getElementById(id);
                 if (!modal) return;
+                if (id === 'product-approval-modal') {
+                    pauseActiveProductVideo();
+                }
                 modal.hidden = true;
                 if (![...document.querySelectorAll('.modal-shell')].some((item) => !item.hidden)) {
                     document.body.classList.remove('is-modal-open');
@@ -1030,48 +1211,182 @@
                 });
             }
 
-            function setImage(button, image, fallback, src, label) {
-                button.dataset.imagePreview = src || '';
-                button.dataset.imageTitle = label || 'Product Image';
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
 
-                if (src) {
-                    image.src = src;
-                    image.alt = label || 'Product image';
-                    image.hidden = false;
-                    fallback.hidden = true;
-                    fallback.textContent = '';
-                } else {
-                    image.removeAttribute('src');
-                    image.alt = '';
-                    image.hidden = true;
-                    fallback.hidden = false;
-                    fallback.textContent = (label || '?').trim().charAt(0).toUpperCase();
+            function getProductMediaItems(product) {
+                const items = Array.isArray(product?.media_items) && product.media_items.length
+                    ? product.media_items
+                    : [{ type: 'image', url: product?.image_url || '', is_fallback: !product?.image_url }];
+
+                return items.map((item) => ({
+                    type: item?.type === 'video' ? 'video' : 'image',
+                    url: item?.url || '',
+                    is_fallback: Boolean(item?.is_fallback),
+                }));
+            }
+
+            function setAdminVideoState(shell, video) {
+                shell.classList.toggle('is-playing', !video.paused && !video.ended);
+            }
+
+            function renderCircleAvatar(element, label, imageUrl) {
+                if (!element) {
+                    return;
+                }
+
+                if (imageUrl) {
+                    element.textContent = '';
+                    const image = document.createElement('img');
+                    image.src = imageUrl;
+                    image.alt = label;
+                    element.replaceChildren(image);
+                    return;
+                }
+
+                element.textContent = label;
+            }
+
+            function resetActionButtonState(button) {
+                if (!(button instanceof HTMLElement)) {
+                    return;
+                }
+
+                window.LocalLiftActionLoading?.stop(button);
+                button.disabled = false;
+                button.classList.remove('is-static');
+            }
+
+            function buildProductMediaSlide(item, productName) {
+                const slide = document.createElement('div');
+                slide.className = 'admin-product-gallery__slide';
+
+                if (item.type === 'video' && item.url) {
+                    slide.innerHTML = `
+                        <div class="admin-product-gallery__video" data-admin-product-video-shell>
+                            <video src="${escapeHtml(item.url)}" preload="metadata" playsinline class="admin-product-gallery__media" data-admin-product-video></video>
+                            <button type="button" class="admin-product-gallery__play" data-admin-product-play aria-label="Play video">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    const shell = slide.querySelector('[data-admin-product-video-shell]');
+                    const video = slide.querySelector('[data-admin-product-video]');
+                    const playButton = slide.querySelector('[data-admin-product-play]');
+
+                    playButton.addEventListener('click', async function () {
+                        try {
+                            await video.play();
+                        } catch (error) {
+                            // Ignore and let the admin tap again.
+                        }
+                    });
+
+                    video.addEventListener('play', () => setAdminVideoState(shell, video));
+                    video.addEventListener('pause', () => setAdminVideoState(shell, video));
+                    video.addEventListener('ended', () => setAdminVideoState(shell, video));
+                    setAdminVideoState(shell, video);
+                    return slide;
+                }
+
+                if (item.url) {
+                    slide.innerHTML = `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(productName)}" class="admin-product-gallery__media" data-image-preview="${escapeHtml(item.url)}" data-image-title="${escapeHtml(productName)}">`;
+                    return slide;
+                }
+
+                const fallback = document.createElement('span');
+                fallback.className = 'product-image-fallback';
+                fallback.textContent = (productName || '?').trim().charAt(0).toUpperCase();
+                slide.appendChild(fallback);
+                return slide;
+            }
+
+            function pauseActiveProductVideo() {
+                const currentVideo = productModalStage.querySelector('[data-admin-product-video]');
+                if (currentVideo) {
+                    currentVideo.pause();
                 }
             }
 
-            function renderThumbs(product) {
-                const thumbs = document.getElementById('product-modal-thumbs');
-                thumbs.innerHTML = '';
+            function renderProductThumbs(product, items) {
+                productModalThumbs.innerHTML = '';
 
-                const thumb = document.createElement('button');
-                thumb.type = 'button';
-                thumb.className = 'thumb-image-button';
-                thumb.dataset.imagePreview = product.image_url || '';
-                thumb.dataset.imageTitle = product.name;
+                items.forEach((item, index) => {
+                    const thumb = document.createElement('button');
+                    thumb.type = 'button';
+                    thumb.className = `thumb-image-button${index === activeProductMediaIndex ? ' is-active' : ''}`;
+                    thumb.dataset.mediaIndex = String(index);
 
-                if (product.image_url) {
-                    const image = document.createElement('img');
-                    image.src = product.image_url;
-                    image.alt = product.name;
-                    thumb.appendChild(image);
-                } else {
-                    const fallback = document.createElement('span');
-                    fallback.className = 'product-image-fallback';
-                    fallback.textContent = product.name.charAt(0).toUpperCase();
-                    thumb.appendChild(fallback);
+                    if (item.type === 'video' && item.url) {
+                        const video = document.createElement('video');
+                        video.src = item.url;
+                        video.muted = true;
+                        video.playsInline = true;
+                        video.preload = 'metadata';
+                        thumb.appendChild(video);
+
+                        const badge = document.createElement('span');
+                        badge.className = 'thumb-image-button__badge';
+                        badge.innerHTML = '<i class="fa-solid fa-play"></i>';
+                        thumb.appendChild(badge);
+                    } else if (item.url) {
+                        const image = document.createElement('img');
+                        image.src = item.url;
+                        image.alt = product.name;
+                        thumb.appendChild(image);
+                    } else {
+                        const fallback = document.createElement('span');
+                        fallback.className = 'product-image-fallback';
+                        fallback.textContent = product.name.charAt(0).toUpperCase();
+                        thumb.appendChild(fallback);
+                    }
+
+                    thumb.addEventListener('click', function () {
+                        setActiveProductMedia(product, index);
+                    });
+
+                    productModalThumbs.appendChild(thumb);
+                });
+            }
+
+            function setActiveProductMedia(product, index) {
+                const items = getProductMediaItems(product);
+                if (!items[index]) {
+                    return;
                 }
 
-                thumbs.appendChild(thumb);
+                pauseActiveProductVideo();
+                activeProductMediaIndex = index;
+                productModalStage.innerHTML = '';
+                productModalStage.appendChild(buildProductMediaSlide(items[index], product.name));
+                productModalCounter.textContent = `${index + 1} / ${items.length}`;
+
+                productModalPrev.disabled = items.length < 2;
+                productModalNext.disabled = items.length < 2;
+                renderProductThumbs(product, items);
+            }
+
+            function renderProductGallery(product) {
+                const items = getProductMediaItems(product);
+                activeProductMediaIndex = 0;
+                setActiveProductMedia(product, 0);
+
+                productModalPrev.onclick = function () {
+                    const nextIndex = (activeProductMediaIndex - 1 + items.length) % items.length;
+                    setActiveProductMedia(product, nextIndex);
+                };
+
+                productModalNext.onclick = function () {
+                    const nextIndex = (activeProductMediaIndex + 1) % items.length;
+                    setActiveProductMedia(product, nextIndex);
+                };
             }
 
             function renderSellerProducts(products) {
@@ -1181,17 +1496,29 @@
                 document.getElementById('product-modal-description').textContent = product.description;
                 document.getElementById('product-modal-reports').textContent = `${product.pending_reports_count}`;
                 document.getElementById('product-modal-rejection').textContent = product.rejection_reason;
-                document.getElementById('product-modal-seller-avatar').textContent = product.avatar;
+                renderCircleAvatar(
+                    document.getElementById('product-modal-seller-avatar'),
+                    product.avatar,
+                    product.seller_avatar_url
+                );
                 document.getElementById('product-modal-seller-handle').textContent = product.seller;
                 document.getElementById('product-modal-seller-name').textContent = product.seller_name;
 
-                setImage(productModalHeroButton, productModalHeroImage, productModalHeroFallback, product.image_url,
-                    product.name);
-                renderThumbs(product);
+                renderProductGallery(product);
 
                 productModalApproveForm.action = product.approve_url;
-                productModalApproveForm.hidden = !product.can_approve;
-                productModalRejectButton.hidden = !product.can_reject;
+                productModalApproveForm.hidden = false;
+                resetActionButtonState(productModalApproveButton);
+                resetActionButtonState(productModalRejectButton);
+
+                productModalApproveButton.textContent = product.can_approve ? 'Approve' : 'Approved';
+                productModalApproveButton.disabled = !product.can_approve;
+                productModalApproveButton.classList.toggle('is-static', !product.can_approve);
+
+                productModalRejectButton.hidden = false;
+                productModalRejectButton.textContent = product.can_reject ? 'Reject' : 'Rejected';
+                productModalRejectButton.disabled = !product.can_reject;
+                productModalRejectButton.classList.toggle('is-static', !product.can_reject);
                 productModalRejectButton.dataset.rejectUrl = product.reject_url;
                 productModalRejectButton.dataset.rejectName = product.name;
 
@@ -1289,17 +1616,16 @@
                 });
             });
 
-            productModalHeroButton.addEventListener('click', () => {
-                if (!activeProduct) return;
-                openImagePreview(activeProduct.image_url, activeProduct.name);
-            });
-
             document.getElementById('product-modal-open-seller').addEventListener('click', () => {
                 if (!activeProduct) return;
 
                 activateSellerTab('shop');
                 document.getElementById('product-seller-modal-handle').textContent = activeProduct.seller;
-                document.getElementById('product-seller-modal-avatar').textContent = activeProduct.avatar;
+                renderCircleAvatar(
+                    document.getElementById('product-seller-modal-avatar'),
+                    activeProduct.avatar,
+                    activeProduct.seller_avatar_url
+                );
                 document.getElementById('product-seller-modal-username').textContent = activeProduct.shop_name;
                 document.getElementById('product-seller-modal-fullname').textContent = activeProduct.seller_name;
                 document.getElementById('product-seller-shop-name').textContent = activeProduct.shop_name;

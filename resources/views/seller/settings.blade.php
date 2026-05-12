@@ -31,7 +31,7 @@
                             <div class="settings-card panel">
                                 <h3>Shop Information</h3>
                                 <form action="{{ route('seller.settings.update') }}" method="POST"
-                                    enctype="multipart/form-data" data-enable-loading>
+                                    enctype="multipart/form-data" data-enable-loading class="js-ph-address-form">
                                     @csrf
                                     @method('PATCH')
 
@@ -59,12 +59,69 @@
                                         @enderror
                                     </div>
 
+                                    <div class="seller-location-block">
+                                        <div>
+                                            <strong>Pickup / Store Location</strong>
+                                            <p>Structured like buyer delivery addresses so LocalLift can support nearby browsing and better delivery estimates.</p>
+                                        </div>
+                                    </div>
+
+                                    <p class="error-text location-feedback" data-location-feedback hidden></p>
+
                                     <div class="form-group">
-                                        <label for="address">Address</label>
-                                        <textarea id="address" name="address" rows="3">{{ old('address', $seller->address ?? '') }}</textarea>
-                                        @error('address')
+                                        <label for="street_address">Street / Shop Address</label>
+                                        <input type="text" id="street_address" name="street_address"
+                                            value="{{ old('street_address', $seller->street_address ?? '') }}"
+                                            placeholder="Building, unit, street, market stall, or pickup point" required>
+                                        @error('street_address')
                                             <small class="error-text">{{ $message }}</small>
                                         @enderror
+                                    </div>
+
+                                    <div class="settings-location-grid">
+                                        <div class="form-group">
+                                            <label for="region">Region</label>
+                                            <select id="region" name="region" data-selected="{{ old('region', $seller->region ?? '') }}" required>
+                                                <option value="" selected disabled>Select region</option>
+                                            </select>
+                                            @error('region')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="province">Province</label>
+                                            <select id="province" name="province" data-selected="{{ old('province', $seller->province ?? '') }}" required>
+                                                <option value="" selected disabled>Select province</option>
+                                            </select>
+                                            @error('province')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="city">City / Municipality</label>
+                                            <select id="city" name="city" data-selected="{{ old('city', $seller->city ?? '') }}" required>
+                                                <option value="" selected disabled>Select city / municipality</option>
+                                            </select>
+                                            @error('city')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="barangay">Barangay</label>
+                                            <select id="barangay" name="barangay" data-selected="{{ old('barangay', $seller->barangay ?? '') }}" required>
+                                                <option value="" selected disabled>Select barangay</option>
+                                            </select>
+                                            @error('barangay')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="postal_code">Postal Code</label>
+                                            <input type="text" id="postal_code" name="postal_code" value="{{ old('postal_code', $seller->postal_code ?? '') }}" inputmode="numeric" required>
+                                            @error('postal_code')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="landmark">Landmark</label>
+                                            <input type="text" id="landmark" name="landmark" value="{{ old('landmark', $seller->landmark ?? '') }}" placeholder="Nearest mall, school, church, or main road" required>
+                                            @error('landmark')<small class="error-text">{{ $message }}</small>@enderror
+                                        </div>
                                     </div>
 
                                     <div class="form-group">
@@ -182,6 +239,7 @@
     </div>
 </section>
 
+<script src="{{ asset('assets/js/buyer-address-form.js') }}"></script>
 <script>
     function showSettingsTab(event, tabId) {
         const tabContents = document.querySelectorAll('.settings-tab-content');

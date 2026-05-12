@@ -56,7 +56,7 @@
                             @endif
 
                             <form action="{{ route('seller.dashboard.application.store') }}" method="POST"
-                                enctype="multipart/form-data" class="seller-application-form">
+                                enctype="multipart/form-data" class="seller-application-form js-ph-address-form">
                                 @csrf
 
                                 <div class="form-grid">
@@ -103,11 +103,68 @@
                                         @error('email')<small class="error-text">{{ $message }}</small>@enderror
                                     </div>
 
+                                    <div class="form-group form-group-wide seller-location-intro">
+                                        <strong>Pickup / Store Location</strong>
+                                        <span>Used for seller verification, delivery estimates, and future local browsing filters.</span>
+                                    </div>
+
+                                    <p class="error-text location-feedback form-group-wide" data-location-feedback hidden></p>
+
                                     <div class="form-group form-group-wide">
-                                        <label for="address">Address</label>
-                                        <textarea id="address" name="address" rows="3"
-                                            required>{{ old('address', $seller?->address ?? auth('seller')->user()?->address) }}</textarea>
-                                        @error('address')<small class="error-text">{{ $message }}</small>@enderror
+                                        <label for="street_address">Street / Shop Address</label>
+                                        <input type="text" id="street_address" name="street_address"
+                                            value="{{ old('street_address', $seller?->street_address ?? '') }}"
+                                            placeholder="Building, unit, street, market stall, or pickup point"
+                                            required>
+                                        @error('street_address')<small class="error-text">{{ $message }}</small>@enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="region">Region</label>
+                                        <select name="region" id="region" data-selected="{{ old('region', $seller?->region) }}" required>
+                                            <option value="" selected disabled>Select region</option>
+                                        </select>
+                                        @error('region')<small class="error-text">{{ $message }}</small>@enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="province">Province</label>
+                                        <select name="province" id="province" data-selected="{{ old('province', $seller?->province) }}" required>
+                                            <option value="" selected disabled>Select province</option>
+                                        </select>
+                                        @error('province')<small class="error-text">{{ $message }}</small>@enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="city">City / Municipality</label>
+                                        <select name="city" id="city" data-selected="{{ old('city', $seller?->city) }}" required>
+                                            <option value="" selected disabled>Select city / municipality</option>
+                                        </select>
+                                        @error('city')<small class="error-text">{{ $message }}</small>@enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="barangay">Barangay</label>
+                                        <select name="barangay" id="barangay" data-selected="{{ old('barangay', $seller?->barangay) }}" required>
+                                            <option value="" selected disabled>Select barangay</option>
+                                        </select>
+                                        @error('barangay')<small class="error-text">{{ $message }}</small>@enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="postal_code">Postal Code</label>
+                                        <input type="text" id="postal_code" name="postal_code"
+                                            value="{{ old('postal_code', $seller?->postal_code) }}"
+                                            inputmode="numeric" required>
+                                        @error('postal_code')<small class="error-text">{{ $message }}</small>@enderror
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="landmark">Landmark</label>
+                                        <input type="text" id="landmark" name="landmark"
+                                            value="{{ old('landmark', $seller?->landmark) }}"
+                                            placeholder="Nearest mall, school, church, or main road" required>
+                                        @error('landmark')<small class="error-text">{{ $message }}</small>@enderror
                                     </div>
 
                                     <div class="form-group">
@@ -360,4 +417,5 @@
             </div>
         </div>
     </section>
+    <script src="{{ asset('assets/js/buyer-address-form.js') }}"></script>
 @endsection

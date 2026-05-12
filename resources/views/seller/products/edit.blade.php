@@ -9,8 +9,28 @@
                 @include('seller.partials.sidebar')
 
                 <main class="dashboard-main">
-                    @php
-                        $descriptionValue = old('description');
+@php
+    $productGallery = $product->gallery_media ?? collect();
+    $descriptionValue = old('description');
+    $hasExistingVariants = $product->variants->where('is_active', true)->isNotEmpty();
+    $variantsEnabled = old('has_variants', $hasExistingVariants ? '1' : null) === '1';
+    $variantRows = old('variants');
+
+    if ($variantRows === null) {
+        $variantRows = $product->variants->map(fn ($variant) => [
+            'id' => $variant->id,
+            'name' => $variant->name,
+            'sku' => $variant->sku,
+            'price' => $variant->price,
+            'stock' => $variant->stock,
+            'image' => $variant->image,
+            'is_active' => $variant->is_active,
+        ])->values()->all();
+    }
+
+    $variantRows = collect($variantRows ?: [
+        ['name' => '', 'sku' => '', 'price' => $product->price, 'stock' => $product->stock, 'is_active' => 1],
+    ])->values();
 
                         if ($descriptionValue === null) {
                             $descriptionValue = html_entity_decode(
@@ -135,28 +155,122 @@
                                             @enderror
                                         </div>
                                     </div>
+
+                                    <div class="variant-builder edit-variant-builder" data-variant-builder data-next-index="{{ $variantRows->count() }}">
+                                        <div class="variant-builder-head">
+                                            <div>
+                                                <label class="variant-toggle-label" for="has_variants">
+                                                    <input type="checkbox" id="has_variants" name="has_variants" value="1" data-variant-toggle {{ $variantsEnabled ? 'checked' : '' }}>
+                                                    <span>This product has variants</span>
+                                                </label>
+                                                <small class="product-media-note">When variants are enabled, the product card uses the lowest active variant price and total active stock.</small>
+                                            </div>
+                                            <button type="button" class="table-action secondary" data-add-variant {{ $variantsEnabled ? '' : 'hidden' }}>
+                                                Add Variant
+                                            </button>
+                                        </div>
+
+                                        @error('variants')
+                                            <small class="error-text">{{ $message }}</small>
+                                        @enderror
+
+                                        <div class="variant-list" data-variant-list {{ $variantsEnabled ? '' : 'hidden' }}>
+                                            @foreach($variantRows as $index => $variantRow)
+                                                <div class="variant-row" data-variant-row>
+                                                    @if(!empty($variantRow['id']))
+                                                        <input type="hidden" name="variants[{{ $index }}][id]" value="{{ $variantRow['id'] }}">
+                                                    @endif
+
+                                                    <div class="form-group">
+                                                        <label>Variant Name</label>
+                                                        <input type="text" name="variants[{{ $index }}][name]" value="{{ $variantRow['name'] ?? '' }}" placeholder="e.g. Small / Red">
+                                                        @error("variants.$index.name")
+                                                            <small class="error-text">{{ $message }}</small>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label>SKU</label>
+                                                        <input type="text" name="variants[{{ $index }}][sku]" value="{{ $variantRow['sku'] ?? '' }}" placeholder="Optional">
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label>Price</label>
+                                                        <input type="number" name="variants[{{ $index }}][price]" value="{{ $variantRow['price'] ?? '' }}" step="0.01" min="0" placeholder="0.00">
+                                                        @error("variants.$index.price")
+                                                            <small class="error-text">{{ $message }}</small>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label>Stock</label>
+                                                        <input type="number" name="variants[{{ $index }}][stock]" value="{{ $variantRow['stock'] ?? '' }}" min="0" placeholder="0">
+                                                        @error("variants.$index.stock")
+                                                            <small class="error-text">{{ $message }}</small>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div class="form-group">
+                                                        <label>Image</label>
+                                                        <input type="file" name="variants[{{ $index }}][image]" accept="image/*">
+                                                        @if(!empty($variantRow['image']))
+                                                            <small class="product-media-note">Current image saved.</small>
+                                                        @endif
+                                                    </div>
+
+                                                    <div class="variant-row-actions">
+                                                        <input type="hidden" name="variants[{{ $index }}][is_active]" value="0">
+                                                        <label class="variant-active-toggle">
+                                                            <input type="checkbox" name="variants[{{ $index }}][is_active]" value="1" {{ (bool) ($variantRow['is_active'] ?? true) ? 'checked' : '' }}>
+                                                            Active
+                                                        </label>
+                                                        <button type="button" class="table-action danger" data-remove-variant>Remove</button>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 </section>
 
                                 <section class="edit-section-card">
                                     <div class="edit-section-heading">
-                                        <h3>Product Image</h3>
-                                        <p>Replace the current image only if you want to update the listing preview.</p>
+                                        <h3>Product Media</h3>
+                                        <p>Keep the current gallery and add more images or videos for the carousel.</p>
                                     </div>
 
-                                    <div class="edit-image-layout">
-                                        @if (!empty($product?->image))
-                                            <div class="current-image-preview">
-                                                <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}">
-                                            </div>
-                                        @endif
-
-                                        <div class="form-group">
-                                            <label for="image">Change Product Image</label>
-                                            <input type="file" id="image" name="image">
-                                            @error('image')
-                                                <span class="error-text">{{ $message }}</span>
-                                            @enderror
+                                    @if($productGallery->isNotEmpty())
+                                        <div class="product-media-gallery">
+                                            @foreach($productGallery as $media)
+                                                <div class="product-media-gallery-card">
+                                                    <div class="product-media-gallery-media">
+                                                        @if(($media['type'] ?? 'image') === 'video')
+                                                            <video src="{{ $media['url'] }}" controls preload="metadata"></video>
+                                                        @else
+                                                            <img src="{{ $media['url'] }}" alt="{{ $product->name }}">
+                                                        @endif
+                                                    </div>
+                                                    <div class="product-media-gallery-meta">
+                                                        {{ ucfirst($media['type'] ?? 'image') }} {{ $loop->iteration }}
+                                                    </div>
+                                                </div>
+                                            @endforeach
                                         </div>
+                                    @endif
+
+                                    <div class="form-group form-group-wide">
+                                        <label for="media">Add More Media</label>
+                                        <input type="file" id="media" name="media[]" accept="image/*,video/*" multiple data-product-media-input>
+                                        <small class="product-media-note">Upload one or more images or videos. The first image becomes the cover image.</small>
+                                        @error('media')
+                                            <span class="error-text">{{ $message }}</span>
+                                        @enderror
+                                        @error('media.*')
+                                            <span class="error-text">{{ $message }}</span>
+                                        @enderror
+                                        @error('image')
+                                            <span class="error-text">{{ $message }}</span>
+                                        @enderror
+                                        <div class="product-media-preview" data-product-media-preview hidden></div>
                                     </div>
                                 </section>
 
@@ -382,4 +496,149 @@
             }
         }
     </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const mediaInput = document.querySelector('[data-product-media-input]');
+            const previewGrid = document.querySelector('[data-product-media-preview]');
+            const objectUrls = [];
+
+            if (!mediaInput || !previewGrid || !window.URL?.createObjectURL) {
+                return;
+            }
+
+            const revokeObjectUrls = () => {
+                while (objectUrls.length > 0) {
+                    URL.revokeObjectURL(objectUrls.pop());
+                }
+            };
+
+            const renderPreview = () => {
+                revokeObjectUrls();
+                const files = Array.from(mediaInput.files || []);
+
+                previewGrid.innerHTML = '';
+                previewGrid.hidden = files.length === 0;
+
+                files.forEach((file) => {
+                    const previewUrl = URL.createObjectURL(file);
+                    objectUrls.push(previewUrl);
+
+                    const card = document.createElement('div');
+                    card.className = 'product-media-preview-card';
+
+                    const mediaWrap = document.createElement('div');
+                    mediaWrap.className = 'product-media-preview-media';
+
+                    if (file.type.startsWith('video/')) {
+                        const video = document.createElement('video');
+                        video.src = previewUrl;
+                        video.controls = true;
+                        video.muted = true;
+                        video.preload = 'metadata';
+                        mediaWrap.appendChild(video);
+                    } else {
+                        const image = document.createElement('img');
+                        image.src = previewUrl;
+                        image.alt = file.name;
+                        mediaWrap.appendChild(image);
+                    }
+
+                    const meta = document.createElement('div');
+                    meta.className = 'product-media-preview-meta';
+                    meta.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+
+                    card.appendChild(mediaWrap);
+                    card.appendChild(meta);
+                    previewGrid.appendChild(card);
+                });
+            };
+
+            mediaInput.addEventListener('change', renderPreview);
+            window.addEventListener('beforeunload', revokeObjectUrls);
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const builder = document.querySelector('[data-variant-builder]');
+
+            if (!builder) {
+                return;
+            }
+
+            const toggle = builder.querySelector('[data-variant-toggle]');
+            const list = builder.querySelector('[data-variant-list]');
+            const addButton = builder.querySelector('[data-add-variant]');
+            let nextIndex = Number(builder.dataset.nextIndex || 0);
+
+            const variantTemplate = (index) => `
+                <div class="variant-row" data-variant-row>
+                    <div class="form-group">
+                        <label>Variant Name</label>
+                        <input type="text" name="variants[${index}][name]" placeholder="e.g. Small / Red">
+                    </div>
+                    <div class="form-group">
+                        <label>SKU</label>
+                        <input type="text" name="variants[${index}][sku]" placeholder="Optional">
+                    </div>
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="number" name="variants[${index}][price]" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Stock</label>
+                        <input type="number" name="variants[${index}][stock]" min="0" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Image</label>
+                        <input type="file" name="variants[${index}][image]" accept="image/*">
+                    </div>
+                    <div class="variant-row-actions">
+                        <input type="hidden" name="variants[${index}][is_active]" value="0">
+                        <label class="variant-active-toggle">
+                            <input type="checkbox" name="variants[${index}][is_active]" value="1" checked>
+                            Active
+                        </label>
+                        <button type="button" class="table-action danger" data-remove-variant>Remove</button>
+                    </div>
+                </div>
+            `;
+
+            const syncVisibility = () => {
+                const enabled = toggle.checked;
+                list.hidden = !enabled;
+                addButton.hidden = !enabled;
+
+                if (enabled && !list.querySelector('[data-variant-row]')) {
+                    list.insertAdjacentHTML('beforeend', variantTemplate(nextIndex++));
+                }
+            };
+
+            toggle.addEventListener('change', syncVisibility);
+            addButton.addEventListener('click', function () {
+                list.insertAdjacentHTML('beforeend', variantTemplate(nextIndex++));
+            });
+
+            list.addEventListener('click', function (event) {
+                const removeButton = event.target.closest('[data-remove-variant]');
+
+                if (!removeButton) {
+                    return;
+                }
+
+                const rows = list.querySelectorAll('[data-variant-row]');
+
+                if (rows.length <= 1) {
+                    rows[0]?.querySelectorAll('input[type="text"], input[type="number"]').forEach((input) => {
+                        input.value = '';
+                    });
+                    return;
+                }
+
+                removeButton.closest('[data-variant-row]')?.remove();
+            });
+
+            syncVisibility();
+        });
+    </script>
 @endsection

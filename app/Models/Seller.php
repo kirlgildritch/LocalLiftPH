@@ -27,6 +27,13 @@ class Seller extends Model
         'store_description',
         'contact_number',
         'address',
+        'street_address',
+        'barangay',
+        'city',
+        'province',
+        'region',
+        'postal_code',
+        'landmark',
         'payout_method',
         'payout_account_name',
         'payout_account_number',
@@ -86,6 +93,11 @@ class Seller extends Model
         return $this->application_status === self::STATUS_APPROVED;
     }
 
+    public function hasVerifiedSellerBadge(): bool
+    {
+        return $this->isApproved() && ! $this->isSuspended();
+    }
+
     public function shopStatusLabel(): string
     {
         return match ($this->effectiveShopStatus()) {
@@ -138,6 +150,23 @@ class Seller extends Model
     public function showsOutOfStockProducts(): bool
     {
         return ! (bool) $this->hide_out_of_stock;
+    }
+
+    public function formattedLocation(): string
+    {
+        $parts = collect([
+            $this->street_address,
+            $this->landmark ? 'Landmark: ' . $this->landmark : null,
+            $this->barangay,
+            $this->city,
+            $this->province,
+            $this->region,
+            $this->postal_code,
+        ])->filter()->values();
+
+        return $parts->isNotEmpty()
+            ? $parts->implode(', ')
+            : (string) ($this->address ?? '');
     }
 
     public function scopeVisibleToBuyers(Builder $query): Builder

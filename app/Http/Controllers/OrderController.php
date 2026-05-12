@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderCancellation;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Notifications\SellerNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ class OrderController extends Controller
             $currentStatus = 'all';
         }
 
-        $orders = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.review', 'cancellation'])
+        $orders = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.variant', 'items.review', 'cancellation', 'returnRequest.media'])
             ->where('user_id', Auth::id())
             ->when($currentStatus !== 'all', function ($query) use ($currentStatus) {
                 $query->where('shipping_status', $currentStatus);
@@ -56,7 +57,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $groupOrdersQuery = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.review', 'cancellation'])
+        $groupOrdersQuery = Order::with(['seller.sellerProfile', 'items.product.user.sellerProfile', 'items.variant', 'items.review', 'cancellation', 'returnRequest.media'])
             ->where('user_id', Auth::id());
 
         if ($order->checkout_group) {
@@ -88,10 +89,14 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $order->load(['items.product']);
+        $order->load(['items.product.activeVariants', 'items.variant']);
 
         foreach ($order->items as $item) {
             if (!$item->product || !$item->product->is_active) {
+                continue;
+            }
+
+            if ($item->product->activeVariants->isNotEmpty() && (! $item->variant || ! $item->variant->is_active)) {
                 continue;
             }
 
@@ -102,6 +107,7 @@ class OrderController extends Controller
             $cartItem = Cart::firstOrNew([
                 'user_id' => Auth::id(),
                 'product_id' => $item->product_id,
+                'product_variant_id' => $item->product_variant_id,
             ]);
 
             $cartItem->quantity = (int) ($cartItem->exists ? $cartItem->quantity : 0) + (int) $item->quantity;
@@ -161,6 +167,21 @@ class OrderController extends Controller
                 ->filter(fn ($item) => filled($item->product_id))
                 ->groupBy('product_id')
                 ->map(fn ($items) => (int) $items->sum('quantity'));
+
+            $restockByVariant = $order->items
+                ->filter(fn ($item) => filled($item->product_variant_id))
+                ->groupBy('product_variant_id')
+                ->map(fn ($items) => (int) $items->sum('quantity'));
+
+            if ($restockByVariant->isNotEmpty()) {
+                ProductVariant::query()
+                    ->whereIn('id', $restockByVariant->keys())
+                    ->lockForUpdate()
+                    ->get()
+                    ->each(function (ProductVariant $variant) use ($restockByVariant): void {
+                        $variant->increment('stock', (int) ($restockByVariant[$variant->id] ?? 0));
+                    });
+            }
 
             if ($restockByProduct->isNotEmpty()) {
                 Product::query()

@@ -55,9 +55,9 @@
 
                 <form class="chat-widget-form" data-chat-form enctype="multipart/form-data">
                     @csrf
-                    <input type="file" name="image" accept="image/*" data-chat-image-input hidden>
-                    <button type="button" class="chat-widget-attach" data-chat-attach aria-label="Attach image">
-                        <i class="fa-regular fa-image"></i>
+                    <input type="file" name="image" accept="image/*,video/*" data-chat-image-input hidden>
+                    <button type="button" class="chat-widget-attach" data-chat-attach aria-label="Attach media">
+                        <i class="fa-solid fa-paperclip"></i>
                     </button>
                     <input type="text" name="message" placeholder="Type a message..." data-chat-input>
                     <span class="chat-widget-file-name" data-chat-file-name></span>
@@ -206,7 +206,8 @@
                         message.id,
                         message.sender_label,
                         message.message || '',
-                        message.image_url || '',
+                        message.media_type || '',
+                        message.media_url || message.video_url || message.image_url || '',
                         message.product?.id || '',
                         message.product?.name || '',
                         message.product?.price_label || '',
@@ -248,6 +249,30 @@
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
+
+            const getMessageMediaType = (message) => message.media_type
+                || (message.has_video ? 'video' : message.has_image ? 'image' : null);
+
+            const getMessageMediaUrl = (message) => message.media_url
+                || message.video_url
+                || message.image_url
+                || '';
+
+            const renderMessageMedia = (message, className) => {
+                const mediaType = getMessageMediaType(message);
+                const mediaUrl = getMessageMediaUrl(message);
+
+                if (!mediaType || !mediaUrl) {
+                    return '';
+                }
+
+                if (mediaType === 'video') {
+                    return `<video src="${escapeHtml(mediaUrl)}" controls preload="metadata" class="${className} ${className}--video"></video>`;
+                }
+
+                return `<img src="${escapeHtml(mediaUrl)}" alt="Shared image" class="${className}">`;
+            };
+
             const renderProductCard = (message) => {
                 if (!message?.has_product || !message?.product) {
                     return '';
@@ -360,12 +385,16 @@
                     return `Product: ${String(message.product.name).slice(0, 40)}`;
                 }
 
-                if (message.has_image && !message.has_text) {
-                    return 'Sent an image';
+                const mediaType = message.media_type || (message.has_video ? 'video' : message.has_image ? 'image' : null);
+
+                if (mediaType && !message.has_text) {
+                    return mediaType === 'video' ? 'Sent a video' : 'Sent an image';
                 }
 
-                if (message.has_image && message.has_text) {
-                    return `Image: ${String(message.message || '').slice(0, 40)}`;
+                if (mediaType && message.has_text) {
+                    const mediaLabel = mediaType === 'video' ? 'Video' : 'Image';
+
+                    return `${mediaLabel}: ${String(message.message || '').slice(0, 40)}`;
                 }
 
                 return String(message.message || 'Start chatting from a product or shop page.').slice(0, 52);
@@ -388,23 +417,33 @@
                     ...(state.conversations || []).filter((item) => Number(item.id) !== Number(conversation.id)),
                 ];
             };
-            const createOptimisticMessage = ({ clientMessageId, text, file }) => ({
-                id: `temp-${clientMessageId}`,
-                client_message_id: clientMessageId,
-                sender_label: 'You',
-                message: text,
-                image_url: file ? URL.createObjectURL(file) : null,
-                has_image: Boolean(file),
-                has_text: Boolean(text),
-                has_product: false,
-                product: null,
-                time: 'Sending...',
-                is_current_user: true,
-                is_seen: false,
-                status_label: 'Sending...',
-                is_pending: true,
-                is_failed: false,
-            });
+            const createOptimisticMessage = ({ clientMessageId, text, file }) => {
+                const mediaType = file ? (file.type.startsWith('video/') ? 'video' : 'image') : null;
+                const mediaUrl = file ? URL.createObjectURL(file) : null;
+
+                return {
+                    media_type: mediaType,
+                    media_url: mediaUrl,
+                    image_url: mediaType === 'image' ? mediaUrl : null,
+                    video_url: mediaType === 'video' ? mediaUrl : null,
+                    id: `temp-${clientMessageId}`,
+                    client_message_id: clientMessageId,
+                    sender_label: 'You',
+                    message: text,
+                    has_image: mediaType === 'image',
+                    has_video: mediaType === 'video',
+                    has_media: Boolean(file),
+                    has_text: Boolean(text),
+                    has_product: false,
+                    product: null,
+                    time: 'Sending...',
+                    is_current_user: true,
+                    is_seen: false,
+                    status_label: 'Sending...',
+                    is_pending: true,
+                    is_failed: false,
+                };
+            };
             const appendOptimisticMessage = (message) => {
                 if (!state.activeConversation) {
                     return;
@@ -622,15 +661,18 @@
                 }
 
                 imagePreviewUrl = URL.createObjectURL(file);
+                const isVideo = file.type.startsWith('video/');
                 previewEl.hidden = false;
                 previewEl.innerHTML = `
                     <div class="chat-widget-preview-card">
-                        <img src="${escapeHtml(imagePreviewUrl)}" alt="Selected preview" class="chat-widget-preview-image">
+                        ${isVideo
+                        ? `<video src="${escapeHtml(imagePreviewUrl)}" controls preload="metadata" class="chat-widget-preview-media chat-widget-preview-media--video"></video>`
+                        : `<img src="${escapeHtml(imagePreviewUrl)}" alt="Selected preview" class="chat-widget-preview-media">`}
                         <div class="chat-widget-preview-copy">
                             <strong>${escapeHtml(file.name)}</strong>
                             <span>Ready to send</span>
                         </div>
-                        <button type="button" class="chat-widget-preview-remove" data-chat-preview-remove aria-label="Remove image">
+                        <button type="button" class="chat-widget-preview-remove" data-chat-preview-remove aria-label="Remove media">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                     </div>
@@ -916,7 +958,7 @@
                                 <strong>${escapeHtml(message.sender_label)}</strong>
                                 ${renderProductCard(message)}
                                 ${message.has_text ? `<p>${escapeHtml(message.message)}</p>` : ''}
-                                ${message.has_image ? `<img src="${escapeHtml(message.image_url)}" alt="Shared image" class="chat-widget-image">` : ''}
+                                ${renderMessageMedia(message, 'chat-widget-media')}
                             </div>
                             <span class="chat-widget-time">
                                 ${escapeHtml(message.time)}
@@ -1192,7 +1234,7 @@
 
                 dropTarget.addEventListener('drop', function (event) {
                     const file = event.dataTransfer?.files?.[0];
-                    if (!file || !file.type.startsWith('image/')) {
+                    if (!file || (!file.type.startsWith('image/') && !file.type.startsWith('video/'))) {
                         return;
                     }
 

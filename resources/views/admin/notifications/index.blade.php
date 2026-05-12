@@ -210,6 +210,99 @@
             padding: 18px 20px;
         }
 
+        .notification-pagination nav {
+            display: grid;
+            gap: 14px;
+        }
+
+        .notification-pagination nav > div:first-child {
+            display: none;
+        }
+
+        .notification-pagination nav > div:last-child {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .notification-pagination nav > div:last-child > div:last-child > span,
+        .notification-pagination nav > div:last-child > div:last-child > span > span,
+        .notification-pagination nav > div:last-child > div:last-child > a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-pagination :is(nav, ul, ol, p) {
+            margin: 0;
+        }
+
+        .notification-pagination a,
+        .notification-pagination span {
+            color: #1f2a44;
+        }
+
+        .notification-pagination nav a,
+        .notification-pagination nav span[aria-current="page"] > span,
+        .notification-pagination nav span[aria-disabled="true"] > span {
+            min-width: 42px;
+            min-height: 42px;
+            padding: 0 14px;
+            border-radius: 12px;
+            border: 1px solid #d6e0f0;
+            background: #ffffff;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 700;
+            box-sizing: border-box;
+        }
+
+        .notification-pagination nav a:hover {
+            background: #eef4ff;
+            border-color: #bfd1f3;
+        }
+
+        .notification-pagination nav span[aria-current="page"] > span {
+            background: linear-gradient(180deg, rgba(63, 111, 217, 0.16), rgba(63, 111, 217, 0.08));
+            border-color: rgba(63, 111, 217, 0.35);
+            color: #1d4ed8;
+        }
+
+        .notification-pagination nav span[aria-disabled="true"] > span {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .notification-pagination nav p {
+            color: #6b7894;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .notification-pagination nav p .font-medium {
+            color: #1f2a44;
+        }
+
+        .notification-pagination svg {
+            width: 20px;
+            height: 20px;
+            display: block;
+            flex: 0 0 auto;
+            fill: currentColor;
+        }
+
+        .notification-pagination nav > div:last-child > div:last-child > a:first-child,
+        .notification-pagination nav > div:last-child > div:last-child > a:last-child,
+        .notification-pagination nav > div:last-child > div:last-child > span:first-child > span,
+        .notification-pagination nav > div:last-child > div:last-child > span:last-child > span {
+            font-size: 0;
+            min-width: 42px;
+            width: 42px;
+            padding: 0;
+        }
+
         @media (max-width: 980px) {
             .notification-summary {
                 grid-template-columns: 1fr;

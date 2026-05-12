@@ -20,6 +20,32 @@ use Illuminate\View\View;
 
 class SellerDashboardController extends Controller
 {
+    private function locationValidationRules(): array
+    {
+        return [
+            'street_address' => ['required', 'string', 'max:255'],
+            'region' => ['required', 'string', 'max:255'],
+            'province' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'barangay' => ['required', 'string', 'max:255'],
+            'postal_code' => ['required', 'string', 'max:20'],
+            'landmark' => ['required', 'string', 'max:255'],
+        ];
+    }
+
+    private function readableAddress(array $validated): string
+    {
+        return collect([
+            $validated['street_address'] ?? null,
+            filled($validated['landmark'] ?? null) ? 'Landmark: ' . $validated['landmark'] : null,
+            $validated['barangay'] ?? null,
+            $validated['city'] ?? null,
+            $validated['province'] ?? null,
+            $validated['region'] ?? null,
+            $validated['postal_code'] ?? null,
+        ])->filter()->implode(', ');
+    }
+
     public function show(Request $request): View
     {
         $user = Auth::guard('seller')->user();
@@ -75,7 +101,6 @@ class SellerDashboardController extends Controller
             'age' => ['required', 'integer', 'min:18', 'max:120'],
             'phone_number' => ['required', 'string', 'max:20'],
             'email' => ['required', 'email', 'max:255'],
-            'address' => ['required', 'string', 'max:255'],
             'valid_id_type' => ['required', 'string', 'max:100'],
             'valid_id_number' => ['required', 'string', 'max:120'],
             'valid_id_document' => [
@@ -102,7 +127,7 @@ class SellerDashboardController extends Controller
                 'mimes:jpg,jpeg,png,pdf,webp',
                 'max:4096',
             ],
-        ]);
+        ] + $this->locationValidationRules());
 
         DB::transaction(function () use ($request, $validated, $existingSeller, $user, $latestDocumentRequest) {
             $seller = $existingSeller ?? new Seller(['user_id' => $user->id]);
@@ -121,7 +146,14 @@ class SellerDashboardController extends Controller
                 'age' => $validated['age'],
                 'email' => $validated['email'],
                 'contact_number' => $validated['phone_number'],
-                'address' => $validated['address'],
+                'address' => $this->readableAddress($validated),
+                'street_address' => $validated['street_address'],
+                'barangay' => $validated['barangay'],
+                'city' => $validated['city'],
+                'province' => $validated['province'],
+                'region' => $validated['region'],
+                'postal_code' => $validated['postal_code'],
+                'landmark' => $validated['landmark'],
                 'valid_id_type' => $validated['valid_id_type'],
                 'valid_id_number' => $validated['valid_id_number'],
                 'application_status' => Seller::STATUS_PENDING,
@@ -147,7 +179,7 @@ class SellerDashboardController extends Controller
                 'name' => $validated['full_name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone_number'],
-                'address' => $validated['address'],
+                'address' => $this->readableAddress($validated),
                 'is_seller' => true,
             ])->save();
         });

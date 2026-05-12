@@ -24,12 +24,52 @@
   box-shadow: 0 14px 28px rgba(21, 101, 192, 0.18);
 }
 
+.catalog-notice,
 .reviewing-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 193, 7, 0.22);
   border-radius: 18px;
+  line-height: 1.55;
+}
+
+.catalog-notice {
+  margin-top: 12px;
+}
+
+.catalog-notice--warning,
+.reviewing-note {
+  border: 1px solid rgba(255, 193, 7, 0.22);
   background: rgba(255, 193, 7, 0.1);
   color: #ffe082;
+}
+
+.catalog-notice--danger {
+  border: 1px solid rgba(255, 99, 132, 0.24);
+  background: rgba(255, 99, 132, 0.1);
+  color: #ffc0cb;
+}
+
+.catalog-notice__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.catalog-notice strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #f8fbff;
+}
+
+.catalog-notice p {
+  margin: 0;
+  color: inherit;
 }
 
 .product-image {

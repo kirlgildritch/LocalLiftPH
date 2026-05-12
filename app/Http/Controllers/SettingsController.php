@@ -12,6 +12,32 @@ use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
 {
+    private function locationValidationRules(): array
+    {
+        return [
+            'street_address' => ['required', 'string', 'max:255'],
+            'region' => ['required', 'string', 'max:255'],
+            'province' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'barangay' => ['required', 'string', 'max:255'],
+            'postal_code' => ['required', 'string', 'max:20'],
+            'landmark' => ['required', 'string', 'max:255'],
+        ];
+    }
+
+    private function readableAddress(array $validated): string
+    {
+        return collect([
+            $validated['street_address'] ?? null,
+            filled($validated['landmark'] ?? null) ? 'Landmark: ' . $validated['landmark'] : null,
+            $validated['barangay'] ?? null,
+            $validated['city'] ?? null,
+            $validated['province'] ?? null,
+            $validated['region'] ?? null,
+            $validated['postal_code'] ?? null,
+        ])->filter()->implode(', ');
+    }
+
     protected function currentSeller(): ?Seller
     {
         $sellerUserId = Auth::guard('seller')->id() ?? Auth::id();
@@ -32,9 +58,8 @@ class SettingsController extends Controller
             'store_name' => 'required|string|max:255',
             'store_description' => 'nullable|string|max:2000',
             'contact_number' => 'required|string|max:20',
-            'address' => 'required|string|max:255',
             'shop_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-        ]);
+        ] + $this->locationValidationRules());
 
         $seller = $this->currentSeller();
 
@@ -47,7 +72,13 @@ class SettingsController extends Controller
             'store_name' => $seller->store_name,
             'store_description' => $seller->store_description,
             'contact_number' => $seller->contact_number,
-            'address' => $seller->address,
+            'street_address' => $seller->street_address,
+            'barangay' => $seller->barangay,
+            'city' => $seller->city,
+            'province' => $seller->province,
+            'region' => $seller->region,
+            'postal_code' => $seller->postal_code,
+            'landmark' => $seller->landmark,
         ];
 
         if ($request->hasFile('shop_logo')) {
@@ -69,13 +100,20 @@ class SettingsController extends Controller
             'store_name' => 'store name',
             'store_description' => 'store description',
             'contact_number' => 'contact number',
-            'address' => 'address',
+            'street_address' => 'street address',
+            'barangay' => 'barangay',
+            'city' => 'city',
+            'province' => 'province',
+            'region' => 'region',
+            'postal_code' => 'postal code',
+            'landmark' => 'landmark',
         ] as $field => $label) {
             if (($validated[$field] ?? null) !== $originalValues[$field]) {
                 $changedFields[] = $label;
             }
         }
 
+        $validated['address'] = $this->readableAddress($validated);
         $seller->update($validated);
 
         if ($changedFields !== []) {

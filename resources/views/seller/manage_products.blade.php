@@ -54,9 +54,31 @@
                             </a>
                         </div>
 
+                        @php
+                            $isSellerVerified = $sellerSettings?->isApproved() ?? false;
+                        @endphp
+
+                        @if(!$isSellerVerified)
+                            <div class="catalog-notice catalog-notice--danger">
+                                <div class="catalog-notice__icon">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <strong>Your seller application is not verified yet.</strong>
+                                    <p>Your products will remain hidden from buyers until LocalLift PH approves your seller account.</p>
+                                </div>
+                            </div>
+                        @endif
+
                         @if($statusCounts['reviewing'] > 0)
-                            <div class="reviewing-note">
-                                Your products under review are not visible to buyers yet.
+                            <div class="catalog-notice catalog-notice--warning">
+                                <div class="catalog-notice__icon">
+                                    <i class="fa-solid fa-clock"></i>
+                                </div>
+                                <div>
+                                    <strong>Products under review are not visible to buyers yet.</strong>
+                                    <p>Product review usually takes up to 5 business days. If we need changes, the product will move to Violation with the reason shown.</p>
+                                </div>
                             </div>
                         @endif
 
