@@ -19,7 +19,7 @@
 
 <a href="{{ $resolvedHref }}" class="market-product-card product-card-link skeleton-shell is-loading {{ $cardClass }}" data-skeleton-item data-skeleton-kind="product-card">
     <div class="market-product-card__image skeleton skeleton-image">
-        <img src="{{ $resolvedImage }}" alt="{{ $product->name }}">
+        <img src="{{ $resolvedImage }}" alt="{{ $product->name }}" loading="lazy" decoding="async">
         @if($locationLabel)
             <div class="market-product-card__location" title="{{ $locationLabel }}">
                 <i class="fa-solid fa-location-dot"></i>

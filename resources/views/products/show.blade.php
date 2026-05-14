@@ -58,7 +58,7 @@ $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMedi
                         data-product-name="{{ e($product->name) }}"
                         data-product-gallery-items='@json($galleryMedia->values())'>
                         <button type="button" class="product-media-arrow product-media-arrow--prev" data-product-gallery-prev aria-label="Previous media">
-                            <i class="fa-solid fa-chevron-left"></i>
+                            <i class="fa-solid fa-chevron-left" title="Report Product"></i>
                         </button>
 
                         <div class="product-media-stage" data-product-gallery-viewport>
@@ -103,7 +103,7 @@ $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMedi
                         'sellerId' => $product->user_id,
                         ])
                         @elseif(!auth('seller')->check() && !auth('admin')->check())
-                        <a href="{{ route('login') }}" class="report-trigger-button" aria-label="Log in to report product">
+                        <a href="{{ route('login') }}" class="report-trigger-button" aria-label="Log in to report product" title="Log in to report product">
                             <i class="fa-solid fa-flag"></i>
                         </a>
                         @endif

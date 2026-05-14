@@ -239,9 +239,9 @@
                                     </div>
 
                                     @if($productGallery->isNotEmpty())
-                                        <div class="product-media-gallery">
+                                        <div class="product-media-gallery" data-existing-media-gallery data-existing-media-delete-url="{{ route('seller.products.media.destroy', $product) }}">
                                             @foreach($productGallery as $media)
-                                                <div class="product-media-gallery-card">
+                                                <div class="product-media-gallery-card" data-existing-media-card data-media-path="{{ $media['path'] ?? '' }}">
                                                     <div class="product-media-gallery-media">
                                                         @if(($media['type'] ?? 'image') === 'video')
                                                             <video src="{{ $media['url'] }}" controls preload="metadata"></video>
@@ -249,6 +249,11 @@
                                                             <img src="{{ $media['url'] }}" alt="{{ $product->name }}">
                                                         @endif
                                                     </div>
+                                                    @if(!empty($media['path']))
+                                                        <button type="button" class="product-media-preview-remove" data-remove-existing-media aria-label="Remove saved media {{ $loop->iteration }}">
+                                                            <i class="fa-solid fa-xmark"></i>
+                                                        </button>
+                                                    @endif
                                                     <div class="product-media-gallery-meta">
                                                         {{ ucfirst($media['type'] ?? 'image') }} {{ $loop->iteration }}
                                                     </div>
@@ -499,30 +504,52 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const form = document.querySelector('.edit-product-form');
             const mediaInput = document.querySelector('[data-product-media-input]');
             const previewGrid = document.querySelector('[data-product-media-preview]');
-            const objectUrls = [];
+            const existingGallery = document.querySelector('[data-existing-media-gallery]');
+            const selectedFiles = [];
+            const objectUrls = new Map();
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-            if (!mediaInput || !previewGrid || !window.URL?.createObjectURL) {
+            if (!mediaInput || !previewGrid || !window.URL?.createObjectURL || !window.DataTransfer || !form) {
                 return;
             }
 
             const revokeObjectUrls = () => {
-                while (objectUrls.length > 0) {
-                    URL.revokeObjectURL(objectUrls.pop());
+                objectUrls.forEach(function (url) {
+                    URL.revokeObjectURL(url);
+                });
+                objectUrls.clear();
+            };
+
+            const syncInputFiles = () => {
+                const transfer = new DataTransfer();
+
+                selectedFiles.forEach(function (file) {
+                    transfer.items.add(file);
+                });
+
+                mediaInput.files = transfer.files;
+            };
+
+            const formatFileSize = (bytes) => {
+                if (bytes < 1024 * 1024) {
+                    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
                 }
+
+                return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
             };
 
             const renderPreview = () => {
                 revokeObjectUrls();
-                const files = Array.from(mediaInput.files || []);
 
                 previewGrid.innerHTML = '';
-                previewGrid.hidden = files.length === 0;
+                previewGrid.hidden = selectedFiles.length === 0;
 
-                files.forEach((file) => {
+                selectedFiles.forEach((file, index) => {
                     const previewUrl = URL.createObjectURL(file);
-                    objectUrls.push(previewUrl);
+                    objectUrls.set(`${file.name}-${index}-${file.lastModified}`, previewUrl);
 
                     const card = document.createElement('div');
                     card.className = 'product-media-preview-card';
@@ -546,15 +573,106 @@
 
                     const meta = document.createElement('div');
                     meta.className = 'product-media-preview-meta';
-                    meta.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+                    meta.textContent = `${file.name} (${formatFileSize(file.size)})`;
+
+                    const removeButton = document.createElement('button');
+                    removeButton.type = 'button';
+                    removeButton.className = 'product-media-preview-remove';
+                    removeButton.setAttribute('aria-label', `Remove ${file.name}`);
+                    removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                    removeButton.addEventListener('click', function () {
+                        selectedFiles.splice(index, 1);
+                        syncInputFiles();
+                        renderPreview();
+                    });
 
                     card.appendChild(mediaWrap);
                     card.appendChild(meta);
+                    card.appendChild(removeButton);
                     previewGrid.appendChild(card);
                 });
             };
 
-            mediaInput.addEventListener('change', renderPreview);
+            const syncExistingGalleryVisibility = () => {
+                if (!existingGallery) {
+                    return;
+                }
+
+                const hasVisibleCards = Array.from(existingGallery.querySelectorAll('[data-existing-media-card]'))
+                    .some((card) => !card.hidden);
+
+                existingGallery.hidden = !hasVisibleCards;
+            };
+
+            mediaInput.addEventListener('change', function () {
+                const nextFiles = Array.from(mediaInput.files || []);
+
+                if (nextFiles.length === 0) {
+                    syncInputFiles();
+                    return;
+                }
+
+                nextFiles.forEach(function (file) {
+                    const alreadySelected = selectedFiles.some(function (currentFile) {
+                        return currentFile.name === file.name
+                            && currentFile.size === file.size
+                            && currentFile.lastModified === file.lastModified;
+                    });
+
+                    if (!alreadySelected) {
+                        selectedFiles.push(file);
+                    }
+                });
+
+                syncInputFiles();
+                renderPreview();
+            });
+
+            existingGallery?.addEventListener('click', async function (event) {
+                const removeButton = event.target.closest('[data-remove-existing-media]');
+                const deleteUrl = existingGallery.dataset.existingMediaDeleteUrl || '';
+
+                if (!removeButton || !deleteUrl) {
+                    return;
+                }
+
+                const card = removeButton.closest('[data-existing-media-card]');
+                const mediaPath = card?.dataset.mediaPath || '';
+
+                if (!card || !mediaPath) {
+                    return;
+                }
+
+                removeButton.disabled = true;
+
+                try {
+                    const response = await fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(csrfToken ? {
+                                'X-CSRF-TOKEN': csrfToken,
+                            } : {}),
+                        },
+                        body: JSON.stringify({
+                            path: mediaPath,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Unable to remove saved media.');
+                    }
+
+                    card.remove();
+                    syncExistingGalleryVisibility();
+                } catch (error) {
+                    removeButton.disabled = false;
+                    window.alert('Unable to remove this saved media right now. Please try again.');
+                }
+            });
+
+            syncExistingGalleryVisibility();
             window.addEventListener('beforeunload', revokeObjectUrls);
         });
     </script>

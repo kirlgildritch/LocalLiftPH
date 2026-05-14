@@ -3,8 +3,10 @@
 namespace App\Support;
 
 use App\Models\Address;
+use App\Models\Seller;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Collection;
 
 class LocationBrowsing
 {
@@ -99,5 +101,24 @@ class LocationBrowsing
         }
 
         return null;
+    }
+
+    public static function locationOptionsForVisibleSellerProducts(): Collection
+    {
+        return Seller::query()
+            ->select(['province', 'city'])
+            ->distinct()
+            ->visibleToBuyers()
+            ->whereNotNull('province')
+            ->where('province', '!=', '')
+            ->whereHas('user.products', function (Builder $query) {
+                $query->visibleToBuyers();
+            })
+            ->orderBy('province')
+            ->orderBy('city')
+            ->get()
+            ->groupBy('province')
+            ->map(fn (Collection $profiles) => $profiles->pluck('city')->filter()->unique()->values())
+            ->sortKeys();
     }
 }

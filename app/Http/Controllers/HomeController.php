@@ -9,7 +9,13 @@ class HomeController extends Controller
 {
     public function index()
     {
-        $featuredProducts = Product::with(['user.sellerProfile', 'category'])
+        $featuredProducts = Product::query()
+            ->select(['products.id', 'products.user_id', 'products.category_id', 'products.name', 'products.price', 'products.image', 'products.created_at'])
+            ->with([
+                'user:id,name',
+                'user.sellerProfile:id,user_id,store_name,city,province,region,application_status,suspended_at,shop_status,shop_status_until',
+                'category:id,name',
+            ])
             ->withRatings()
             ->visibleToBuyers()
             ->latest()

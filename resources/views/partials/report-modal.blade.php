@@ -9,7 +9,7 @@
     $shouldAutoOpen = session('report_modal_open') === $modalContext || $hasReportErrors;
 @endphp
 
-<button type="button" class="report-trigger-button" data-report-open="{{ $modalId }}" aria-label="{{ $triggerLabel }}">
+<button type="button" class="report-trigger-button" data-report-open="{{ $modalId }}" aria-label="{{ $triggerLabel }}" title="{{ $triggerLabel }}">
     <i class="fa-solid fa-flag"></i>
 </button>
 
