@@ -20,7 +20,6 @@ class ShopFollowController extends Controller
 
         ShopFollow::firstOrCreate([
             'user_id' => Auth::id(),
-            'seller_id' => $user->id,
             'seller_user_id' => $user->id,
         ]);
 
@@ -31,11 +30,7 @@ class ShopFollowController extends Controller
     {
         ShopFollow::query()
             ->where('user_id', Auth::id())
-            ->where(function ($query) use ($user) {
-                $query
-                    ->where('seller_user_id', $user->id)
-                    ->orWhere('seller_id', $user->id);
-            })
+            ->where('seller_user_id', $user->id)
             ->delete();
 
         return $this->respond($request, $user, false, 'Shop unfollowed.');

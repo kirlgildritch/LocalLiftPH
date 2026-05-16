@@ -5,7 +5,7 @@
 }
 
 .page-intro {
-  margin-bottom: 24px;
+  margin-bottom: 18px;
 }
 
 .checkout-breadcrumb {
@@ -19,6 +19,10 @@
 
 .checkout-breadcrumb a {
   color: var(--accent);
+}
+
+.shops-page .page-intro .checkout-breadcrumb {
+  margin-bottom: 0;
 }
 
 .page-hero,

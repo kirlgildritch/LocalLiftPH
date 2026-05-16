@@ -12,7 +12,6 @@ class ShopFollow extends Model
 
     protected $fillable = [
         'user_id',
-        'seller_id',
         'seller_user_id',
     ];
 

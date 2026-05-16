@@ -60,7 +60,7 @@
         <div class="section-header">
           <div>
             <span class="section-kicker">Recently Viewed</span>
-            <h2 class="section-title">Pick up where you left off</h2>
+
           </div>
         </div>
 

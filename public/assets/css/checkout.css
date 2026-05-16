@@ -539,6 +539,7 @@
 .summary-product {
   gap: 12px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .summary-image {
@@ -572,6 +573,13 @@
 .summary-price {
   text-align: right;
   flex-shrink: 0;
+}
+
+.summary-price > span {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 6px;
 }
 
 .summary-price strong,
@@ -746,6 +754,11 @@
   .delivery-method-card__price,
   .summary-price {
     text-align: left;
+    width: 100%;
+  }
+
+  .summary-price > span {
+    justify-content: flex-start;
   }
 
   .coupon-box,
