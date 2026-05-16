@@ -723,7 +723,6 @@
 
         if (sellerNotificationMenu) {
             updateSellerNotificationBadge(sellerUnreadCount);
-            void fetchSellerNotificationFeed();
 
             sellerNotificationFeedTimer = window.setInterval(() => {
                 void fetchSellerNotificationFeed();

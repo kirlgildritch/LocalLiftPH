@@ -40,8 +40,10 @@ class ShopController extends Controller
             ->get();
 
         $shopsQuery = User::query()
-            ->select('users.*')
-            ->with(['sellerProfile'])
+            ->select(['users.id', 'users.name', 'users.created_at'])
+            ->with([
+                'sellerProfile:id,user_id,store_name,shop_logo,city,province,region,application_status,suspended_at,shop_status,shop_status_until',
+            ])
             ->withCount([
                 'products' => function ($query) {
                     $query->visibleToBuyers();
@@ -73,17 +75,7 @@ class ShopController extends Controller
             default => $shopsQuery->latest()->get(), 
         };
 
-        $locationOptions = User::query()
-            ->visibleSellerShops()
-            ->whereHas('products', fn ($query) => $query->visibleToBuyers())
-            ->whereHas('sellerProfile', fn ($query) => $query->whereNotNull('province'))
-            ->with('sellerProfile:id,user_id,province,city')
-            ->get()
-            ->pluck('sellerProfile')
-            ->filter()
-            ->groupBy('province')
-            ->map(fn ($profiles) => $profiles->pluck('city')->filter()->unique()->sort()->values())
-            ->sortKeys();
+        $locationOptions = LocationBrowsing::locationOptionsForVisibleSellerProducts();
 
         $buyerLocation = $defaultAddress;
 
@@ -110,7 +102,12 @@ class ShopController extends Controller
         }
 
         $products = $user->products()
-            ->with(['user.sellerProfile', 'category'])
+            ->select(['products.id', 'products.user_id', 'products.category_id', 'products.name', 'products.price', 'products.image', 'products.created_at'])
+            ->with([
+                'user:id,name',
+                'user.sellerProfile:id,user_id,store_name,city,province,region,application_status,suspended_at,shop_status,shop_status_until',
+                'category:id,name',
+            ])
             ->withRatings()
             ->visibleToBuyers()
             ->latest()

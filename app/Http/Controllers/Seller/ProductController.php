@@ -97,6 +97,48 @@ class ProductController extends Controller
         }
     }
 
+    private function removeMarkedProductMedia(Product $product, array $paths): bool
+    {
+        $paths = collect($paths)
+            ->map(fn ($path) => trim((string) $path))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($paths->isEmpty()) {
+            return false;
+        }
+
+        $product->loadMissing(['media', 'variants']);
+
+        $product->media()
+            ->whereIn('path', $paths->all())
+            ->delete();
+
+        if (filled($product->image) && $paths->contains($product->image)) {
+            $product->image = $product->media()
+                ->where('type', 'image')
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->value('path');
+            $product->save();
+        }
+
+        $product->refresh()->loadMissing(['media', 'variants']);
+
+        foreach ($paths as $path) {
+            $isStillUsed = $product->image === $path
+                || $product->media->contains(fn ($media) => $media->path === $path)
+                || $product->variants->contains(fn ($variant) => $variant->image === $path);
+
+            if (! $isStillUsed) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
+        return true;
+    }
+
     private function variantValidationRules(): array
     {
         return [
@@ -450,6 +492,12 @@ class ProductController extends Controller
             if (! in_array('image', $changedFields, true)) {
                 $changedFields[] = 'image';
             }
+
+            if (! in_array('media', $changedFields, true)) {
+                $changedFields[] = 'media';
+            }
+        } elseif ($mediaFiles !== [] && ! in_array('media', $changedFields, true)) {
+            $changedFields[] = 'media';
         }
 
         foreach ([
@@ -517,6 +565,25 @@ class ProductController extends Controller
         return redirect()
             ->route('seller.products.index')
             ->with('success', 'Product updated successfully.');
+    }
+
+    public function destroyMedia(Request $request, Product $product)
+    {
+        abort_unless((int) $product->user_id === (int) Auth::guard('seller')->id(), 403);
+
+        $validated = $request->validate([
+            'path' => ['required', 'string'],
+        ]);
+
+        if (! $this->removeMarkedProductMedia($product, [$validated['path']])) {
+            return response()->json([
+                'message' => 'Saved media could not be removed.',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Saved media removed.',
+        ]);
     }
 
     public function destroy($id)

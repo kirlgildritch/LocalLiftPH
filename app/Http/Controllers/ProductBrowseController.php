@@ -38,8 +38,12 @@ class ProductBrowseController extends Controller
         }
 
         $productsQuery = Product::query()
-            ->select('products.*')
-            ->with(['user.sellerProfile', 'category'])
+            ->select(['products.id', 'products.user_id', 'products.category_id', 'products.name', 'products.price', 'products.image', 'products.created_at'])
+            ->with([
+                'user:id,name',
+                'user.sellerProfile:id,user_id,store_name,city,province,region,application_status,suspended_at,shop_status,shop_status_until',
+                'category:id,name',
+            ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->visibleToBuyers();
@@ -101,25 +105,17 @@ class ProductBrowseController extends Controller
             }
         ])->orderBy('name')->get();
 
-        $locationOptions = User::query()
-            ->visibleSellerShops()
-            ->whereHas('products', fn ($query) => $query->visibleToBuyers())
-            ->whereHas('sellerProfile', fn ($query) => $query->whereNotNull('province'))
-            ->with('sellerProfile:id,user_id,province,city')
-            ->get()
-            ->pluck('sellerProfile')
-            ->filter()
-            ->groupBy('province')
-            ->map(fn ($profiles) => $profiles->pluck('city')->filter()->unique()->sort()->values())
-            ->sortKeys();
+        $locationOptions = LocationBrowsing::locationOptionsForVisibleSellerProducts();
 
-        $shops = User::withCount([
-            'products' => function ($query) {
-                $query->visibleToBuyers();
-            }
-        ])
+        $shops = User::query()
+            ->select(['users.id', 'users.name', 'users.profile_image', 'users.created_at'])
+            ->withCount([
+                'products' => function ($query) {
+                    $query->visibleToBuyers();
+                }
+            ])
             ->visibleSellerShops()
-            ->with('sellerProfile')
+            ->with('sellerProfile:id,user_id,store_name')
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($nestedQuery) use ($search) {
                     $nestedQuery->where('name', 'like', '%' . $search . '%')
@@ -162,6 +158,7 @@ class ProductBrowseController extends Controller
         }
 
         $products = Product::query()
+            ->select(['id', 'name', 'price', 'image', 'user_id', 'category_id'])
             ->visibleToBuyers()
             ->where('name', 'like', "%{$search}%")
             ->orderBy('name')
@@ -169,6 +166,7 @@ class ProductBrowseController extends Controller
             ->pluck('name');
 
         $shops = User::query()
+            ->select(['users.id', 'users.name'])
             ->visibleSellerShops()
             ->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
@@ -227,8 +225,9 @@ class ProductBrowseController extends Controller
         );
 
         $product->load([
-            'user.sellerProfile',
-            'category',
+            'user:id,name',
+            'user.sellerProfile:id,user_id,store_name,store_description,city,province,region,application_status,suspended_at,shop_status,shop_status_until,hide_out_of_stock,shop_logo',
+            'category:id,name',
             'media',
             'variants',
         ])->loadAvg('reviews', 'rating')
@@ -312,6 +311,13 @@ class ProductBrowseController extends Controller
         }
 
         $relatedProducts = Product::with(['user.sellerProfile', 'category'])
+        $relatedProducts = Product::query()
+            ->select(['products.id', 'products.user_id', 'products.category_id', 'products.name', 'products.price', 'products.image', 'products.created_at'])
+            ->with([
+                'user:id,name',
+                'user.sellerProfile:id,user_id,store_name,city,province,region,application_status,suspended_at,shop_status,shop_status_until',
+                'category:id,name',
+            ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
             ->where('id', '!=', $product->id)

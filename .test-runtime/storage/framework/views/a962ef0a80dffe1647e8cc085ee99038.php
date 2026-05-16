@@ -62,6 +62,10 @@
                         <i class="fa-solid fa-box"></i>
                         <span>My Orders</span>
                     </a>
+                    <a href="<?php echo e(route('buyer.wishlist.index')); ?>">
+                        <i class="fa-regular fa-heart"></i>
+                        <span>My Wishlist</span>
+                    </a>
                     <a href="<?php echo e(route('buyer.addresses')); ?>">
                         <i class="fa-solid fa-map-location-dot"></i>
                         <span>Addresses</span>

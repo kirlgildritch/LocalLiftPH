@@ -164,7 +164,7 @@
                                 <div class="shop-logo">
                                     <div class="shop-logo-frame skeleton skeleton-image">
                                         @if(!empty($shop->sellerProfile?->shop_logo))
-                                            <img src="{{ asset('storage/' . $shop->sellerProfile->shop_logo) }}" alt="Shop Logo">
+                                            <img src="{{ asset('storage/' . $shop->sellerProfile->shop_logo) }}" alt="Shop Logo" loading="lazy" decoding="async">
                                         @else
                                             <div class="shop-logo-placeholder">
                                                 <i class="fa-solid fa-store"></i>

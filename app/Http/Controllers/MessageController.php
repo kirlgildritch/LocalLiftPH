@@ -290,10 +290,15 @@ class MessageController extends Controller
         $currentUserId = $this->currentUserId();
 
         return Conversation::with([
-            'buyer.sellerProfile',
-            'seller.sellerProfile',
-            'latestMessage.sender',
-            'latestMessage.product.user.sellerProfile',
+            'buyer:id,name,profile_image',
+            'buyer.sellerProfile:id,user_id,store_name,shop_logo',
+            'seller:id,name,profile_image',
+            'seller.sellerProfile:id,user_id,store_name,shop_logo',
+            'latestMessage:id,conversation_id,sender_id,product_id,message,image_path,video_path,read_at,created_at',
+            'latestMessage.sender:id,name',
+            'latestMessage.product:id,user_id,name,price,image',
+            'latestMessage.product.user:id,name',
+            'latestMessage.product.user.sellerProfile:id,user_id,store_name,shop_logo',
         ])->withCount([
             'messages as unread_count' => function ($query) use ($currentUserId) {
                 $query->whereNull('read_at')
@@ -305,6 +310,13 @@ class MessageController extends Controller
         })->when(! $currentUserId, function ($query) {
             $query->whereRaw('1 = 0');
         });
+    }
+
+    protected function shouldPreloadConversationListOnly(Request $request, ?Conversation $providedConversation = null): bool
+    {
+        return $request->boolean('preload')
+            && ! $providedConversation
+            && ! $request->filled('conversation');
     }
 
     protected function markConversationAsRead(Conversation $conversation): int
@@ -350,19 +362,27 @@ class MessageController extends Controller
         $this->touchCurrentUserPresence();
 
         $currentUser = $this->currentUser();
+        $preloadOnly = $this->shouldPreloadConversationListOnly($request, $providedConversation);
         $conversations = $this->conversationsQueryForCurrentUser()
             ->latest('updated_at')
             ->get();
 
-        $activeConversation = $this->resolveActiveConversation($request, $conversations, $providedConversation);
+        $activeConversation = $preloadOnly
+            ? null
+            : $this->resolveActiveConversation($request, $conversations, $providedConversation);
 
         if ($activeConversation) {
             $markedAsRead = $this->markConversationAsRead($activeConversation);
             $activeConversation->load([
-                'messages.sender',
-                'messages.product.user.sellerProfile',
-                'buyer.sellerProfile',
-                'seller.sellerProfile',
+                'messages:id,conversation_id,sender_id,product_id,message,image_path,video_path,read_at,created_at',
+                'messages.sender:id,name',
+                'messages.product:id,user_id,name,price,image',
+                'messages.product.user:id,name',
+                'messages.product.user.sellerProfile:id,user_id,store_name,shop_logo',
+                'buyer:id,name,profile_image',
+                'buyer.sellerProfile:id,user_id,store_name,shop_logo',
+                'seller:id,name,profile_image',
+                'seller.sellerProfile:id,user_id,store_name,shop_logo',
             ]);
 
             if ($markedAsRead > 0 && $currentUser) {
@@ -428,6 +448,7 @@ class MessageController extends Controller
                 'count' => $conversations->count(),
                 'current_user_id' => $currentUser?->id,
                 'widget_route' => route($this->widgetRouteName()),
+                'default_conversation_id' => $conversations->first()?->id,
             ],
         ];
     }

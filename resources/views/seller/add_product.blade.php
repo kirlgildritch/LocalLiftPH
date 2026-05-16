@@ -427,28 +427,47 @@
     document.addEventListener('DOMContentLoaded', function () {
         const mediaInput = document.querySelector('[data-product-media-input]');
         const previewGrid = document.querySelector('[data-product-media-preview]');
-        const objectUrls = [];
+        const selectedFiles = [];
+        const objectUrls = new Map();
 
-        if (!mediaInput || !previewGrid || !window.URL?.createObjectURL) {
+        if (!mediaInput || !previewGrid || !window.URL?.createObjectURL || !window.DataTransfer) {
             return;
         }
 
         const revokeObjectUrls = () => {
-            while (objectUrls.length > 0) {
-                URL.revokeObjectURL(objectUrls.pop());
+            objectUrls.forEach(function (url) {
+                URL.revokeObjectURL(url);
+            });
+            objectUrls.clear();
+        };
+
+        const syncInputFiles = () => {
+            const transfer = new DataTransfer();
+
+            selectedFiles.forEach(function (file) {
+                transfer.items.add(file);
+            });
+
+            mediaInput.files = transfer.files;
+        };
+
+        const formatFileSize = (bytes) => {
+            if (bytes < 1024 * 1024) {
+                return `${Math.max(1, Math.round(bytes / 1024))} KB`;
             }
+
+            return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
         };
 
         const renderPreview = () => {
             revokeObjectUrls();
-            const files = Array.from(mediaInput.files || []);
 
             previewGrid.innerHTML = '';
-            previewGrid.hidden = files.length === 0;
+            previewGrid.hidden = selectedFiles.length === 0;
 
-            files.forEach((file) => {
+            selectedFiles.forEach((file, index) => {
                 const previewUrl = URL.createObjectURL(file);
-                objectUrls.push(previewUrl);
+                objectUrls.set(`${file.name}-${index}-${file.lastModified}`, previewUrl);
 
                 const card = document.createElement('div');
                 card.className = 'product-media-preview-card';
@@ -472,15 +491,50 @@
 
                 const meta = document.createElement('div');
                 meta.className = 'product-media-preview-meta';
-                meta.textContent = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+                meta.textContent = `${file.name} (${formatFileSize(file.size)})`;
+
+                const removeButton = document.createElement('button');
+                removeButton.type = 'button';
+                removeButton.className = 'product-media-preview-remove';
+                removeButton.setAttribute('aria-label', `Remove ${file.name}`);
+                removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                removeButton.addEventListener('click', function () {
+                    selectedFiles.splice(index, 1);
+                    syncInputFiles();
+                    renderPreview();
+                });
 
                 card.appendChild(mediaWrap);
                 card.appendChild(meta);
+                card.appendChild(removeButton);
                 previewGrid.appendChild(card);
             });
         };
 
-        mediaInput.addEventListener('change', renderPreview);
+        mediaInput.addEventListener('change', function () {
+            const nextFiles = Array.from(mediaInput.files || []);
+
+            if (nextFiles.length === 0) {
+                syncInputFiles();
+                return;
+            }
+
+            nextFiles.forEach(function (file) {
+                const alreadySelected = selectedFiles.some(function (currentFile) {
+                    return currentFile.name === file.name
+                        && currentFile.size === file.size
+                        && currentFile.lastModified === file.lastModified;
+                });
+
+                if (!alreadySelected) {
+                    selectedFiles.push(file);
+                }
+            });
+
+            syncInputFiles();
+            renderPreview();
+        });
+
         window.addEventListener('beforeunload', revokeObjectUrls);
     });
 </script>

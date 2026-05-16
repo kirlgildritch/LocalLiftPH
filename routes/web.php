@@ -106,6 +106,7 @@ Route::middleware('seller')->group(function () {
     Route::get('/manage-products', [ProductController::class, 'index'])->name('seller.products.index');
     Route::get('/seller/products/{product}/edit', [ProductController::class, 'edit'])->name('seller.products.edit');
     Route::patch('/seller/products/{product}', [ProductController::class, 'update'])->name('seller.products.update');
+    Route::delete('/seller/products/{product}/media', [ProductController::class, 'destroyMedia'])->name('seller.products.media.destroy');
     Route::delete('/seller/products/{product}', [ProductController::class, 'destroy'])->name('seller.products.destroy');
     Route::get('/seller/products/{product}/reviews', [ProductController::class, 'reviews'])->name('seller.products.reviews');
     Route::patch('/seller/products/{product}/reviews/{review}/reply', [ProductController::class, 'replyToReview'])->name('seller.products.reviews.reply');

@@ -101,6 +101,7 @@
             let pendingScrollBehavior = 'auto';
             let conversationsSwapTimer = null;
             let messagesSwapTimer = null;
+            let queuedLoadRequest = null;
             const subscriptions = new Map();
             const presenceSubscriptions = new Map();
             const presenceMembers = new Map();
@@ -122,6 +123,7 @@
             };
 
             const isMobileChatViewport = () => window.matchMedia('(max-width: 640px)').matches;
+            const defaultConversationId = () => Number(state.meta?.default_conversation_id || state.conversations[0]?.id || 0) || null;
             const createClientMessageId = () => `chat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
             const socketId = () => window.Echo?.socketId?.() || '';
             const requestHeaders = (includeSocket = true) => {
@@ -1011,22 +1013,31 @@
                 applyPresenceIndicators();
             };
 
-            const loadWidget = async (conversationId = state.activeConversationId) => {
+            const loadWidget = async (conversationId = state.activeConversationId, options = {}) => {
+                const preloadOnly = Boolean(options.preloadOnly);
+                const requestedConversationId = conversationId || null;
+
                 if (state.loading) {
+                    queuedLoadRequest = {
+                        conversationId: requestedConversationId,
+                        options,
+                    };
                     return;
                 }
 
                 state.loading = true;
-                const requestedConversationId = conversationId || null;
+                queuedLoadRequest = null;
                 const previousConversationId = state.activeConversationId || null;
                 const preserveBottom = isNearMessagesBottom();
                 const shouldShowLoadingState = !state.hasLoadedOnce
                     || requestedConversationId !== previousConversationId
-                    || (!state.activeConversation && (!!requestedConversationId || state.conversations.length > 0));
+                    || (!state.activeConversation && (!!requestedConversationId || (!preloadOnly && state.conversations.length > 0)));
 
                 const url = new URL(fetchUrl, window.location.origin);
                 if (conversationId) {
                     url.searchParams.set('conversation', String(conversationId));
+                } else if (preloadOnly) {
+                    url.searchParams.set('preload', '1');
                 }
 
                 if (shouldShowLoadingState) {
@@ -1048,8 +1059,10 @@
                     const payload = await response.json();
                     state.conversations = Array.isArray(payload.conversations) ? payload.conversations : [];
                     state.activeConversation = payload.active_conversation || null;
-                    state.activeConversationId = state.activeConversation?.id || (state.conversations[0]?.id ?? null);
                     state.meta = payload.meta || {};
+                    state.activeConversationId = state.activeConversation?.id
+                        || requestedConversationId
+                        || (!preloadOnly ? defaultConversationId() : null);
                     state.hasLoadedOnce = true;
                     pendingScrollBehavior = requestedConversationId !== previousConversationId
                         ? 'force'
@@ -1072,6 +1085,12 @@
                         setComposerBusy(false);
                     }
                     state.loading = false;
+
+                    if (queuedLoadRequest) {
+                        const nextLoadRequest = queuedLoadRequest;
+                        queuedLoadRequest = null;
+                        void loadWidget(nextLoadRequest.conversationId, nextLoadRequest.options);
+                    }
                 }
             };
 
@@ -1082,9 +1101,28 @@
 
                 if (!state.hasLoadedOnce) {
                     loadWidget();
+                } else if (!state.activeConversation && defaultConversationId()) {
+                    loadWidget(defaultConversationId());
                 } else {
                     renderAll();
                 }
+            };
+
+            const scheduleDeferredLoad = () => {
+                const runDeferredLoad = () => {
+                    if (state.open || state.loading || state.hasLoadedOnce) {
+                        return;
+                    }
+
+                    void loadWidget(null, { preloadOnly: true });
+                };
+
+                if ('requestIdleCallback' in window) {
+                    window.requestIdleCallback(runDeferredLoad, { timeout: 1500 });
+                    return;
+                }
+
+                window.setTimeout(runDeferredLoad, 900);
             };
 
             const openConversation = async (conversationId) => {
@@ -1330,7 +1368,7 @@
             if (autoOpen) {
                 openWidget();
             } else {
-                loadWidget();
+                scheduleDeferredLoad();
             }
         });
     });

@@ -241,6 +241,8 @@
                                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
                                             <img src="{{ !empty($shop->profile_image) ? asset('storage/' . $shop->profile_image) : asset('assets/images/default-product.png') }}"
                                                 alt="{{ $shop->name }}"
+                                                loading="lazy"
+                                                decoding="async"
                                                 style="width: 52px; height: 52px; object-fit: cover; border-radius: 50%;">
                                             <div>
                                                 <h4 style="margin: 0;">{{ $shop->name }}</h4>

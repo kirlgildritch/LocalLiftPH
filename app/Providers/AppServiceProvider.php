@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Models\Cart;
 use App\Models\Order;
-use App\Notifications\SellerNotificationService;
 use App\Policies\OrderPolicy;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -55,12 +54,15 @@ class AppServiceProvider extends ServiceProvider
             $cartCount = 0;
             $buyerGuard = Auth::guard('web');
 
-            if ($buyerGuard->check()) {
+            if ($buyerGuard->check() && ! request()->routeIs('cart.index')) {
                 $buyerId = $buyerGuard->id();
                 $cartQuery = Cart::query()->where('user_id', $buyerId);
 
                 $miniCartItems = (clone $cartQuery)
-                    ->with(['product.user'])
+                    ->with([
+                        'product:id,user_id,name,price,image',
+                        'product.user:id,name',
+                    ])
                     ->latest()
                     ->take(4)
                     ->get();
@@ -81,14 +83,6 @@ class AppServiceProvider extends ServiceProvider
 
             if ($sellerGuard->check()) {
                 $sellerUser = $sellerGuard->user();
-
-                app(SellerNotificationService::class)->syncPendingOrdersNotShipped($sellerUser);
-
-                $sellerHeaderNotifications = $sellerUser->notifications()
-                    ->latest()
-                    ->limit(5)
-                    ->get();
-
                 $sellerUnreadNotificationCount = $sellerUser->unreadNotifications()->count();
             }
 
