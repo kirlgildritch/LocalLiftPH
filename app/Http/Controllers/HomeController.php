@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\RecentlyViewedProduct;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
@@ -42,6 +44,29 @@ class HomeController extends Controller
                 ];
             });
 
-        return view('home', compact('featuredProducts', 'featuredCategories'));
+        $recentlyViewedProducts = collect();
+
+        if (Auth::guard('web')->check()) {
+            $recentlyViewedProducts = RecentlyViewedProduct::query()
+                ->with([
+                    'product' => function ($query) {
+                        $query
+                            ->with(['user.sellerProfile', 'category'])
+                            ->withRatings();
+                    },
+                ])
+                ->where('user_id', Auth::id())
+                ->whereHas('product', function ($query) {
+                    $query->visibleToBuyers();
+                })
+                ->latest('updated_at')
+                ->take(6)
+                ->get()
+                ->pluck('product')
+                ->filter()
+                ->values();
+        }
+
+        return view('home', compact('featuredProducts', 'featuredCategories', 'recentlyViewedProducts'));
     }
 }

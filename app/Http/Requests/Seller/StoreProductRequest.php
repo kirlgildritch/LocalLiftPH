@@ -17,6 +17,6 @@ class StoreProductRequest extends SellerProductRequest
             'width_cm' => 'required|numeric|min:0.01',
             'length_cm' => 'required|numeric|min:0.01',
             'height_cm' => 'required|numeric|min:0.01',
-        ] + $this->mediaValidationRules() + $this->variantValidationRules();
+        ] + $this->discountValidationRules() + $this->mediaValidationRules() + $this->variantValidationRules();
     }
 }

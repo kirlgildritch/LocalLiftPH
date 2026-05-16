@@ -55,6 +55,8 @@
                             ])
 
                             @include('seller.products.partials.form.pricing-fields', [
+                                'discountTypeValue' => old('discount_type'),
+                                'discountValue' => old('discount_value'),
                                 'priceLabel' => 'Price',
                                 'pricePlaceholder' => '₱ ',
                                 'priceValue' => old('price'),

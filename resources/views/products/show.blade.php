@@ -49,6 +49,7 @@
         <div class="detail-sections">
             @include('products.partials.show.reviews')
             @include('products.partials.show.related-products')
+            @includeWhen(($recentlyViewedProducts ?? collect())->isNotEmpty(), 'products.partials.show.recently-viewed')
         </div>
     </div>
 </section>

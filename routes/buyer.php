@@ -9,6 +9,7 @@ use App\Http\Controllers\OrderReturnRequestController;
 use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ShopFollowController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -46,6 +47,9 @@ Route::middleware('buyer')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('buyer.wishlist.index');
     Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('buyer.wishlist.store');
     Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->name('buyer.wishlist.destroy');
+
+    Route::post('/shops/{user}/follow', [ShopFollowController::class, 'store'])->name('shops.follow');
+    Route::delete('/shops/{user}/follow', [ShopFollowController::class, 'destroy'])->name('shops.unfollow');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');

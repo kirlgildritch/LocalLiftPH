@@ -24,7 +24,7 @@
         @forelse(($groupedCartItems ?? collect()) as $sellerId => $sellerCartItems)
             @php
                 $seller = $sellerCartItems->first()?->product?->user;
-                $sellerSubtotal = $sellerCartItems->sum(fn($item) => (float) ($item->variant?->price ?? $item->product->price ?? 0) * (int) $item->quantity);
+                $sellerSubtotal = $sellerCartItems->sum(fn($item) => ($item->product?->discountedPrice((float) ($item->variant?->price ?? $item->product->price ?? 0)) ?? 0) * (int) $item->quantity);
                 $sellerShipping = $sellerCartItems->sum(fn($item) => (float) ($item->product->shipping_fee ?? 0) * (int) $item->quantity);
                 $estimate = ($deliveryEstimates ?? collect())->get($sellerId);
             @endphp
@@ -44,7 +44,9 @@
                 @foreach($sellerCartItems as $item)
                     @php
                         $variant = $item->variant;
-                        $unitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                        $originalUnitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                        $unitPrice = $item->product?->discountedPrice($originalUnitPrice) ?? $originalUnitPrice;
+                        $hasDiscount = $item->product?->hasActiveDiscount() && $unitPrice < $originalUnitPrice;
                         $productImage = $variant?->image ?: ($item->product->image ?? null);
                     @endphp
                     <div class="summary-item">
@@ -64,7 +66,12 @@
 
                         <div class="summary-price">
                             <strong>&#8369; {{ number_format($unitPrice * (int) $item->quantity, 2) }}</strong>
-                            <span>&#8369; {{ number_format($unitPrice, 2) }} each</span>
+                            <span>
+                                @if($hasDiscount)
+                                    <span class="checkout-price-original">&#8369; {{ number_format($originalUnitPrice, 2) }}</span>
+                                @endif
+                                <span class="{{ $hasDiscount ? 'checkout-price-sale' : '' }}">&#8369; {{ number_format($unitPrice, 2) }} each</span>
+                            </span>
                         </div>
                     </div>
                 @endforeach
@@ -84,6 +91,11 @@
         <strong>&#8369; {{ number_format($shippingFee, 2) }}</strong>
     </div>
 
+    <div class="summary-line">
+        <span>Voucher</span>
+        <strong>Optional</strong>
+    </div>
+
     <div class="summary-total">
         <span>Total</span>
         <strong>&#8369; {{ number_format($total, 2) }}</strong>
@@ -94,6 +106,13 @@
         @foreach(($selectedCartItemIds ?? collect()) as $selectedCartItemId)
             <input type="hidden" name="selected_cart_items[]" value="{{ $selectedCartItemId }}">
         @endforeach
+        <div class="form-group" style="margin-bottom: 14px;">
+            <label for="voucher_code">Voucher / Coupon</label>
+            <input type="text" id="voucher_code" name="voucher_code" value="{{ $voucherCode }}" placeholder="Enter code, if any">
+            @error('voucher_code')
+                <small class="error-text">{{ $message }}</small>
+            @enderror
+        </div>
         <button
             type="submit"
             class="action-btn primary-btn full-btn"

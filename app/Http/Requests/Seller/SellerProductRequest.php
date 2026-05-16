@@ -34,4 +34,12 @@ abstract class SellerProductRequest extends FormRequest
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
         ];
     }
+
+    protected function discountValidationRules(): array
+    {
+        return [
+            'discount_type' => 'nullable|required_with:discount_value|in:percent,fixed',
+            'discount_value' => 'nullable|required_with:discount_type|numeric|min:0',
+        ];
+    }
 }

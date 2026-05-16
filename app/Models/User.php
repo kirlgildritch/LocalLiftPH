@@ -94,6 +94,21 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Wishlist::class);
     }
 
+    public function followedShops(): HasMany
+    {
+        return $this->hasMany(\App\Models\ShopFollow::class);
+    }
+
+    public function shopFollowers(): HasMany
+    {
+        return $this->hasMany(\App\Models\ShopFollow::class, 'seller_user_id');
+    }
+
+    public function recentlyViewedProducts(): HasMany
+    {
+        return $this->hasMany(\App\Models\RecentlyViewedProduct::class);
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(\App\Models\Order::class);

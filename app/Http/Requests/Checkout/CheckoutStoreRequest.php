@@ -19,6 +19,7 @@ class CheckoutStoreRequest extends FormRequest
             'selected_cart_items' => ['nullable', 'array'],
             'selected_cart_items.*' => ['integer'],
             'payment_method' => ['required', Rule::in(array_keys(Order::paymentMethods()))],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

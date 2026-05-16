@@ -18,11 +18,17 @@
                     class="variant-choice"
                     data-variant-choice
                     data-variant-id="{{ $variant->id }}"
-                    data-variant-price="{{ (float) $variant->price }}"
+                    data-variant-price="{{ $product->discountedPrice((float) $variant->price) }}"
+                    data-variant-original-price="{{ (float) $variant->price }}"
                     data-variant-stock="{{ (int) $variant->stock }}"
                     {{ (int) $variant->stock <= 0 ? 'disabled' : '' }}>
                     <strong>{{ $variant->displayName() }}</strong>
-                    <small>&#8369; {{ number_format($variant->price, 2) }} | {{ (int) $variant->stock }} left</small>
+                    <small>
+                        @if($product->hasActiveDiscount() && $product->discountedPrice((float) $variant->price) < (float) $variant->price)
+                            <span class="variant-price-original">&#8369; {{ number_format($variant->price, 2) }}</span>
+                        @endif
+                        &#8369; {{ number_format($product->discountedPrice((float) $variant->price), 2) }} | {{ (int) $variant->stock }} left
+                    </small>
                 </button>
             @endforeach
         </div>

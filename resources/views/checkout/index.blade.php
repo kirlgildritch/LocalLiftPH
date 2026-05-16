@@ -5,6 +5,10 @@
     <link rel="stylesheet" href="{{ asset('assets/css/checkout.css') }}">
     @php
         $checkoutPaymentScript = asset('assets/js/checkout-payment.js') . '?v=' . @filemtime(public_path('assets/js/checkout-payment.js'));
+        $paymentMethods = $paymentMethods ?? \App\Models\Order::paymentMethods();
+        $selectedPaymentMethod = $selectedPaymentMethod ?? \App\Models\Order::PAYMENT_METHOD_COD;
+        $selectedPayment = $paymentMethods[$selectedPaymentMethod] ?? reset($paymentMethods);
+        $voucherCode = old('voucher_code');
     @endphp
 
     <section class="checkout-page">

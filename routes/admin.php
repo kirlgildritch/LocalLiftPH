@@ -36,6 +36,7 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('/products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('products.reject');
 
     Route::get('/sellers', [SellerReviewController::class, 'index'])->name('sellers');
+    Route::get('/sellers/{seller}/documents/{type}', [SellerReviewController::class, 'document'])->name('sellers.documents.show');
     Route::patch('/sellers/{seller}/status', [SellerReviewController::class, 'updateStatus'])->name('sellers.status');
 
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders');

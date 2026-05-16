@@ -1,5 +1,3 @@
-
-
 @extends('layouts.app')
 
 @section('content')
@@ -16,16 +14,14 @@
             </div>
 
             @php
-    $total = 0;
-    $selectedCartItemId = session('selected_cart_item_id');
-    $selectedCartItemIds = collect(session('selected_cart_item_ids', []))
-        ->map(fn($id) => (int) $id)
-        ->filter()
-        ->values();
-    $hasSelectedCartItem = filled($selectedCartItemId);
-    $hasSelectedCartItems = $selectedCartItemIds->isNotEmpty();
-    $selectedSubtotal = 0;
-    $selectedShipping = 0;
+                $total = 0;
+                $selectedCartItemId = session('selected_cart_item_id');
+                $selectedCartItemIds = collect(session('selected_cart_item_ids', []))
+                    ->map(fn ($id) => (int) $id)
+                    ->filter()
+                    ->values();
+                $selectedSubtotal = 0;
+                $selectedShipping = 0;
             @endphp
 
             <div
@@ -35,8 +31,6 @@
                 data-selection-storage-key="locallift-cart-selection-{{ auth()->id() }}"
             >
                 <div class="cart-main">
-
-
                     <div class="cart-list panel">
                         <div class="select-all-row">
                             <label>
@@ -54,19 +48,21 @@
 
                         @forelse($cartItems as $item)
                             @php
-        $variant = $item->variant;
-        $unitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
-        $availableStock = max(0, (int) ($variant?->stock ?? $item->product->stock ?? 0));
-        $productImage = $variant?->image ?: $item->product->image;
-        $subtotal = $unitPrice * $item->quantity;
-        $shipping = ($item->product->shipping_fee ?? 0) * $item->quantity;
-        $total += $subtotal;
-        $isChecked = (int) $selectedCartItemId === (int) $item->id
-            || $selectedCartItemIds->contains((int) $item->id);
-        if ($isChecked) {
-            $selectedSubtotal += $subtotal;
-            $selectedShipping += $shipping;
-        }
+                                $variant = $item->variant;
+                                $originalUnitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                                $unitPrice = $item->product?->discountedPrice($originalUnitPrice) ?? $originalUnitPrice;
+                                $hasDiscount = $item->product?->hasActiveDiscount() && $unitPrice < $originalUnitPrice;
+                                $availableStock = max(0, (int) ($variant?->stock ?? $item->product->stock ?? 0));
+                                $productImage = $variant?->image ?: $item->product->image;
+                                $subtotal = $unitPrice * $item->quantity;
+                                $shipping = ($item->product->shipping_fee ?? 0) * $item->quantity;
+                                $total += $subtotal;
+                                $isChecked = (int) $selectedCartItemId === (int) $item->id
+                                    || $selectedCartItemIds->contains((int) $item->id);
+                                if ($isChecked) {
+                                    $selectedSubtotal += $subtotal;
+                                    $selectedShipping += $shipping;
+                                }
                             @endphp
 
                             <article
@@ -101,7 +97,12 @@
                                     </div>
                                 </div>
 
-                                <div class="item-price">&#8369; {{ number_format($unitPrice, 2) }}</div>
+                                <div class="item-price">
+                                    @if($hasDiscount)
+                                        <span class="cart-price-original">&#8369; {{ number_format($originalUnitPrice, 2) }}</span><br>
+                                    @endif
+                                    <span class="{{ $hasDiscount ? 'cart-price-sale' : '' }}">&#8369; {{ number_format($unitPrice, 2) }}</span>
+                                </div>
 
                                 <div class="item-quantity">
                                     <div class="qty-box">

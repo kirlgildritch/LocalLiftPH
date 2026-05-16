@@ -63,7 +63,8 @@ class CheckoutController extends Controller
         $shippingFee = 0;
 
         foreach ($cartItems as $item) {
-            $price = (float) ($item->variant?->price ?? $item->product->price ?? 0);
+            $basePrice = (float) ($item->variant?->price ?? $item->product->price ?? 0);
+            $price = $item->product?->discountedPrice($basePrice) ?? $basePrice;
             $itemShipping = (float) ($item->product->shipping_fee ?? 0);
             $quantity = (int) $item->quantity;
 
@@ -75,6 +76,39 @@ class CheckoutController extends Controller
             'subtotal' => $subtotal,
             'shippingFee' => $shippingFee,
             'total' => $subtotal + $shippingFee,
+        ];
+    }
+
+    protected function validateVoucher(?string $code, float $subtotal): array
+    {
+        $normalizedCode = strtoupper(trim((string) $code));
+
+        if ($normalizedCode === '') {
+            return [
+                'code' => null,
+                'discount' => 0,
+            ];
+        }
+
+        $voucher = collect(config('vouchers.codes', []))
+            ->first(fn ($details, $key) => strtoupper((string) $key) === $normalizedCode);
+
+        if (! $voucher) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'voucher_code' => 'Voucher code is invalid or unavailable.',
+            ]);
+        }
+
+        $type = $voucher['type'] ?? null;
+        $value = max(0, (float) ($voucher['value'] ?? 0));
+
+        $discount = $type === 'percent'
+            ? $subtotal * min($value, 100) / 100
+            : $value;
+
+        return [
+            'code' => $normalizedCode,
+            'discount' => round(min($discount, $subtotal), 2),
         ];
     }
 
@@ -205,13 +239,14 @@ class CheckoutController extends Controller
             return $addressRedirect;
         }
 
-        $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
+        $allTotals = $this->calculateCartTotals($cartItems);
+        $voucher = $this->validateVoucher($validated['voucher_code'] ?? null, $allTotals['subtotal']);
         $checkoutGroup = (string) Str::uuid();
         $createdOrders = collect();
         $stockChecks = collect();
 
         try {
-            DB::transaction(function () use ($cartItems, $groupedCartItems, $checkoutGroup, $validated, &$createdOrders, &$stockChecks) {
+            DB::transaction(function () use ($cartItems, $checkoutGroup, $validated, $voucher, &$createdOrders, &$stockChecks) {
                 $lockedProducts = Product::query()
                     ->with(['user.sellerProfile', 'activeVariants'])
                     ->whereIn('id', $cartItems->pluck('product_id')->filter()->unique()->values())
@@ -225,15 +260,36 @@ class CheckoutController extends Controller
                     ->get()
                     ->keyBy('id');
 
+                $cartItems->each(function (Cart $item) use ($lockedProducts, $lockedVariants): void {
+                    if ($product = $lockedProducts->get($item->product_id)) {
+                        $item->setRelation('product', $product);
+                    }
+
+                    if ($item->product_variant_id && $variant = $lockedVariants->get($item->product_variant_id)) {
+                        $item->setRelation('variant', $variant);
+                    }
+                });
+
+                $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
+                $lockedAllTotals = $this->calculateCartTotals($cartItems);
+
                 foreach ($groupedCartItems as $sellerId => $sellerCartItems) {
                     $totals = $this->calculateCartTotals($sellerCartItems);
+                    $sellerVoucherDiscount = 0;
+
+                    if ($voucher['discount'] > 0 && $lockedAllTotals['subtotal'] > 0) {
+                        $lockedVoucherDiscount = min($voucher['discount'], $lockedAllTotals['subtotal']);
+                        $sellerVoucherDiscount = round($lockedVoucherDiscount * ($totals['subtotal'] / $lockedAllTotals['subtotal']), 2);
+                    }
 
                     $order = Order::create([
                         'user_id' => Auth::id(),
                         'seller_id' => (int) $sellerId,
                         'checkout_group' => $checkoutGroup,
                         'shipping_fee' => $totals['shippingFee'],
-                        'total_price' => $totals['total'],
+                        'voucher_code' => $voucher['code'],
+                        'voucher_discount' => $sellerVoucherDiscount,
+                        'total_price' => max(0, $totals['total'] - $sellerVoucherDiscount),
                         'status' => Order::STATUS_PENDING,
                         'shipping_status' => Order::SHIPPING_PENDING,
                         'payment_method' => $validated['payment_method'],
@@ -260,6 +316,8 @@ class CheckoutController extends Controller
                         }
 
                         $previousStock = (int) $product->stock;
+                        $basePrice = (float) ($variant?->price ?? $product->price);
+                        $unitPrice = $product->discountedPrice($basePrice);
 
                         $order->items()->create([
                             'product_id' => $product->id,
@@ -267,7 +325,7 @@ class CheckoutController extends Controller
                             'variant_name' => $variant?->displayName(),
                             'variant_options' => $variant?->option_values,
                             'quantity' => $item->quantity,
-                            'price' => $variant?->price ?? $product->price,
+                            'price' => $unitPrice,
                             'shipping_fee' => $product->shipping_fee ?? 0,
                         ]);
 

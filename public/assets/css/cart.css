@@ -170,6 +170,18 @@ input[type="checkbox"] {
   font-weight: 700;
 }
 
+.cart-price-original {
+  color: #7f8da3;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(255, 116, 116, 0.78);
+}
+
+.cart-price-sale {
+  color: #ffdf6e;
+  font-weight: 800;
+}
+
 .item-quantity {
   display: flex;
   justify-content: flex-start;

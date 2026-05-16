@@ -104,6 +104,8 @@
                                     </div>
 
                                     @include('seller.products.partials.form.pricing-fields', [
+                                        'discountTypeValue' => old('discount_type', $product->discount_type ?? ''),
+                                        'discountValue' => old('discount_value', $product->discount_value ?? ''),
                                         'priceValue' => old('price', $product->price ?? ''),
                                         'stockValue' => old('stock', $product->stock ?? ''),
                                         'wrapperClass' => 'form-grid edit-two-column-grid',

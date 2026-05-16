@@ -22,7 +22,9 @@ class AdminActivityNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return filter_var(env('NOTIFICATIONS_BROADCAST', false), FILTER_VALIDATE_BOOLEAN)
+            ? ['database', 'broadcast']
+            : ['database'];
     }
 
     public function toArray(object $notifiable): array
