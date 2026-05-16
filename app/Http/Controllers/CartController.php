@@ -28,7 +28,8 @@ class CartController extends Controller
             'extra_count' => $extraCount,
             'preview_items' => $previewItems->map(function ($item) {
                 $variant = $item->variant;
-                $price = $variant?->price ?? $item->product->price ?? 0;
+                $basePrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                $price = $item->product?->discountedPrice($basePrice) ?? $basePrice;
 
                 return [
                     'id' => $item->id,
@@ -217,7 +218,8 @@ class CartController extends Controller
         ]);
 
         if ($request->expectsJson()) {
-            $price = (float) ($cartItem->variant?->price ?? $cartItem->product->price ?? 0);
+            $basePrice = (float) ($cartItem->variant?->price ?? $cartItem->product->price ?? 0);
+            $price = $cartItem->product?->discountedPrice($basePrice) ?? $basePrice;
             $shippingFee = (float) ($cartItem->product->shipping_fee ?? 0);
             $quantity = (int) $cartItem->quantity;
             $subtotal = $price * $quantity;

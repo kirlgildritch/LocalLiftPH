@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Category;
 use App\Models\Review;
 use App\Models\Wishlist;
+use App\Models\RecentlyViewedProduct;
 use App\Support\LocationBrowsing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -266,6 +267,50 @@ class ProductBrowseController extends Controller
                 ->exists()
             : false;
 
+        $recentlyViewedProducts = collect();
+
+        if (Auth::guard('web')->check()) {
+            RecentlyViewedProduct::updateOrCreate(
+                [
+                    'user_id' => Auth::id(),
+                    'product_id' => $product->id,
+                ],
+                ['updated_at' => now()]
+            );
+
+            $recentIdsToKeep = RecentlyViewedProduct::query()
+                ->where('user_id', Auth::id())
+                ->latest('updated_at')
+                ->limit(12)
+                ->pluck('id');
+
+            RecentlyViewedProduct::query()
+                ->where('user_id', Auth::id())
+                ->whereNotIn('id', $recentIdsToKeep)
+                ->delete();
+
+            $recentlyViewedProducts = RecentlyViewedProduct::query()
+                ->with([
+                    'product' => function ($query) {
+                        $query
+                            ->with(['user.sellerProfile', 'category'])
+                            ->withAvg('reviews', 'rating')
+                            ->withCount('reviews');
+                    },
+                ])
+                ->where('user_id', Auth::id())
+                ->where('product_id', '!=', $product->id)
+                ->whereHas('product', function ($query) {
+                    $query->visibleToBuyers();
+                })
+                ->latest('updated_at')
+                ->take(4)
+                ->get()
+                ->pluck('product')
+                ->filter()
+                ->values();
+        }
+
         $relatedProducts = Product::with(['user.sellerProfile', 'category'])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
@@ -283,7 +328,8 @@ class ProductBrowseController extends Controller
             'reviews',
             'showAllReviews',
             'initialReviewsLimit',
-            'isWishlisted'
+            'isWishlisted',
+            'recentlyViewedProducts'
         ));
     }
 }

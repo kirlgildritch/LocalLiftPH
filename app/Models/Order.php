@@ -44,6 +44,8 @@ class Order extends Model
         'seller_id',
         'checkout_group',
         'shipping_fee',
+        'voucher_code',
+        'voucher_discount',
         'total_price',
         'status',
         'shipping_status',
@@ -58,6 +60,7 @@ class Order extends Model
     protected $casts = [
         'paid_at' => 'datetime',
         'seller_released_at' => 'datetime',
+        'voucher_discount' => 'decimal:2',
     ];
 
     public function user()

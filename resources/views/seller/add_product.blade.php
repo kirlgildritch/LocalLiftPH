@@ -68,6 +68,27 @@
                             </div>
 
                             <div class="form-group">
+                                <label for="discount_type">Discount Type</label>
+                                <select name="discount_type" id="discount_type">
+                                    <option value="">No discount</option>
+                                    <option value="percent" {{ old('discount_type') === 'percent' ? 'selected' : '' }}>Percentage</option>
+                                    <option value="fixed" {{ old('discount_type') === 'fixed' ? 'selected' : '' }}>Fixed amount</option>
+                                </select>
+                                @error('discount_type')
+                                    <small class="error-text">{{ $message }}</small>
+                                @enderror
+                            </div>
+
+                            <div class="form-group">
+                                <label for="discount_value">Discount Value</label>
+                                <input type="number" id="discount_value" name="discount_value" step="0.01" min="0"
+                                    value="{{ old('discount_value') }}" placeholder="Optional">
+                                @error('discount_value')
+                                    <small class="error-text">{{ $message }}</small>
+                                @enderror
+                            </div>
+
+                            <div class="form-group">
                                 <label for="stock">Stock Quantity</label>
                                 <input type="number" id="stock" name="stock" min="0" value="{{ old('stock') }}">
                                 @error('stock')

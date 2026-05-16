@@ -135,6 +135,10 @@ class ShopController extends Controller
 
         $sellerReviewCount = (clone $sellerReviewsBaseQuery)->count();
         $sellerReviewAverage = round((float) ((clone $sellerReviewsBaseQuery)->avg('rating') ?? 0), 1);
+        $followerCount = $user->shopFollowers()->count();
+        $isFollowing = Auth::guard('web')->check()
+            ? $user->shopFollowers()->where('user_id', Auth::id())->exists()
+            : false;
 
         return view('shops.show', compact(
             'user',
@@ -142,6 +146,8 @@ class ShopController extends Controller
             'sellerReviews',
             'sellerReviewCount',
             'sellerReviewAverage',
+            'followerCount',
+            'isFollowing',
             'showAllReviews',
             'initialReviewsLimit'
         ));

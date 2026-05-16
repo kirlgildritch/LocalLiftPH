@@ -30,10 +30,18 @@ class Product extends Model
         'length_cm',
         'height_cm',
         'shipping_fee',
+        'discount_type',
+        'discount_value',
         'image',
         'is_active',
         'rejection_reason',
         'status', // pending, approved, rejected
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:2',
+        'shipping_fee' => 'decimal:2',
+        'discount_value' => 'decimal:2',
     ];
 
     public function carts()
@@ -79,6 +87,43 @@ class Product extends Model
     public function reports(): HasMany
     {
         return $this->hasMany(Report::class);
+    }
+
+    public function recentlyViewedBy(): HasMany
+    {
+        return $this->hasMany(RecentlyViewedProduct::class);
+    }
+
+    public function hasActiveDiscount(): bool
+    {
+        return in_array($this->discount_type, ['percent', 'fixed'], true)
+            && (float) $this->discount_value > 0;
+    }
+
+    public function discountedPrice(?float $basePrice = null): float
+    {
+        $price = max(0, (float) ($basePrice ?? $this->price ?? 0));
+
+        if (! $this->hasActiveDiscount()) {
+            return round($price, 2);
+        }
+
+        $discount = $this->discount_type === 'percent'
+            ? $price * min((float) $this->discount_value, 100) / 100
+            : min((float) $this->discount_value, $price);
+
+        return round(max(0, $price - $discount), 2);
+    }
+
+    public function discountLabel(): ?string
+    {
+        if (! $this->hasActiveDiscount()) {
+            return null;
+        }
+
+        return $this->discount_type === 'percent'
+            ? rtrim(rtrim(number_format((float) $this->discount_value, 2), '0'), '.') . '% off'
+            : 'PHP ' . number_format((float) $this->discount_value, 2) . ' off';
     }
 
     public function scopeApproved(Builder $query): Builder

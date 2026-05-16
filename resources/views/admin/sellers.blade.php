@@ -327,6 +327,9 @@
 @push('scripts')
     @php
         $sellerModalData = $sellers->getCollection()->values()->map(function ($seller, $index) use ($avatarClasses, $sellers, $publicMediaUrl) {
+            $documentUrl = fn (string $type, ?string $path) => $path
+                ? route('admin.sellers.documents.show', [$seller, $type]) . '?filename=' . rawurlencode(basename($path))
+                : null;
             $displayName = $seller->store_name ?: ($seller->full_name ?? $seller->user?->name ?? 'Seller');
             $handle = '@' . \Illuminate\Support\Str::slug($displayName, '');
             $productsCount = $seller->user?->products->count() ?? 0;
@@ -352,8 +355,8 @@
                 'date' => optional($seller->submitted_at ?? $seller->created_at)->format('m/d/Y'),
                 'products' => $productsCount . ' product' . ($productsCount === 1 ? '' : 's'),
                 'valid_id_type' => $seller->valid_id_type ?: 'ID / Passport',
-                'valid_id_url' => $publicMediaUrl($seller->valid_id_path),
-                'business_permit_url' => $publicMediaUrl($seller->business_permit_path),
+                'valid_id_url' => $documentUrl('valid-id', $seller->valid_id_path),
+                'business_permit_url' => $documentUrl('business-permit', $seller->business_permit_path),
                 'review_notes' => $seller->review_notes,
                 'status' => $seller->application_status,
                 'update_url' => route('admin.sellers.status', $seller),
@@ -366,7 +369,7 @@
                 'latest_request_status' => $latestRequest?->status,
                 'latest_request_status_label' => $requestStatusLabel,
                 'latest_request_date' => optional($latestRequest?->requested_at)->format('m/d/Y h:i A'),
-                'latest_request_document_url' => $publicMediaUrl($latestRequest?->response_document_path),
+                'latest_request_document_url' => $documentUrl('requested-document', $latestRequest?->response_document_path),
             ];
         })->values();
     @endphp
@@ -406,7 +409,9 @@
 
             const fileExtension = (url) => {
                 try {
-                    return new URL(url, window.location.origin).pathname.split('.').pop().toLowerCase();
+                    const parsedUrl = new URL(url, window.location.origin);
+                    const filename = parsedUrl.searchParams.get('filename') || parsedUrl.pathname;
+                    return filename.split('.').pop().toLowerCase();
                 } catch (error) {
                     return '';
                 }

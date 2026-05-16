@@ -10,7 +10,9 @@ use App\Notifications\SellerNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -168,5 +170,26 @@ class SellerReviewController extends Controller
         }
 
         return back()->with('success', 'Seller application status updated.');
+    }
+
+    public function document(Seller $seller, string $type)
+    {
+        $seller->loadMissing('latestDocumentRequest');
+
+        $path = match ($type) {
+            'valid-id' => $seller->valid_id_path,
+            'business-permit' => $seller->business_permit_path,
+            'requested-document' => $seller->latestDocumentRequest?->response_document_path,
+            default => null,
+        };
+
+        abort_if(blank($path), 404);
+
+        $disk = Storage::disk('public');
+        abort_unless($disk->exists($path), 404);
+
+        return Response::file($disk->path($path), [
+            'Content-Type' => $disk->mimeType($path) ?: 'application/octet-stream',
+        ]);
     }
 }

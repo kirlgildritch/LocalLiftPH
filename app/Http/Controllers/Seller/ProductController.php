@@ -338,6 +338,8 @@ class ProductController extends Controller
             'image' => 'nullable|image|max:51200',
             'media' => 'nullable|array|max:12',
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
+            'discount_type' => 'nullable|required_with:discount_value|in:percent,fixed',
+            'discount_value' => 'nullable|required_with:discount_type|numeric|min:0',
         ] + $this->variantValidationRules());
 
         $shippingFee = $this->calculateShippingFee(
@@ -359,6 +361,8 @@ class ProductController extends Controller
             'length_cm' => $request->length_cm,
             'height_cm' => $request->height_cm,
             'shipping_fee' => $shippingFee,
+            'discount_type' => $request->filled('discount_value') ? $request->input('discount_type') : null,
+            'discount_value' => $request->filled('discount_value') ? $request->input('discount_value') : null,
             'user_id' => auth()->id(),
             'is_active' => 0, // hidden by default
             'status' => 'pending', // for admin approval
@@ -403,6 +407,8 @@ class ProductController extends Controller
             'width_cm' => (string) $product->width_cm,
             'length_cm' => (string) $product->length_cm,
             'height_cm' => (string) $product->height_cm,
+            'discount_type' => $product->discount_type,
+            'discount_value' => (string) $product->discount_value,
         ];
 
         $validated = $request->validate([
@@ -419,6 +425,8 @@ class ProductController extends Controller
             'image' => 'nullable|image|max:51200',
             'media' => 'nullable|array|max:12',
             'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
+            'discount_type' => 'nullable|required_with:discount_value|in:percent,fixed',
+            'discount_value' => 'nullable|required_with:discount_type|numeric|min:0',
         ] + $this->variantValidationRules());
 
         $shippingFee = $this->calculateShippingFee(
@@ -455,6 +463,8 @@ class ProductController extends Controller
             'width_cm' => 'width',
             'length_cm' => 'length',
             'height_cm' => 'height',
+            'discount_type' => 'discount type',
+            'discount_value' => 'discount value',
         ] as $field => $label) {
             if ((string) ($validated[$field] ?? '') !== (string) $originalValues[$field]) {
                 $changedFields[] = $label;
@@ -473,6 +483,8 @@ class ProductController extends Controller
             'length_cm' => $validated['length_cm'],
             'height_cm' => $validated['height_cm'],
             'shipping_fee' => $shippingFee,
+            'discount_type' => filled($validated['discount_value'] ?? null) ? ($validated['discount_type'] ?? null) : null,
+            'discount_value' => filled($validated['discount_value'] ?? null) ? $validated['discount_value'] : null,
             'image' => $validated['image'] ?? $product->image,
         ]);
 

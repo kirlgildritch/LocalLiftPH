@@ -55,7 +55,9 @@
                     @forelse($cartItems as $item)
                         @php
                             $variant = $item->variant;
-                            $unitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                            $originalUnitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                            $unitPrice = $item->product?->discountedPrice($originalUnitPrice) ?? $originalUnitPrice;
+                            $hasDiscount = $item->product?->hasActiveDiscount() && $unitPrice < $originalUnitPrice;
                             $availableStock = max(0, (int) ($variant?->stock ?? $item->product->stock ?? 0));
                             $productImage = $variant?->image ?: $item->product->image;
                             $subtotal = $unitPrice * $item->quantity;
@@ -101,7 +103,12 @@
                                 </div>
                             </div>
 
-                            <div class="item-price">&#8369; {{ number_format($unitPrice, 2) }}</div>
+                            <div class="item-price">
+                                @if($hasDiscount)
+                                    <span class="cart-price-original">&#8369; {{ number_format($originalUnitPrice, 2) }}</span><br>
+                                @endif
+                                <span class="{{ $hasDiscount ? 'cart-price-sale' : '' }}">&#8369; {{ number_format($unitPrice, 2) }}</span>
+                            </div>
 
                             <div class="item-quantity">
                                 <div class="qty-box">
