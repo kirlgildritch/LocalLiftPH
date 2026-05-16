@@ -52,12 +52,16 @@
     </div>
 
     <div class="product-price" data-product-display-price>
+        <?php if($productPage->hasDiscount): ?>
+            <span class="product-price__original">&#8369; <?php echo e(number_format($productPage->displayOriginalPrice, 2)); ?></span>
+        <?php endif; ?>
         <?php if($productPage->hasVariants): ?>
-            Starts at &#8369; <?php echo e(number_format($productPage->displayPrice, 2)); ?>
-
+            <span class="product-price__sale">Starts at &#8369; <?php echo e(number_format($productPage->displayPrice, 2)); ?></span>
         <?php else: ?>
-            &#8369; <?php echo e(number_format($productPage->displayPrice, 2)); ?>
-
+            <span class="product-price__sale">&#8369; <?php echo e(number_format($productPage->displayPrice, 2)); ?></span>
+        <?php endif; ?>
+        <?php if($productPage->hasDiscount): ?>
+            <span class="product-price__badge"><?php echo e($product->discountLabel()); ?></span>
         <?php endif; ?>
     </div>
 
@@ -84,11 +88,17 @@
                     class="variant-choice"
                     data-variant-choice
                     data-variant-id="<?php echo e($variant->id); ?>"
-                    data-variant-price="<?php echo e((float) $variant->price); ?>"
+                    data-variant-price="<?php echo e($product->discountedPrice((float) $variant->price)); ?>"
+                    data-variant-original-price="<?php echo e((float) $variant->price); ?>"
                     data-variant-stock="<?php echo e((int) $variant->stock); ?>"
                     <?php echo e((int) $variant->stock <= 0 ? 'disabled' : ''); ?>>
                     <strong><?php echo e($variant->displayName()); ?></strong>
-                    <small>&#8369; <?php echo e(number_format($variant->price, 2)); ?> | <?php echo e((int) $variant->stock); ?> left</small>
+                    <small>
+                        <?php if($product->hasActiveDiscount() && $product->discountedPrice((float) $variant->price) < (float) $variant->price): ?>
+                            <span class="variant-price-original">&#8369; <?php echo e(number_format($variant->price, 2)); ?></span>
+                        <?php endif; ?>
+                        &#8369; <?php echo e(number_format($product->discountedPrice((float) $variant->price), 2)); ?> | <?php echo e((int) $variant->stock); ?> left
+                    </small>
                 </button>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
 

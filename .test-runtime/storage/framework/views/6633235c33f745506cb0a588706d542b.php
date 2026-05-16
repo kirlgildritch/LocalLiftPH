@@ -50,6 +50,9 @@ unset($__defined_vars, $__key, $__value); ?>
     $averageRating = round((float) ($product->reviews_avg_rating ?? 0), 1);
     $sellerProfile = $product->user?->sellerProfile;
     $locationLabel = \App\Support\LocationBrowsing::matchLabel($sellerProfile, $buyerLocation);
+    $originalPrice = (float) ($product->price ?? 0);
+    $discountedPrice = $product->discountedPrice($originalPrice);
+    $hasDiscount = $product->hasActiveDiscount() && $discountedPrice < $originalPrice;
 ?>
 
 <a href="<?php echo e($resolvedHref); ?>" class="market-product-card product-card-link <?php echo e($cardClass); ?>">
@@ -110,10 +113,20 @@ unset($__defined_vars, $__key, $__value); ?>
             <div class="market-product-card__meta"><?php echo e($meta); ?></div>
         <?php endif; ?>
 
-        <div class="market-product-card__price">
-            <span class="market-product-card__currency">&#8369;</span>
-            <?php echo e(number_format($product->price, 2)); ?>
+        <div class="market-product-card__price skeleton skeleton-text">
+            <?php if($hasDiscount): ?>
+                <span class="market-product-card__price-original">&#8369; <?php echo e(number_format($originalPrice, 2)); ?></span>
+                <span class="market-product-card__price-sale">
+                    <span class="market-product-card__currency">&#8369;</span>
+                    <?php echo e(number_format($discountedPrice, 2)); ?>
 
+                </span>
+                <span class="market-product-card__discount-badge"><?php echo e($product->discountLabel()); ?></span>
+            <?php else: ?>
+                <span class="market-product-card__currency">&#8369;</span>
+                <?php echo e(number_format($originalPrice, 2)); ?>
+
+            <?php endif; ?>
         </div>
     </div>
 </a>

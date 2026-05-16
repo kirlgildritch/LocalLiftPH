@@ -52,6 +52,44 @@
     </div>
   </section>
 
+  <?php if(($recentlyViewedProducts ?? collect())->isNotEmpty()): ?>
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <span class="section-kicker">Recently Viewed</span>
+            <h2 class="section-title">Pick up where you left off</h2>
+          </div>
+        </div>
+
+        <div class="products product-card-grid" data-skeleton-group data-skeleton-delay="420">
+          <?php $__currentLoopData = $recentlyViewedProducts; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <?php if (isset($component)) { $__componentOriginal3fd2897c1d6a149cdb97b41db9ff827a = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginal3fd2897c1d6a149cdb97b41db9ff827a = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.product-card','data' => ['product' => $product,'fallbackImage' => asset('assets/image/heroBanner.png')]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('product-card'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['product' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($product),'fallback-image' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(asset('assets/image/heroBanner.png'))]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginal3fd2897c1d6a149cdb97b41db9ff827a)): ?>
+<?php $attributes = $__attributesOriginal3fd2897c1d6a149cdb97b41db9ff827a; ?>
+<?php unset($__attributesOriginal3fd2897c1d6a149cdb97b41db9ff827a); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginal3fd2897c1d6a149cdb97b41db9ff827a)): ?>
+<?php $component = $__componentOriginal3fd2897c1d6a149cdb97b41db9ff827a; ?>
+<?php unset($__componentOriginal3fd2897c1d6a149cdb97b41db9ff827a); ?>
+<?php endif; ?>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
+      </div>
+    </section>
+  <?php endif; ?>
+
   <section class="section">
     <div class="container">
       <div class="section-header">

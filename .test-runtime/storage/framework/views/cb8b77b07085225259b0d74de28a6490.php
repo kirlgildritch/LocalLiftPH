@@ -48,6 +48,7 @@
         <div class="detail-sections">
             <?php echo $__env->make('products.partials.show.reviews', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             <?php echo $__env->make('products.partials.show.related-products', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+            <?php echo $__env->renderWhen(($recentlyViewedProducts ?? collect())->isNotEmpty(), 'products.partials.show.recently-viewed', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1])); ?>
         </div>
     </div>
 </section>
@@ -65,5 +66,4 @@
     'resources/js/review-upload.js'
 ]); ?>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\kirlg\LocalLiftPH\resources\views/products/show.blade.php ENDPATH**/ ?>

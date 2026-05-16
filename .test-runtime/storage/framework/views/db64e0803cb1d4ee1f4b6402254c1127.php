@@ -4,6 +4,10 @@
     <link rel="stylesheet" href="<?php echo e(asset('assets/css/checkout.css')); ?>">
     <?php
         $checkoutPaymentScript = asset('assets/js/checkout-payment.js') . '?v=' . @filemtime(public_path('assets/js/checkout-payment.js'));
+        $paymentMethods = $paymentMethods ?? \App\Models\Order::paymentMethods();
+        $selectedPaymentMethod = $selectedPaymentMethod ?? \App\Models\Order::PAYMENT_METHOD_COD;
+        $selectedPayment = $paymentMethods[$selectedPaymentMethod] ?? reset($paymentMethods);
+        $voucherCode = old('voucher_code');
     ?>
 
     <section class="checkout-page">
@@ -32,5 +36,4 @@
 
     <script src="<?php echo e($checkoutPaymentScript); ?>" defer></script>
 <?php $__env->stopSection(); ?>
-
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\kirlg\LocalLiftPH\resources\views/checkout/index.blade.php ENDPATH**/ ?>

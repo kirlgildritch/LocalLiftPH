@@ -24,7 +24,7 @@
         <?php $__empty_1 = true; $__currentLoopData = ($groupedCartItems ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sellerId => $sellerCartItems): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
             <?php
                 $seller = $sellerCartItems->first()?->product?->user;
-                $sellerSubtotal = $sellerCartItems->sum(fn($item) => (float) ($item->variant?->price ?? $item->product->price ?? 0) * (int) $item->quantity);
+                $sellerSubtotal = $sellerCartItems->sum(fn($item) => ($item->product?->discountedPrice((float) ($item->variant?->price ?? $item->product->price ?? 0)) ?? 0) * (int) $item->quantity);
                 $sellerShipping = $sellerCartItems->sum(fn($item) => (float) ($item->product->shipping_fee ?? 0) * (int) $item->quantity);
                 $estimate = ($deliveryEstimates ?? collect())->get($sellerId);
             ?>
@@ -44,7 +44,9 @@
                 <?php $__currentLoopData = $sellerCartItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <?php
                         $variant = $item->variant;
-                        $unitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                        $originalUnitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
+                        $unitPrice = $item->product?->discountedPrice($originalUnitPrice) ?? $originalUnitPrice;
+                        $hasDiscount = $item->product?->hasActiveDiscount() && $unitPrice < $originalUnitPrice;
                         $productImage = $variant?->image ?: ($item->product->image ?? null);
                     ?>
                     <div class="summary-item">
@@ -64,7 +66,12 @@
 
                         <div class="summary-price">
                             <strong>&#8369; <?php echo e(number_format($unitPrice * (int) $item->quantity, 2)); ?></strong>
-                            <span>&#8369; <?php echo e(number_format($unitPrice, 2)); ?> each</span>
+                            <span>
+                                <?php if($hasDiscount): ?>
+                                    <span class="checkout-price-original">&#8369; <?php echo e(number_format($originalUnitPrice, 2)); ?></span>
+                                <?php endif; ?>
+                                <span class="<?php echo e($hasDiscount ? 'checkout-price-sale' : ''); ?>">&#8369; <?php echo e(number_format($unitPrice, 2)); ?> each</span>
+                            </span>
                         </div>
                     </div>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
@@ -84,6 +91,11 @@
         <strong>&#8369; <?php echo e(number_format($shippingFee, 2)); ?></strong>
     </div>
 
+    <div class="summary-line">
+        <span>Voucher</span>
+        <strong>Optional</strong>
+    </div>
+
     <div class="summary-total">
         <span>Total</span>
         <strong>&#8369; <?php echo e(number_format($total, 2)); ?></strong>
@@ -94,6 +106,20 @@
         <?php $__currentLoopData = ($selectedCartItemIds ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $selectedCartItemId): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
             <input type="hidden" name="selected_cart_items[]" value="<?php echo e($selectedCartItemId); ?>">
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        <div class="form-group" style="margin-bottom: 14px;">
+            <label for="voucher_code">Voucher / Coupon</label>
+            <input type="text" id="voucher_code" name="voucher_code" value="<?php echo e($voucherCode); ?>" placeholder="Enter code, if any">
+            <?php $__errorArgs = ['voucher_code'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                <small class="error-text"><?php echo e($message); ?></small>
+            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+        </div>
         <button
             type="submit"
             class="action-btn primary-btn full-btn"
