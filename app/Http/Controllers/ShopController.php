@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\VoucherService;
 use App\Support\LocationBrowsing;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -92,7 +93,7 @@ class ShopController extends Controller
         ));
     }
 
-    public function show(Request $request, User $user)
+    public function show(Request $request, User $user, VoucherService $voucherService)
     {
         $user->loadMissing('sellerProfile');
 
@@ -123,7 +124,7 @@ class ShopController extends Controller
             });
 
         $sellerReviews = (clone $sellerReviewsBaseQuery)
-            ->with(['user', 'media', 'product.category'])
+            ->with(['user', 'media', 'product.category', 'orderItem.variant', 'orderItem.product:id,name'])
             ->latest()
             ->when(! $showAllReviews, function ($query) use ($initialReviewsLimit) {
                 $query->limit($initialReviewsLimit);
@@ -136,10 +137,12 @@ class ShopController extends Controller
         $isFollowing = Auth::guard('web')->check()
             ? $user->shopFollowers()->where('user_id', Auth::id())->exists()
             : false;
+        $sellerVouchers = $voucherService->activeSellerVouchers($user);
 
         return view('shops.show', compact(
             'user',
             'products',
+            'sellerVouchers',
             'sellerReviews',
             'sellerReviewCount',
             'sellerReviewAverage',

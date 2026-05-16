@@ -1,8 +1,14 @@
 @extends('layouts.app')
 
-@section('content')
-  <link rel="stylesheet" href="{{ asset('assets/css/home.css') }}">
+@push('head')
+  @php
+    $homeCssVersion = @filemtime(public_path('assets/css/home.css'));
+  @endphp
+  <link rel="preload" as="image" href="{{ asset('assets/image/hero-carousel/hero-slide-1.webp') }}">
+  <link rel="stylesheet" href="{{ asset('assets/css/home.css') }}?v={{ $homeCssVersion }}">
+@endpush
 
+@section('content')
   <section class="hero">
     <div class="container hero-shell">
       <div class="hero-copy">

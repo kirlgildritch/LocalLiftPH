@@ -24,7 +24,7 @@
 
     <div class="shop-review-card__product">
         <i class="fa-solid fa-bag-shopping"></i>
-        <span>{{ $review->product?->name ?? 'Product review' }}</span>
+        <span>{{ $review->purchaseDetailsLabel(true) ?? ($review->product?->name ?? 'Product review') }}</span>
     </div>
 
     <p>{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>

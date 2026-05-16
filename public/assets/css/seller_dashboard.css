@@ -1040,6 +1040,21 @@ a {
   gap: 12px;
 }
 
+.voucher-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #bbdefb;
+  font-weight: 600;
+}
+
+.voucher-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  accent-color: #42a5f5;
+}
+
 .error-text {
   color: #ffc0cb;
   font-size: 12px;

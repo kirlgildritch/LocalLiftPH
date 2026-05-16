@@ -24,6 +24,13 @@
         </div>
     </div>
 
+    @if($review->purchaseDetailsLabel())
+        <div class="review-purchase-meta">
+            <i class="fa-solid fa-receipt"></i>
+            <span>{{ $review->purchaseDetailsLabel() }}</span>
+        </div>
+    @endif
+
     <p class="review-card-comment">{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
 
     @php

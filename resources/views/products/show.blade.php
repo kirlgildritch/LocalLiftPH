@@ -4,18 +4,6 @@
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/product_details.css') }}">
 
-@if(session('error'))
-<div style="color:red;">{{ session('error') }}</div>
-@endif
-
-@if($errors->any())
-<div style="color:red;">
-    @foreach($errors->all() as $error)
-    <p>{{ $error }}</p>
-    @endforeach
-</div>
-@endif
-
 <section class="product-detail-page">
     <div class="container">
         <div class="checkout-breadcrumb">
@@ -30,10 +18,15 @@
             <div class="product-main panel">
                 @include('products.partials.show.gallery')
                 @include('products.partials.show.summary')
+                @include('products.partials.show.variant-picker')
             </div>
 
             <aside class="purchase-sidebar">
                 @include('products.partials.show.purchase-card')
+                @include('vouchers.partials.buyer-voucher-list', [
+                    'vouchers' => $sellerVouchers ?? collect(),
+                    'title' => 'Seller Vouchers',
+                ])
             </aside>
         </div>
 

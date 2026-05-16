@@ -7,7 +7,7 @@
         $paymentMethods = $paymentMethods ?? \App\Models\Order::paymentMethods();
         $selectedPaymentMethod = $selectedPaymentMethod ?? \App\Models\Order::PAYMENT_METHOD_COD;
         $selectedPayment = $paymentMethods[$selectedPaymentMethod] ?? reset($paymentMethods);
-        $voucherCode = old('voucher_code');
+        $voucherCode = old('voucher_code', $voucherCode ?? null);
     ?>
 
     <section class="checkout-page">
@@ -36,4 +36,5 @@
 
     <script src="<?php echo e($checkoutPaymentScript); ?>" defer></script>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\kirlg\LocalLiftPH\resources\views/checkout/index.blade.php ENDPATH**/ ?>

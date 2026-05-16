@@ -27,6 +27,13 @@
                 <i class="fa-solid fa-dollar-sign"></i> Earnings
             </div>
         </a>
+
+        <a href="<?php echo e(route('seller.vouchers.index')); ?>" class="<?php echo e(request()->is('seller-vouchers*') ? 'active' : ''); ?>">
+            <div class="left">
+                <i class="fa-solid fa-ticket"></i> Vouchers
+            </div>
+        </a>
+
         <a href="<?php echo e(route('seller.shop.preview')); ?>" class="<?php echo e(request()->is('seller-shop-preview') ? 'active' : ''); ?>">
             <div class="left">
                 <i class="fa-solid fa-store"></i> View Shop
@@ -35,4 +42,5 @@
 
 
     </div>
-</aside><?php /**PATH C:\Users\kirlg\LocalLiftPH\resources\views/seller/partials/sidebar.blade.php ENDPATH**/ ?>
+</aside>
+<?php /**PATH C:\Users\kirlg\LocalLiftPH\resources\views/seller/partials/sidebar.blade.php ENDPATH**/ ?>

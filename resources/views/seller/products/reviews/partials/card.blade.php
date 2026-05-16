@@ -18,22 +18,25 @@
                                     </div>
                                 </div>
 
-                                <div class="seller-rating-chip">
-                                    <i class="fa-solid fa-star"></i>
-                                    {{ $review->rating }}/5
+                                <div class="seller-review-status-stack">
+                                    <div class="seller-rating-chip">
+                                        <i class="fa-solid fa-star"></i>
+                                        {{ $review->rating }}/5
+                                    </div>
+                                    <span class="seller-reply-status seller-reply-status--{{ $replyState->statusTone }}">
+                                        {{ $replyState->statusLabel }}
+                                    </span>
                                 </div>
                             </div>
 
-                            <p>{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
+                            @if($purchaseDetails)
+                            <div class="seller-review-purchase-meta">
+                                <i class="fa-solid fa-receipt"></i>
+                                <span>{{ $purchaseDetails }}</span>
+                            </div>
+                            @endif
 
-                            @php
-                            $reviewMedia = $review->media->isNotEmpty()
-                            ? $review->media
-                            : collect([
-                            $review->image_path ? (object) ['type' => 'image', 'path' => $review->image_path] : null,
-                            $review->video_path ? (object) ['type' => 'video', 'path' => $review->video_path] : null,
-                            ])->filter();
-                            @endphp
+                            <p>{{ $review->comment ?: 'Verified buyer rating submitted.' }}</p>
 
                             @if($reviewMedia->isNotEmpty())
                             <div class="seller-review-media-grid">
@@ -51,14 +54,19 @@
 
                             @if(filled($review->seller_reply))
                             <div class="seller-review-reply-card">
-                                <div>
-                                    <strong>Your reply</strong><br>
+                                <div class="seller-review-reply-card-header">
+                                    <span class="seller-review-reply-icon">
+                                        <i class="fa-solid fa-reply"></i>
+                                    </span>
+                                    <div>
+                                        <strong>Your public reply</strong>
+                                        <span>Visible below this buyer review.</span>
+                                    </div>
                                     @if($review->seller_replied_at)
-                                    <span>{{ $review->seller_replied_at->format('M d, Y') }}</span><br>
+                                    <time>{{ $review->seller_replied_at->format('M d, Y') }}</time>
                                     @endif
                                 </div>
 
-                                <br>
                                 <p>{{ $review->seller_reply }}</p>
                             </div>
                             @endif
@@ -68,21 +76,23 @@
                                 @method('PATCH')
 
                                 <div class="seller-review-reply-form-header">
-                                    <label for="seller_reply_{{ $review->id }}">
-                                        {{ $review->seller_reply ? 'Edit your reply' : 'Reply to this review' }}
-                                    </label>
-                                    <span>{{ $review->seller_reply ? ':' : ':' }}</span>
+                                    <div>
+                                        <label for="seller_reply_{{ $review->id }}">{{ $replyState->formTitle }}</label>
+                                        <p>{{ $replyState->formHint }}</p>
+                                    </div>
+                                    <span>1000 max</span>
                                 </div>
 
                                 <div class="seller-review-reply-field">
                                     <textarea name="seller_reply" id="seller_reply_{{ $review->id }}" rows="3" maxlength="1000" required
-                                        placeholder="Thank the buyer, answer concerns, or clarify product details...">{{ old('seller_reply', $review->seller_reply) }}</textarea>
+                                        placeholder="{{ $replyState->placeholder }}">{{ old('seller_reply', $review->seller_reply) }}</textarea>
                                 </div>
 
                                 <div class="seller-review-reply-actions">
+                                    <small><i class="fa-solid fa-eye"></i> Public response</small>
                                     <button type="submit" class="submitt table-action secondary">
                                         <i class="fa-solid fa-reply"></i>
-                                        {{ $review->seller_reply ? 'Submit Reply' : 'Post Reply' }}
+                                        {{ $replyState->buttonLabel }}
                                     </button>
                                 </div>
                             </form>

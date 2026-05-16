@@ -21,60 +21,51 @@
     </div>
 
     <div class="summary-items">
-        <?php $__empty_1 = true; $__currentLoopData = ($groupedCartItems ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $sellerId => $sellerCartItems): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
-            <?php
-                $seller = $sellerCartItems->first()?->product?->user;
-                $sellerSubtotal = $sellerCartItems->sum(fn($item) => ($item->product?->discountedPrice((float) ($item->variant?->price ?? $item->product->price ?? 0)) ?? 0) * (int) $item->quantity);
-                $sellerShipping = $sellerCartItems->sum(fn($item) => (float) ($item->product->shipping_fee ?? 0) * (int) $item->quantity);
-                $estimate = ($deliveryEstimates ?? collect())->get($sellerId);
-            ?>
+        <?php $__empty_1 = true; $__currentLoopData = ($checkoutSummary['groups'] ?? collect()); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $shopSummary): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
             <div class="summary-shop-group">
                 <div class="summary-shop-head">
                     <div>
-                        <h4><?php echo e($seller?->sellerProfile?->store_name ?? $seller?->name ?? 'LocalLift Seller'); ?></h4>
-                        <p><?php echo e($sellerCartItems->count()); ?> item<?php echo e($sellerCartItems->count() !== 1 ? 's' : ''); ?> &middot; Delivery <?php echo e($estimate['date_range'] ?? '3-5 days'); ?></p>
+                        <h4><?php echo e($shopSummary['seller_name']); ?></h4>
+                        <p><?php echo e($shopSummary['item_count']); ?> item<?php echo e($shopSummary['item_count'] !== 1 ? 's' : ''); ?> &middot; Delivery <?php echo e($shopSummary['delivery_range']); ?></p>
                     </div>
 
                     <div class="summary-price">
-                        <strong>&#8369; <?php echo e(number_format($sellerSubtotal + $sellerShipping, 2)); ?></strong>
+                        <strong>&#8369; <?php echo e(number_format($shopSummary['shop_total'], 2)); ?></strong>
                         <span>Shop total</span>
                     </div>
                 </div>
 
-                <?php $__currentLoopData = $sellerCartItems; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <?php
-                        $variant = $item->variant;
-                        $originalUnitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
-                        $unitPrice = $item->product?->discountedPrice($originalUnitPrice) ?? $originalUnitPrice;
-                        $hasDiscount = $item->product?->hasActiveDiscount() && $unitPrice < $originalUnitPrice;
-                        $productImage = $variant?->image ?: ($item->product->image ?? null);
-                    ?>
+                <?php $__currentLoopData = $shopSummary['items']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $itemSummary): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <div class="summary-item">
                         <div class="summary-product">
                             <div class="summary-image">
-                                <img src="<?php echo e($productImage ? asset('storage/' . $productImage) : asset('assets/images/default-product.png')); ?>"
-                                    alt="<?php echo e($item->product->name ?? 'Product'); ?>">
+                                <img src="<?php echo e($itemSummary['image_url']); ?>" alt="<?php echo e($itemSummary['product_name']); ?>">
                             </div>
                             <div>
-                                <h4><?php echo e($item->product->name ?? 'Product'); ?></h4>
-                                <?php if($variant): ?>
-                                    <p>Option: <?php echo e($variant->displayName()); ?></p>
+                                <h4><?php echo e($itemSummary['product_name']); ?></h4>
+                                <?php if($itemSummary['variant_name']): ?>
+                                    <p>Option: <?php echo e($itemSummary['variant_name']); ?></p>
                                 <?php endif; ?>
-                                <p>Qty <?php echo e($item->quantity); ?> &middot; Shipping &#8369; <?php echo e(number_format(((float) ($item->product->shipping_fee ?? 0)) * (int) $item->quantity, 2)); ?></p>
+                                <p>Qty <?php echo e($itemSummary['quantity']); ?> &middot; Shipping &#8369; <?php echo e(number_format($itemSummary['shipping_total'], 2)); ?></p>
                             </div>
                         </div>
 
                         <div class="summary-price">
-                            <strong>&#8369; <?php echo e(number_format($unitPrice * (int) $item->quantity, 2)); ?></strong>
+                            <strong>&#8369; <?php echo e(number_format($itemSummary['line_subtotal'], 2)); ?></strong>
                             <span>
-                                <?php if($hasDiscount): ?>
-                                    <span class="checkout-price-original">&#8369; <?php echo e(number_format($originalUnitPrice, 2)); ?></span>
+                                <?php if($itemSummary['has_discount']): ?>
+                                    <span class="checkout-price-original">&#8369; <?php echo e(number_format($itemSummary['original_unit_price'], 2)); ?></span>
                                 <?php endif; ?>
-                                <span class="<?php echo e($hasDiscount ? 'checkout-price-sale' : ''); ?>">&#8369; <?php echo e(number_format($unitPrice, 2)); ?> each</span>
+                                <span class="<?php echo e($itemSummary['has_discount'] ? 'checkout-price-sale' : ''); ?>">&#8369; <?php echo e(number_format($itemSummary['unit_price'], 2)); ?> each</span>
                             </span>
                         </div>
                     </div>
                 <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+                <?php echo $__env->make('vouchers.partials.buyer-voucher-list', [
+                    'vouchers' => ($availableSellerVouchers ?? collect())->get($shopSummary['seller_id'], collect()),
+                    'title' => 'Seller Vouchers',
+                ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             </div>
         <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
             <p>Your cart is empty.</p>
@@ -83,22 +74,29 @@
 
     <div class="summary-line">
         <span>Subtotal</span>
-        <strong>&#8369; <?php echo e(number_format($subtotal, 2)); ?></strong>
+        <strong>&#8369; <?php echo e(number_format($checkoutSummary['subtotal'] ?? $subtotal, 2)); ?></strong>
     </div>
 
     <div class="summary-line">
         <span>Shipping Fee</span>
-        <strong>&#8369; <?php echo e(number_format($shippingFee, 2)); ?></strong>
+        <strong>&#8369; <?php echo e(number_format($checkoutSummary['shipping_fee'] ?? $shippingFee, 2)); ?></strong>
     </div>
 
     <div class="summary-line">
-        <span>Voucher</span>
-        <strong>Optional</strong>
+        <span>Voucher<?php echo e(filled($checkoutSummary['voucher_code'] ?? null) ? ' (' . $checkoutSummary['voucher_code'] . ')' : ''); ?></span>
+        <strong>
+            <?php if(($checkoutSummary['voucher_discount'] ?? 0) > 0): ?>
+                - &#8369; <?php echo e(number_format($checkoutSummary['voucher_discount'], 2)); ?>
+
+            <?php else: ?>
+                Optional
+            <?php endif; ?>
+        </strong>
     </div>
 
     <div class="summary-total">
         <span>Total</span>
-        <strong>&#8369; <?php echo e(number_format($total, 2)); ?></strong>
+        <strong>&#8369; <?php echo e(number_format($checkoutSummary['total'] ?? $total, 2)); ?></strong>
     </div>
 
     <form action="<?php echo e(route('checkout.store')); ?>" method="POST" id="checkout-submit-form" data-enable-loading>
@@ -119,7 +117,19 @@ $message = $__bag->first($__errorArgs[0]); ?>
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>
+            <?php if(($checkoutSummary['voucher_discount'] ?? 0) > 0): ?>
+                <small class="success-text"><?php echo e($checkoutSummary['voucher_label']); ?> applied.</small>
+            <?php endif; ?>
         </div>
+        <button
+            type="submit"
+            class="action-btn full-btn"
+            formmethod="GET"
+            formaction="<?php echo e(route('checkout.index')); ?>"
+            data-loading-text="Applying..."
+        >
+            Apply Voucher
+        </button>
         <button
             type="submit"
             class="action-btn primary-btn full-btn"

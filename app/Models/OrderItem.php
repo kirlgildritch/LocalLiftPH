@@ -45,4 +45,42 @@ class OrderItem extends Model
     {
         return $this->hasOne(Review::class);
     }
+
+    public function variantDisplayName(): ?string
+    {
+        if (filled($this->variant_name)) {
+            return $this->variant_name;
+        }
+
+        if ($this->relationLoaded('variant') && $this->variant) {
+            return $this->variant->displayName();
+        }
+
+        $options = collect($this->variant_options ?? [])
+            ->filter(fn ($value) => filled($value))
+            ->map(fn ($value, $key) => is_string($key) ? "{$key}: {$value}" : (string) $value)
+            ->values();
+
+        return $options->isNotEmpty() ? $options->join(', ') : null;
+    }
+
+    public function purchaseDetailsLabel(bool $includeProduct = false): string
+    {
+        $details = collect();
+
+        $product = $this->relationLoaded('product') ? $this->product : null;
+
+        if ($includeProduct && $product) {
+            $details->push($product->name);
+        }
+
+        if ($variantName = $this->variantDisplayName()) {
+            $details->push('Option: ' . $variantName);
+        }
+
+        $details->push('Qty ' . max(1, (int) $this->quantity));
+        $details->push('Paid ₱' . number_format((float) $this->price, 2) . ' each');
+
+        return $details->join(' • ');
+    }
 }

@@ -3,18 +3,6 @@
 <?php $__env->startSection('content'); ?>
 <link rel="stylesheet" href="<?php echo e(asset('assets/css/product_details.css')); ?>">
 
-<?php if(session('error')): ?>
-<div style="color:red;"><?php echo e(session('error')); ?></div>
-<?php endif; ?>
-
-<?php if($errors->any()): ?>
-<div style="color:red;">
-    <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-    <p><?php echo e($error); ?></p>
-    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-</div>
-<?php endif; ?>
-
 <section class="product-detail-page">
     <div class="container">
         <div class="checkout-breadcrumb">
@@ -29,10 +17,15 @@
             <div class="product-main panel">
                 <?php echo $__env->make('products.partials.show.gallery', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
                 <?php echo $__env->make('products.partials.show.summary', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php echo $__env->make('products.partials.show.variant-picker', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             </div>
 
             <aside class="purchase-sidebar">
                 <?php echo $__env->make('products.partials.show.purchase-card', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+                <?php echo $__env->make('vouchers.partials.buyer-voucher-list', [
+                    'vouchers' => $sellerVouchers ?? collect(),
+                    'title' => 'Seller Vouchers',
+                ], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
             </aside>
         </div>
 
@@ -66,4 +59,5 @@
     'resources/js/review-upload.js'
 ]); ?>
 <?php $__env->stopSection(); ?>
+
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\kirlg\LocalLiftPH\resources\views/products/show.blade.php ENDPATH**/ ?>

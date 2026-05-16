@@ -13,6 +13,7 @@ use App\Models\ProductVariant;
 use App\Models\Review;
 use App\Notifications\SellerNotificationService;
 use App\Services\AdminActivityService;
+use App\Support\ReviewDisplayData;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
@@ -587,11 +588,15 @@ class ProductController extends Controller
         $this->authorize('viewSellerReviews', $product);
 
         $reviews = $product->reviews()
-            ->with(['user', 'media'])
+            ->with(['user', 'media', 'orderItem.variant', 'orderItem.product:id,name'])
             ->latest()
             ->paginate(10);
 
-        return view('seller.products.reviews', compact('product', 'reviews'));
+        $reviewCards = $reviews
+            ->getCollection()
+            ->map(fn (Review $review) => ReviewDisplayData::forSellerReview($review));
+
+        return view('seller.products.reviews', compact('product', 'reviews', 'reviewCards'));
     }
 
     public function replyToReview(ReplyToProductReviewRequest $request, Product $product, Review $review)

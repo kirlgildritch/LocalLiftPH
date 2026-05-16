@@ -998,11 +998,11 @@ footer {
 .suggestion-item.is-empty:hover {
   background: transparent;
 }
+.app-toast,
 .toast-success {
     position: fixed;
     top: 20px;
     right: 20px;
-    background: linear-gradient(135deg, rgba(46, 204, 113, 0.95), rgba(39, 174, 96, 0.95));
     color: #fff;
     padding: 14px 18px;
     border-radius: 14px;
@@ -1018,8 +1018,25 @@ footer {
     animation: toastFadeIn 0.4s ease forwards;
 }
 
+.app-toast {
+    max-width: min(420px, calc(100vw - 40px));
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    line-height: 1.45;
+}
+
+.app-toast--success,
+.toast-success {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.95), rgba(39, 174, 96, 0.95));
+}
+
+.app-toast--error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.96), rgba(185, 28, 28, 0.96));
+}
+
+.app-toast i,
 .toast-success i {
     font-size: 16px;
+    flex: 0 0 auto;
 }
 
 @keyframes toastFadeIn {

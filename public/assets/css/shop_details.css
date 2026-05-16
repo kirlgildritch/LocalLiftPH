@@ -259,6 +259,80 @@
   background: transparent;
 }
 
+.buyer-voucher-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.buyer-voucher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.buyer-voucher-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(187, 222, 251, 0.14);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.buyer-voucher-card__icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: rgba(66, 165, 245, 0.14);
+  color: var(--accent);
+}
+
+.buyer-voucher-card__body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.buyer-voucher-card__body strong {
+  color: var(--text);
+}
+
+.buyer-voucher-card__body span {
+  color: #ffdf6e;
+  font-weight: 700;
+}
+
+.buyer-voucher-card__body small,
+.buyer-voucher-card__code {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.buyer-voucher-card__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(66, 165, 245, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--accent);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.buyer-voucher-card__action.is-copied {
+  border-color: rgba(70, 195, 123, 0.42);
+  color: #46c37b;
+}
+
 .shop-highlight:last-child {
   border-right: none;
 }

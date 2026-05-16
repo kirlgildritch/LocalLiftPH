@@ -156,6 +156,11 @@
                     </div>
                 </div>
             </div>
+
+            @include('vouchers.partials.buyer-voucher-list', [
+                'vouchers' => $sellerVouchers ?? collect(),
+                'title' => 'Shop Vouchers',
+            ])
         </div>
 
         <div class="shop-detail-layout">

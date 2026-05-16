@@ -11,7 +11,8 @@ use App\Models\ProductVariant;
 use App\Models\Seller;
 use App\Support\DeliveryEstimate;
 use App\Notifications\SellerNotificationService;
-use Illuminate\Http\Request;
+use App\Services\CheckoutSummaryService;
+use App\Services\VoucherService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -57,61 +58,6 @@ class CheckoutController extends Controller
         });
     }
 
-    protected function calculateCartTotals($cartItems): array
-    {
-        $subtotal = 0;
-        $shippingFee = 0;
-
-        foreach ($cartItems as $item) {
-            $basePrice = (float) ($item->variant?->price ?? $item->product->price ?? 0);
-            $price = $item->product?->discountedPrice($basePrice) ?? $basePrice;
-            $itemShipping = (float) ($item->product->shipping_fee ?? 0);
-            $quantity = (int) $item->quantity;
-
-            $subtotal += $price * $quantity;
-            $shippingFee += $itemShipping * $quantity;
-        }
-
-        return [
-            'subtotal' => $subtotal,
-            'shippingFee' => $shippingFee,
-            'total' => $subtotal + $shippingFee,
-        ];
-    }
-
-    protected function validateVoucher(?string $code, float $subtotal): array
-    {
-        $normalizedCode = strtoupper(trim((string) $code));
-
-        if ($normalizedCode === '') {
-            return [
-                'code' => null,
-                'discount' => 0,
-            ];
-        }
-
-        $voucher = collect(config('vouchers.codes', []))
-            ->first(fn ($details, $key) => strtoupper((string) $key) === $normalizedCode);
-
-        if (! $voucher) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                'voucher_code' => 'Voucher code is invalid or unavailable.',
-            ]);
-        }
-
-        $type = $voucher['type'] ?? null;
-        $value = max(0, (float) ($voucher['value'] ?? 0));
-
-        $discount = $type === 'percent'
-            ? $subtotal * min($value, 100) / 100
-            : $value;
-
-        return [
-            'code' => $normalizedCode,
-            'discount' => round(min($discount, $subtotal), 2),
-        ];
-    }
-
     protected function groupedCartItemsBySeller(Collection $cartItems): Collection
     {
         return $cartItems
@@ -120,7 +66,7 @@ class CheckoutController extends Controller
             ->sortKeys();
     }
 
-    public function index(CheckoutIndexRequest $request)
+    public function index(CheckoutIndexRequest $request, CheckoutSummaryService $checkoutSummaryService, VoucherService $voucherService)
     {
         $validated = $request->validated();
 
@@ -163,7 +109,6 @@ class CheckoutController extends Controller
             return $addressRedirect;
         }
 
-        $totals = $this->calculateCartTotals($cartItems);
         $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
 
         $defaultAddress = Auth::user()->addresses()
@@ -174,8 +119,28 @@ class CheckoutController extends Controller
         $deliveryEstimates = $groupedCartItems
             ->map(fn (Collection $sellerCartItems) => DeliveryEstimate::forSellerCartItems($sellerCartItems, $defaultAddress));
         $overallDeliveryEstimate = DeliveryEstimate::combined($deliveryEstimates);
+        $totals = $checkoutSummaryService->totals($cartItems);
+        $voucherCode = $validated['voucher_code'] ?? old('voucher_code');
+        $voucherApplication = $voucherService->emptyApplication();
 
+        if (filled($voucherCode)) {
+            $voucherApplication = $voucherService->evaluateForCart($voucherCode, Auth::user(), $cartItems, $checkoutSummaryService);
+        }
+
+        $checkoutSummary = $checkoutSummaryService->build($cartItems, $deliveryEstimates, $voucherApplication);
         $selectedCartItemIds = $cartItems->pluck('id')->values();
+        $availableSellerVouchers = $voucherService
+            ->activeSellerVouchersForSellers($groupedCartItems->keys())
+            ->map(function (Collection $sellerVouchers) use ($selectedCartItemIds) {
+                return $sellerVouchers->map(function (array $voucher) use ($selectedCartItemIds) {
+                    $voucher['apply_url'] = route('checkout.index', [
+                        'selected_cart_items' => $selectedCartItemIds->all(),
+                        'voucher_code' => $voucher['code'],
+                    ]);
+
+                    return $voucher;
+                });
+            });
 
         $paymentMethods = Order::paymentMethods();
         $selectedPaymentMethod = old('payment_method', Order::PAYMENT_METHOD_COD);
@@ -187,7 +152,10 @@ class CheckoutController extends Controller
             'overallDeliveryEstimate' => $overallDeliveryEstimate,
             'subtotal' => $totals['subtotal'],
             'shippingFee' => $totals['shippingFee'],
-            'total' => $totals['total'],
+            'total' => $checkoutSummary['total'],
+            'checkoutSummary' => $checkoutSummary,
+            'voucherCode' => $voucherCode,
+            'availableSellerVouchers' => $availableSellerVouchers,
             'defaultAddress' => $defaultAddress,
             'hasSavedAddress' => true,
             'selectedCartItemIds' => $selectedCartItemIds,
@@ -197,7 +165,7 @@ class CheckoutController extends Controller
         ]);
     }
 
-    public function store(CheckoutStoreRequest $request, SellerNotificationService $sellerNotifications)
+    public function store(CheckoutStoreRequest $request, SellerNotificationService $sellerNotifications, CheckoutSummaryService $checkoutSummaryService, VoucherService $voucherService)
     {
         $validated = $request->validated();
 
@@ -239,14 +207,15 @@ class CheckoutController extends Controller
             return $addressRedirect;
         }
 
-        $allTotals = $this->calculateCartTotals($cartItems);
-        $voucher = $this->validateVoucher($validated['voucher_code'] ?? null, $allTotals['subtotal']);
+        $allTotals = $checkoutSummaryService->totals($cartItems);
+        $voucher = $voucherService->evaluateForCart($validated['voucher_code'] ?? null, Auth::user(), $cartItems, $checkoutSummaryService);
         $checkoutGroup = (string) Str::uuid();
         $createdOrders = collect();
         $stockChecks = collect();
+        $totalVoucherDiscount = 0.0;
 
         try {
-            DB::transaction(function () use ($cartItems, $checkoutGroup, $validated, $voucher, &$createdOrders, &$stockChecks) {
+            DB::transaction(function () use ($cartItems, $checkoutGroup, $validated, $checkoutSummaryService, $voucherService, &$voucher, &$createdOrders, &$stockChecks, &$totalVoucherDiscount) {
                 $lockedProducts = Product::query()
                     ->with(['user.sellerProfile', 'activeVariants'])
                     ->whereIn('id', $cartItems->pluck('product_id')->filter()->unique()->values())
@@ -271,15 +240,32 @@ class CheckoutController extends Controller
                 });
 
                 $groupedCartItems = $this->groupedCartItemsBySeller($cartItems);
-                $lockedAllTotals = $this->calculateCartTotals($cartItems);
+                $lockedAllTotals = $checkoutSummaryService->totals($cartItems);
+                $voucher = $voucherService->evaluateForCart($validated['voucher_code'] ?? null, Auth::user(), $cartItems, $checkoutSummaryService, true);
+                $remainingVoucherDiscount = (float) $voucher['discount'];
+                $lastSellerId = $groupedCartItems->keys()->last();
 
                 foreach ($groupedCartItems as $sellerId => $sellerCartItems) {
-                    $totals = $this->calculateCartTotals($sellerCartItems);
+                    $totals = $checkoutSummaryService->totals($sellerCartItems);
                     $sellerVoucherDiscount = 0;
 
                     if ($voucher['discount'] > 0 && $lockedAllTotals['subtotal'] > 0) {
                         $lockedVoucherDiscount = min($voucher['discount'], $lockedAllTotals['subtotal']);
-                        $sellerVoucherDiscount = round($lockedVoucherDiscount * ($totals['subtotal'] / $lockedAllTotals['subtotal']), 2);
+
+                        if ($voucher['seller_id'] !== null) {
+                            $sellerVoucherDiscount = (int) $sellerId === (int) $voucher['seller_id']
+                                ? round($lockedVoucherDiscount, 2)
+                                : 0;
+                        } else {
+                            $sellerVoucherDiscount = round($lockedVoucherDiscount * ($totals['subtotal'] / $lockedAllTotals['subtotal']), 2);
+
+                            if ((int) $sellerId === (int) $lastSellerId) {
+                                $sellerVoucherDiscount = round($remainingVoucherDiscount, 2);
+                            }
+                        }
+
+                        $remainingVoucherDiscount = round($remainingVoucherDiscount - $sellerVoucherDiscount, 2);
+                        $totalVoucherDiscount = round($totalVoucherDiscount + $sellerVoucherDiscount, 2);
                     }
 
                     $order = Order::create([
@@ -348,6 +334,14 @@ class CheckoutController extends Controller
                     ->where('user_id', Auth::id())
                     ->whereIn('id', $cartItems->pluck('id'))
                     ->delete();
+
+                if ($createdOrders->isNotEmpty()) {
+                    $redemptionOrder = $createdOrders
+                        ->first(fn (Order $order) => (float) $order->voucher_discount > 0)
+                        ?? $createdOrders->sortBy('id')->first();
+
+                    $voucherService->redeem($voucher, Auth::user(), $redemptionOrder, $totalVoucherDiscount);
+                }
             });
         } catch (\RuntimeException $exception) {
             return redirect()

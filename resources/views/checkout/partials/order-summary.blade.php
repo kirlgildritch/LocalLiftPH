@@ -1,4 +1,5 @@
 <div class="order-summary panel">
+    
     <span class="section-kicker">Final Review</span>
     <h3>Review Your Order</h3>
 
@@ -21,60 +22,51 @@
     </div>
 
     <div class="summary-items">
-        @forelse(($groupedCartItems ?? collect()) as $sellerId => $sellerCartItems)
-            @php
-                $seller = $sellerCartItems->first()?->product?->user;
-                $sellerSubtotal = $sellerCartItems->sum(fn($item) => ($item->product?->discountedPrice((float) ($item->variant?->price ?? $item->product->price ?? 0)) ?? 0) * (int) $item->quantity);
-                $sellerShipping = $sellerCartItems->sum(fn($item) => (float) ($item->product->shipping_fee ?? 0) * (int) $item->quantity);
-                $estimate = ($deliveryEstimates ?? collect())->get($sellerId);
-            @endphp
+        @forelse(($checkoutSummary['groups'] ?? collect()) as $shopSummary)
             <div class="summary-shop-group">
                 <div class="summary-shop-head">
                     <div>
-                        <h4>{{ $seller?->sellerProfile?->store_name ?? $seller?->name ?? 'LocalLift Seller' }}</h4>
-                        <p>{{ $sellerCartItems->count() }} item{{ $sellerCartItems->count() !== 1 ? 's' : '' }} &middot; Delivery {{ $estimate['date_range'] ?? '3-5 days' }}</p>
+                        <h4>{{ $shopSummary['seller_name'] }}</h4>
+                        <p>{{ $shopSummary['item_count'] }} item{{ $shopSummary['item_count'] !== 1 ? 's' : '' }} &middot; Delivery {{ $shopSummary['delivery_range'] }}</p>
                     </div>
 
                     <div class="summary-price">
-                        <strong>&#8369; {{ number_format($sellerSubtotal + $sellerShipping, 2) }}</strong>
+                        <strong>&#8369; {{ number_format($shopSummary['shop_total'], 2) }}</strong>
                         <span>Shop total</span>
                     </div>
                 </div>
 
-                @foreach($sellerCartItems as $item)
-                    @php
-                        $variant = $item->variant;
-                        $originalUnitPrice = (float) ($variant?->price ?? $item->product->price ?? 0);
-                        $unitPrice = $item->product?->discountedPrice($originalUnitPrice) ?? $originalUnitPrice;
-                        $hasDiscount = $item->product?->hasActiveDiscount() && $unitPrice < $originalUnitPrice;
-                        $productImage = $variant?->image ?: ($item->product->image ?? null);
-                    @endphp
+                @foreach($shopSummary['items'] as $itemSummary)
                     <div class="summary-item">
                         <div class="summary-product">
                             <div class="summary-image">
-                                <img src="{{ $productImage ? asset('storage/' . $productImage) : asset('assets/images/default-product.png') }}"
-                                    alt="{{ $item->product->name ?? 'Product' }}">
+                                <img src="{{ $itemSummary['image_url'] }}" alt="{{ $itemSummary['product_name'] }}">
                             </div>
                             <div>
-                                <h4>{{ $item->product->name ?? 'Product' }}</h4>
-                                @if($variant)
-                                    <p>Option: {{ $variant->displayName() }}</p>
+                                <h4>{{ $itemSummary['product_name'] }}</h4>
+                                @if($itemSummary['variant_name'])
+                                    <p>Option: {{ $itemSummary['variant_name'] }}</p>
                                 @endif
-                                <p>Qty {{ $item->quantity }} &middot; Shipping &#8369; {{ number_format(((float) ($item->product->shipping_fee ?? 0)) * (int) $item->quantity, 2) }}</p>
+                                <p>Qty {{ $itemSummary['quantity'] }} &middot; Shipping &#8369; {{ number_format($itemSummary['shipping_total'], 2) }}</p>
                             </div>
                         </div>
 
                         <div class="summary-price">
-                            <strong>&#8369; {{ number_format($unitPrice * (int) $item->quantity, 2) }}</strong>
+                            <strong>&#8369; {{ number_format($itemSummary['line_subtotal'], 2) }}</strong>
                             <span>
-                                @if($hasDiscount)
-                                    <span class="checkout-price-original">&#8369; {{ number_format($originalUnitPrice, 2) }}</span>
+                                @if($itemSummary['has_discount'])
+                                    <span class="checkout-price-original">&#8369; {{ number_format($itemSummary['original_unit_price'], 2) }}</span>
                                 @endif
-                                <span class="{{ $hasDiscount ? 'checkout-price-sale' : '' }}">&#8369; {{ number_format($unitPrice, 2) }} each</span>
+                                <span class="{{ $itemSummary['has_discount'] ? 'checkout-price-sale' : '' }}">&#8369; {{ number_format($itemSummary['unit_price'], 2) }} each</span>
                             </span>
                         </div>
                     </div>
                 @endforeach
+
+                @include('vouchers.partials.buyer-voucher-list', [
+                    'vouchers' => ($availableSellerVouchers ?? collect())->get($shopSummary['seller_id'], collect()),
+                    'title' => 'Seller Vouchers',
+                ])
             </div>
         @empty
             <p>Your cart is empty.</p>
@@ -83,22 +75,28 @@
 
     <div class="summary-line">
         <span>Subtotal</span>
-        <strong>&#8369; {{ number_format($subtotal, 2) }}</strong>
+        <strong>&#8369; {{ number_format($checkoutSummary['subtotal'] ?? $subtotal, 2) }}</strong>
     </div>
 
     <div class="summary-line">
         <span>Shipping Fee</span>
-        <strong>&#8369; {{ number_format($shippingFee, 2) }}</strong>
+        <strong>&#8369; {{ number_format($checkoutSummary['shipping_fee'] ?? $shippingFee, 2) }}</strong>
     </div>
 
     <div class="summary-line">
-        <span>Voucher</span>
-        <strong>Optional</strong>
+        <span>Voucher{{ filled($checkoutSummary['voucher_code'] ?? null) ? ' (' . $checkoutSummary['voucher_code'] . ')' : '' }}</span>
+        <strong>
+            @if(($checkoutSummary['voucher_discount'] ?? 0) > 0)
+                - &#8369; {{ number_format($checkoutSummary['voucher_discount'], 2) }}
+            @else
+                Optional
+            @endif
+        </strong>
     </div>
 
     <div class="summary-total">
         <span>Total</span>
-        <strong>&#8369; {{ number_format($total, 2) }}</strong>
+        <strong>&#8369; {{ number_format($checkoutSummary['total'] ?? $total, 2) }}</strong>
     </div>
 
     <form action="{{ route('checkout.store') }}" method="POST" id="checkout-submit-form" data-enable-loading>
@@ -112,7 +110,19 @@
             @error('voucher_code')
                 <small class="error-text">{{ $message }}</small>
             @enderror
+            @if(($checkoutSummary['voucher_discount'] ?? 0) > 0)
+                <small class="success-text">{{ $checkoutSummary['voucher_label'] }} applied.</small>
+            @endif
         </div>
+        <button
+            type="submit"
+            class="action-btn full-btn"
+            formmethod="GET"
+            formaction="{{ route('checkout.index') }}"
+            data-loading-text="Applying..."
+        >
+            Apply Voucher
+        </button>
         <button
             type="submit"
             class="action-btn primary-btn full-btn"

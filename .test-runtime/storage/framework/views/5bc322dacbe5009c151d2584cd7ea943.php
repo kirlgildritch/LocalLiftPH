@@ -16,6 +16,7 @@
     <?php if(empty($disableFloatingChatWidget)): ?>
         <link rel="stylesheet" href="<?php echo e(asset('assets/css/messages.css')); ?>">
     <?php endif; ?>
+    <?php echo $__env->yieldPushContent('head'); ?>
     <link rel="icon" type="image/png" sizes="64x64" href="<?php echo e(asset('assets/image/favicon.png')); ?>">
     <?php if(file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot'))): ?>
         <?php echo app('Illuminate\Foundation\Vite')(['resources/js/app.js']); ?>
@@ -39,10 +40,34 @@
         <?php echo $__env->make('messages.partials.floating-chat', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
     <?php endif; ?>
 
-    <?php if(session('success')): ?>
-        <div id="toast-success" class="toast-success">
-            <i class="fa-solid fa-circle-check"></i>
-            <span><?php echo e(session('success')); ?></span>
+    <?php
+        $appToast = null;
+
+        if (session('success')) {
+            $appToast = [
+                'type' => 'success',
+                'icon' => 'fa-circle-check',
+                'message' => session('success'),
+            ];
+        } elseif (session('error')) {
+            $appToast = [
+                'type' => 'error',
+                'icon' => 'fa-circle-exclamation',
+                'message' => session('error'),
+            ];
+        } elseif ($errors->any()) {
+            $appToast = [
+                'type' => 'error',
+                'icon' => 'fa-circle-exclamation',
+                'message' => $errors->first(),
+            ];
+        }
+    ?>
+
+    <?php if($appToast): ?>
+        <div id="app-toast" class="app-toast app-toast--<?php echo e($appToast['type']); ?>" role="status" aria-live="polite">
+            <i class="fa-solid <?php echo e($appToast['icon']); ?>"></i>
+            <span><?php echo e($appToast['message']); ?></span>
         </div>
     <?php endif; ?>
 

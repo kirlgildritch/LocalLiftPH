@@ -313,3 +313,62 @@
             justify-content: flex-start;
         }
     }
+
+    @media (max-width: 640px) {
+        .admin-notifications-page {
+            gap: 14px;
+        }
+
+        .notification-summary {
+            gap: 12px;
+        }
+
+        .notification-summary__card,
+        .notification-panel {
+            border-radius: 14px;
+        }
+
+        .notification-summary__card,
+        .notification-panel__header,
+        .notification-filters,
+        .notification-row,
+        .notification-pagination {
+            padding: 14px;
+        }
+
+        .notification-actions,
+        .notification-actions form,
+        .notification-btn-action {
+            width: 100%;
+        }
+
+        .notification-btn-action {
+            justify-content: center;
+        }
+
+        .notification-row {
+            grid-template-columns: 40px minmax(0, 1fr);
+            gap: 12px;
+        }
+
+        .notification-row__icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+        }
+
+        .notification-row__content {
+            min-width: 0;
+        }
+
+        .notification-row__content h3,
+        .notification-row__content p {
+            overflow-wrap: anywhere;
+        }
+
+        .notification-row__right {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, auto));
+            width: 100%;
+        }
+    }

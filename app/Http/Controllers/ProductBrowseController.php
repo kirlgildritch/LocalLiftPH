@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Review;
 use App\Models\Wishlist;
 use App\Models\RecentlyViewedProduct;
+use App\Services\VoucherService;
 use App\Support\LocationBrowsing;
 use App\Support\ReviewUploadLimit;
 use Illuminate\Http\Request;
@@ -225,7 +226,7 @@ class ProductBrowseController extends Controller
         return response()->json($suggestions);
     }
 
-    public function show(Request $request, Product $product)
+    public function show(Request $request, Product $product, VoucherService $voucherService)
     {
         abort_if(
             $product->status !== Product::STATUS_APPROVED
@@ -249,7 +250,7 @@ class ProductBrowseController extends Controller
 
         $reviewsQuery = Review::query()
             ->where('product_id', $product->id)
-            ->with(['user', 'media'])
+            ->with(['user', 'media', 'orderItem.variant', 'orderItem.product:id,name'])
             ->latest();
 
         $reviews = $showAllReviews
@@ -344,9 +345,11 @@ class ProductBrowseController extends Controller
             $isWishlisted,
             $showAllReviews
         );
+        $sellerVouchers = $voucherService->activeSellerVouchers((int) $product->user_id, 4);
 
         return view('products.show', compact(
             'product',
+            'sellerVouchers',
             'relatedProducts',
             'reviewableOrderItems',
             'reviews',

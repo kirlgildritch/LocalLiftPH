@@ -35,6 +35,7 @@ body {
     font-family: "DM Sans", sans-serif;
     color: var(--text);
     background: var(--bg);
+    overflow-x: hidden;
 }
 
 body.is-modal-open {
@@ -193,6 +194,7 @@ textarea {
 
 .admin-main {
     min-width: 0;
+    width: 100%;
 }
 
 .topbar {
@@ -207,6 +209,14 @@ textarea {
     background: rgba(243, 246, 251, 0.94);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(223, 230, 241, 0.9);
+}
+
+.topbar > div:not(.topbar__meta) {
+    min-width: 0;
+}
+
+.topbar h2 {
+    overflow-wrap: anywhere;
 }
 
 .topbar__meta {
@@ -453,11 +463,14 @@ textarea {
 
 .page {
     padding: 1.75rem;
+    min-width: 0;
+    overflow-x: hidden;
 }
 
 .page-stack {
     display: grid;
     gap: 1.5rem;
+    min-width: 0;
 }
 
 .panel-card,
@@ -863,6 +876,7 @@ textarea {
 
 .table-card {
     overflow: hidden;
+    min-width: 0;
 }
 
 .data-table {
@@ -1415,6 +1429,9 @@ textarea {
     width: min(100%, 52rem);
     margin: 1rem auto;
     overflow: hidden;
+    max-height: calc(100vh - 4rem);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-card--wide {
@@ -1442,6 +1459,7 @@ textarea {
 
 .modal-card__body {
     padding: 1.35rem;
+    overflow-y: auto;
 }
 
 .modal-close {
@@ -1752,6 +1770,22 @@ textarea {
         grid-template-columns: 1fr;
     }
 
+    .admin-shell::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 35;
+        background: rgba(15, 23, 42, 0.42);
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s ease, visibility 0.2s ease;
+    }
+
+    .admin-shell.sidebar-open::before {
+        opacity: 1;
+        visibility: visible;
+    }
+
     .sidebar__brand-copy {
         gap: 0.5rem;
     }
@@ -1769,6 +1803,8 @@ textarea {
         position: fixed;
         inset: 0 auto 0 0;
         width: min(20rem, 88vw);
+        max-width: 100%;
+        overflow-y: auto;
         transform: translateX(-100%);
         transition: transform 0.2s ease;
         z-index: 40;
@@ -1779,7 +1815,8 @@ textarea {
     }
 
     .topbar {
-        padding-left: 1rem;
+        padding: 1rem;
+        gap: 0.85rem;
     }
 
     .topbar__menu {
@@ -1811,7 +1848,6 @@ textarea {
         grid-template-columns: 1fr;
     }
 
-    .topbar,
     .section-card__header,
     .table-card__header,
     .modal-card__header,
@@ -1824,9 +1860,40 @@ textarea {
         align-items: flex-start;
     }
 
+    .topbar {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        padding: 0.85rem 1rem;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .topbar h2 {
+        font-size: 1.15rem;
+        line-height: 1.15;
+    }
+
     .topbar__meta {
-        width: 100%;
-        justify-content: space-between;
+        width: auto;
+        justify-content: flex-end;
+        gap: 0.55rem;
+    }
+
+    .user-chip {
+        width: 2.75rem;
+        height: 2.75rem;
+        justify-content: center;
+        padding: 0;
+        border-radius: 0.9rem;
+    }
+
+    .user-chip > span:not(.user-chip__avatar) {
+        display: none;
+    }
+
+    .user-chip__avatar {
+        width: 2rem;
+        height: 2rem;
     }
 
     .notification-menu {
@@ -1835,9 +1902,13 @@ textarea {
     }
 
     .search-box,
-    .search-box--grow {
+    .search-box--grow,
+    .inline-select,
+    .filter-input,
+    .field-select {
         width: 100%;
         min-width: 0;
+        max-width: none;
     }
 
     .table-actions {
@@ -1857,6 +1928,24 @@ textarea {
 
     .modal-shell {
         padding: 0.75rem;
+    }
+
+    .modal-card {
+        margin: 0 auto;
+        max-height: calc(100vh - 1.5rem);
+        border-radius: 16px;
+    }
+
+    .modal-card__body {
+        padding: 1rem;
+    }
+
+    .action-button {
+        min-width: 0;
+    }
+
+    .data-table {
+        min-width: 720px;
     }
 }
 .sidebar__logout {
@@ -1931,13 +2020,87 @@ textarea {
 }
 
 @media (max-width: 640px) {
+    .topbar__eyebrow {
+        display: none;
+    }
+
+    .topbar__menu,
+    .notification-btn {
+        width: 2.55rem;
+        height: 2.55rem;
+        border-radius: 0.8rem;
+    }
+
+    .page {
+        padding: 0.85rem;
+    }
+
+    .page-stack {
+        gap: 1rem;
+    }
+
+    .panel-card,
+    .summary-card,
+    .table-card,
+    .info-card,
+    .modal-card {
+        border-radius: 14px;
+    }
+
+    .summary-card__value strong {
+        font-size: 2.25rem;
+    }
+
+    .section-card__header,
+    .table-card__header {
+        padding: 0.9rem 1rem;
+    }
+
+    .toolbar-row > *,
+    .filter-bar > *,
+    .button-row > *,
+    .footer-actions > * {
+        width: 100%;
+    }
+
+    .button-row .button,
+    .button-row .action-button,
+    .footer-actions .button,
+    .footer-actions .action-button,
+    .table-actions__primary .button,
+    .table-actions__primary .action-button {
+        width: 100%;
+    }
+
+    .product-cell,
+    .seller-cell,
+    .order-id-cell,
+    .report-product-cell {
+        gap: 0.75rem;
+    }
+
+    .thumb {
+        width: 4.2rem;
+        height: 4.2rem;
+    }
+
+    .modal-card__header,
+    .modal-card__footer {
+        padding: 0.85rem 1rem;
+    }
+
+    .modal-title {
+        font-size: 1.05rem;
+    }
+
     .notification-menu {
         position: fixed;
-        top: 84px;
-        left: 14px;
-        right: 14px;
+        top: 68px;
+        left: 12px;
+        right: 12px;
         width: auto;
         max-width: none;
+        border-radius: 16px;
     }
 
     .toast-message {

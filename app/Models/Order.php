@@ -88,6 +88,11 @@ class Order extends Model
         return $this->hasOne(OrderReturnRequest::class);
     }
 
+    public function voucherRedemption()
+    {
+        return $this->hasOne(VoucherRedemption::class);
+    }
+
     public function sellerPayout()
     {
         return $this->belongsTo(SellerPayout::class);

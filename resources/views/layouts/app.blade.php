@@ -16,6 +16,7 @@
     @if(empty($disableFloatingChatWidget))
         <link rel="stylesheet" href="{{ asset('assets/css/messages.css') }}">
     @endif
+    @stack('head')
     <link rel="icon" type="image/png" sizes="64x64" href="{{ asset('assets/image/favicon.png') }}">
     @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
         @vite(['resources/js/app.js'])
@@ -39,10 +40,34 @@
         @include('messages.partials.floating-chat')
     @endif
 
-    @if(session('success'))
-        <div id="toast-success" class="toast-success">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>{{ session('success') }}</span>
+    @php
+        $appToast = null;
+
+        if (session('success')) {
+            $appToast = [
+                'type' => 'success',
+                'icon' => 'fa-circle-check',
+                'message' => session('success'),
+            ];
+        } elseif (session('error')) {
+            $appToast = [
+                'type' => 'error',
+                'icon' => 'fa-circle-exclamation',
+                'message' => session('error'),
+            ];
+        } elseif ($errors->any()) {
+            $appToast = [
+                'type' => 'error',
+                'icon' => 'fa-circle-exclamation',
+                'message' => $errors->first(),
+            ];
+        }
+    @endphp
+
+    @if($appToast)
+        <div id="app-toast" class="app-toast app-toast--{{ $appToast['type'] }}" role="status" aria-live="polite">
+            <i class="fa-solid {{ $appToast['icon'] }}"></i>
+            <span>{{ $appToast['message'] }}</span>
         </div>
     @endif
 

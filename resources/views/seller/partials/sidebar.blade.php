@@ -27,6 +27,13 @@
                 <i class="fa-solid fa-dollar-sign"></i> Earnings
             </div>
         </a>
+
+        <a href="{{ route('seller.vouchers.index') }}" class="{{ request()->is('seller-vouchers*') ? 'active' : '' }}">
+            <div class="left">
+                <i class="fa-solid fa-ticket"></i> Vouchers
+            </div>
+        </a>
+
         <a href="{{ route('seller.shop.preview') }}" class="{{ request()->is('seller-shop-preview') ? 'active' : '' }}">
             <div class="left">
                 <i class="fa-solid fa-store"></i> View Shop

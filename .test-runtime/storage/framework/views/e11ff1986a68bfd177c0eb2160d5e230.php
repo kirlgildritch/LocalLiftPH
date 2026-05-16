@@ -1,6 +1,12 @@
-<?php $__env->startSection('content'); ?>
-  <link rel="stylesheet" href="<?php echo e(asset('assets/css/home.css')); ?>">
+<?php $__env->startPush('head'); ?>
+  <?php
+    $homeCssVersion = @filemtime(public_path('assets/css/home.css'));
+  ?>
+  <link rel="preload" as="image" href="<?php echo e(asset('assets/image/hero-carousel/hero-slide-1.webp')); ?>">
+  <link rel="stylesheet" href="<?php echo e(asset('assets/css/home.css')); ?>?v=<?php echo e($homeCssVersion); ?>">
+<?php $__env->stopPush(); ?>
 
+<?php $__env->startSection('content'); ?>
   <section class="hero">
     <div class="container hero-shell">
       <div class="hero-copy">
@@ -58,7 +64,7 @@
         <div class="section-header">
           <div>
             <span class="section-kicker">Recently Viewed</span>
-            <h2 class="section-title">Pick up where you left off</h2>
+
           </div>
         </div>
 

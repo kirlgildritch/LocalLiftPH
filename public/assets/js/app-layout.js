@@ -11,7 +11,7 @@
     };
 
     onReady(function () {
-        const toast = document.getElementById('toast-success');
+        const toast = document.getElementById('app-toast') || document.getElementById('toast-success');
 
         if (toast) {
             window.setTimeout(function () {
@@ -22,6 +22,39 @@
                 }, 400);
             }, 3000);
         }
+
+        document.querySelectorAll('[data-copy-voucher-code]').forEach(function (button) {
+            button.addEventListener('click', async function () {
+                const code = button.getAttribute('data-copy-voucher-code') || '';
+                const originalText = button.textContent;
+
+                try {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        await navigator.clipboard.writeText(code);
+                    } else {
+                        const input = document.createElement('input');
+                        input.value = code;
+                        input.setAttribute('readonly', 'readonly');
+                        input.style.position = 'fixed';
+                        input.style.opacity = '0';
+                        document.body.appendChild(input);
+                        input.select();
+                        document.execCommand('copy');
+                        input.remove();
+                    }
+
+                    button.textContent = 'Copied';
+                    button.classList.add('is-copied');
+
+                    window.setTimeout(function () {
+                        button.textContent = originalText;
+                        button.classList.remove('is-copied');
+                    }, 1800);
+                } catch (error) {
+                    button.textContent = code;
+                }
+            });
+        });
 
         const reportModals = Array.from(document.querySelectorAll('.report-modal-shell[id]'));
 

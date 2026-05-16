@@ -218,6 +218,57 @@
     color: #facc15;
 }
 
+.seller-review-status-stack {
+    display: grid;
+    justify-items: end;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.seller-reply-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.seller-reply-status--posted {
+    border: 1px solid rgba(52, 211, 153, 0.26);
+    background: rgba(52, 211, 153, 0.1);
+    color: #a7f3d0;
+}
+
+.seller-reply-status--empty {
+    border: 1px solid rgba(250, 204, 21, 0.22);
+    background: rgba(250, 204, 21, 0.08);
+    color: #fde68a;
+}
+
+.seller-review-purchase-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: 100%;
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid rgba(96, 165, 250, 0.18);
+    border-radius: 999px;
+    background: rgba(96, 165, 250, 0.08);
+    color: #bfdbfe;
+    font-size: 0.86rem;
+    line-height: 1.35;
+}
+
+.seller-review-purchase-meta i {
+    color: #93c5fd;
+}
+
 .seller-review-media-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -241,37 +292,97 @@
 }
 
 .seller-review-reply-card {
-    padding: 16px;
-    border: 1px solid rgba(96, 165, 250, 0.18);
-    border-radius: 16px;
-    background: rgba(96, 165, 250, 0.08);
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid rgba(52, 211, 153, 0.2);
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(52, 211, 153, 0.09), rgba(96, 165, 250, 0.06)),
+        rgba(7, 15, 27, 0.38);
+}
+
+.seller-review-reply-card-header {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+.seller-review-reply-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+    background: rgba(52, 211, 153, 0.14);
+    color: #a7f3d0;
 }
 
 .seller-review-reply-card strong {
+    display: block;
     color: #f5f9ff;
 }
 
+.seller-review-reply-card span,
+.seller-review-reply-card time {
+    color: #8fa7c4;
+    font-size: 0.86rem;
+}
+
+.seller-review-reply-card time {
+    white-space: nowrap;
+}
+
 .seller-review-reply-card p {
-    margin-top: 8px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
     color: #dbeafe;
+    line-height: 1.65;
 }
 
 .seller-review-reply-form {
     display: grid;
-    gap: 12px;
-    margin-top: 4px;
+    gap: 14px;
+    margin-top: 0;
     padding: 18px;
     border: 1px solid rgba(147, 197, 253, 0.18);
-    border-radius: 18px;
-    background: rgba(7, 15, 27, 0.34);
+    border-radius: 20px;
+    background:
+        linear-gradient(180deg, rgba(15, 30, 52, 0.74), rgba(7, 15, 27, 0.64)),
+        rgba(7, 15, 27, 0.34);
 }
 
 .seller-review-reply-form-header {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
     color: #f5f9ff;
-    font-weight: 700;
+}
+
+.seller-review-reply-form-header label {
+    display: block;
+    font-weight: 800;
+}
+
+.seller-review-reply-form-header p {
+    margin: 5px 0 0;
+    color: #8fa7c4;
+    line-height: 1.5;
+}
+
+.seller-review-reply-form-header > span {
+    flex: 0 0 auto;
+    min-height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #8fa7c4;
+    font-size: 0.78rem;
+    font-weight: 800;
 }
 
 .seller-review-reply-field {
@@ -304,7 +415,27 @@
 
 .seller-review-reply-actions {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.seller-review-reply-actions small {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #8fa7c4;
+    line-height: 1.4;
+}
+
+.seller-review-reply-actions small i {
+    color: #93c5fd;
+}
+
+.seller-review-reply-actions .table-action {
+    min-height: 42px;
+    padding-inline: 16px;
+    border-radius: 999px;
 }
 
 .seller-review-pagination {
@@ -334,6 +465,10 @@
     .seller-review-page-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .seller-review-status-stack {
+        justify-items: start;
     }
 
     .seller-review-summary-cards {
@@ -386,7 +521,8 @@
     }
 
     .seller-review-reply-actions {
-        justify-content: stretch;
+        align-items: stretch;
+        flex-direction: column;
     }
 
     .seller-review-reply-actions .table-action {

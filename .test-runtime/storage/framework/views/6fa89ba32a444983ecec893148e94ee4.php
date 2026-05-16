@@ -19,22 +19,26 @@
                                     </div>
                                 </div>
 
-                                <div class="seller-rating-chip">
-                                    <i class="fa-solid fa-star"></i>
-                                    <?php echo e($review->rating); ?>/5
+                                <div class="seller-review-status-stack">
+                                    <div class="seller-rating-chip">
+                                        <i class="fa-solid fa-star"></i>
+                                        <?php echo e($review->rating); ?>/5
+                                    </div>
+                                    <span class="seller-reply-status seller-reply-status--<?php echo e($replyState->statusTone); ?>">
+                                        <?php echo e($replyState->statusLabel); ?>
+
+                                    </span>
                                 </div>
                             </div>
 
-                            <p><?php echo e($review->comment ?: 'Verified buyer rating submitted.'); ?></p>
+                            <?php if($purchaseDetails): ?>
+                            <div class="seller-review-purchase-meta">
+                                <i class="fa-solid fa-receipt"></i>
+                                <span><?php echo e($purchaseDetails); ?></span>
+                            </div>
+                            <?php endif; ?>
 
-                            <?php
-                            $reviewMedia = $review->media->isNotEmpty()
-                            ? $review->media
-                            : collect([
-                            $review->image_path ? (object) ['type' => 'image', 'path' => $review->image_path] : null,
-                            $review->video_path ? (object) ['type' => 'video', 'path' => $review->video_path] : null,
-                            ])->filter();
-                            ?>
+                            <p><?php echo e($review->comment ?: 'Verified buyer rating submitted.'); ?></p>
 
                             <?php if($reviewMedia->isNotEmpty()): ?>
                             <div class="seller-review-media-grid">
@@ -52,14 +56,19 @@
 
                             <?php if(filled($review->seller_reply)): ?>
                             <div class="seller-review-reply-card">
-                                <div>
-                                    <strong>Your reply</strong><br>
+                                <div class="seller-review-reply-card-header">
+                                    <span class="seller-review-reply-icon">
+                                        <i class="fa-solid fa-reply"></i>
+                                    </span>
+                                    <div>
+                                        <strong>Your public reply</strong>
+                                        <span>Visible below this buyer review.</span>
+                                    </div>
                                     <?php if($review->seller_replied_at): ?>
-                                    <span><?php echo e($review->seller_replied_at->format('M d, Y')); ?></span><br>
+                                    <time><?php echo e($review->seller_replied_at->format('M d, Y')); ?></time>
                                     <?php endif; ?>
                                 </div>
 
-                                <br>
                                 <p><?php echo e($review->seller_reply); ?></p>
                             </div>
                             <?php endif; ?>
@@ -69,22 +78,23 @@
                                 <?php echo method_field('PATCH'); ?>
 
                                 <div class="seller-review-reply-form-header">
-                                    <label for="seller_reply_<?php echo e($review->id); ?>">
-                                        <?php echo e($review->seller_reply ? 'Edit your reply' : 'Reply to this review'); ?>
-
-                                    </label>
-                                    <span><?php echo e($review->seller_reply ? ':' : ':'); ?></span>
+                                    <div>
+                                        <label for="seller_reply_<?php echo e($review->id); ?>"><?php echo e($replyState->formTitle); ?></label>
+                                        <p><?php echo e($replyState->formHint); ?></p>
+                                    </div>
+                                    <span>1000 max</span>
                                 </div>
 
                                 <div class="seller-review-reply-field">
                                     <textarea name="seller_reply" id="seller_reply_<?php echo e($review->id); ?>" rows="3" maxlength="1000" required
-                                        placeholder="Thank the buyer, answer concerns, or clarify product details..."><?php echo e(old('seller_reply', $review->seller_reply)); ?></textarea>
+                                        placeholder="<?php echo e($replyState->placeholder); ?>"><?php echo e(old('seller_reply', $review->seller_reply)); ?></textarea>
                                 </div>
 
                                 <div class="seller-review-reply-actions">
+                                    <small><i class="fa-solid fa-eye"></i> Public response</small>
                                     <button type="submit" class="submitt table-action secondary">
                                         <i class="fa-solid fa-reply"></i>
-                                        <?php echo e($review->seller_reply ? 'Submit Reply' : 'Post Reply'); ?>
+                                        <?php echo e($replyState->buttonLabel); ?>
 
                                     </button>
                                 </div>

@@ -62,4 +62,13 @@ class Review extends Model
     {
         return $this->hasMany(ReviewMedia::class)->orderBy('sort_order');
     }
+
+    public function purchaseDetailsLabel(bool $includeProduct = false): ?string
+    {
+        if (! $this->relationLoaded('orderItem') || ! $this->orderItem) {
+            return null;
+        }
+
+        return $this->orderItem->purchaseDetailsLabel($includeProduct);
+    }
 }

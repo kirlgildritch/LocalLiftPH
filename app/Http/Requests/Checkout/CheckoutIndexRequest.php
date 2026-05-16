@@ -16,6 +16,7 @@ class CheckoutIndexRequest extends FormRequest
         return [
             'selected_cart_items' => ['nullable', 'array'],
             'selected_cart_items.*' => ['integer'],
+            'voucher_code' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

@@ -8,7 +8,7 @@
         $paymentMethods = $paymentMethods ?? \App\Models\Order::paymentMethods();
         $selectedPaymentMethod = $selectedPaymentMethod ?? \App\Models\Order::PAYMENT_METHOD_COD;
         $selectedPayment = $paymentMethods[$selectedPaymentMethod] ?? reset($paymentMethods);
-        $voucherCode = old('voucher_code');
+        $voucherCode = old('voucher_code', $voucherCode ?? null);
     @endphp
 
     <section class="checkout-page">

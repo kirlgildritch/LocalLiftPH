@@ -55,6 +55,11 @@ class User extends Authenticatable
         return $this->hasOne(Seller::class);
     }
 
+    public function sellerVouchers(): HasMany
+    {
+        return $this->hasMany(Voucher::class, 'seller_id');
+    }
+
     public function addresses(): HasMany
     {
         return $this->hasMany(\App\Models\Address::class);

@@ -15,6 +15,7 @@
             $currentRoute === 'seller.products.reviews' => 'Product Reviews',
             $currentRoute === 'seller.orders' => 'Seller Orders',
             $currentRoute === 'seller.earnings' => 'Earnings',
+            str_starts_with((string) $currentRoute, 'seller.vouchers.') => 'Seller Vouchers',
             $currentRoute === 'seller.messages',
             $currentRoute === 'seller.messages.show' => 'Seller Messages',
             $currentRoute === 'seller.profile' => 'Seller Profile',

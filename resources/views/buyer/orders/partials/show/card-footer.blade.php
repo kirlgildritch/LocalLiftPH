@@ -16,14 +16,12 @@
 
     <div class="order-actions">
         @if($shopOrder->canBeCancelled())
-            <button type="button" class="order-btn danger-btn open-cancel-order"
-                data-order-id="{{ $shopOrder->id }}"
+            <button type="button" class="order-btn danger-btn open-cancel-order" data-order-id="{{ $shopOrder->id }}"
                 data-order-action="{{ route('buyer.orders.cancel', $shopOrder) }}">
                 Cancel Order
             </button>
         @elseif($shopOrder->canConfirmReceipt())
-            <form action="{{ route('buyer.orders.received', $shopOrder) }}" method="POST"
-                style="display: inline;">
+            <form action="{{ route('buyer.orders.received', $shopOrder) }}" method="POST" style="display: inline;">
                 @csrf
                 @method('PATCH')
                 <button type="submit" class="order-btn primary-btn">
@@ -42,12 +40,9 @@
                 </button>
             @endif
 
-            @if($shopHasRateableItems)
-                <span class="order-btn secondary-btn is-static">Choose an item above to rate</span>
-            @endif
 
-            <form action="{{ route('buyer.orders.buyAgain', $shopOrder) }}" method="POST"
-                style="display: inline;">
+
+            <form action="{{ route('buyer.orders.buyAgain', $shopOrder) }}" method="POST" style="display: inline;">
                 @csrf
                 <button type="submit" class="order-btn primary-btn">
                     {{ $shopOrder->shippingStatus() === \App\Models\Order::SHIPPING_CANCELLED ? 'Reorder' : 'Buy Again' }}

@@ -83,7 +83,7 @@ class ProductReviewController extends Controller
             ]);
         }
 
-        $freshReview = $review->fresh(['product.user.sellerProfile', 'user', 'media']);
+        $freshReview = $review->fresh(['product.user.sellerProfile', 'user', 'media', 'orderItem.variant', 'orderItem.product:id,name']);
 
         $sellerNotifications->buyerLeftReview($freshReview);
 
