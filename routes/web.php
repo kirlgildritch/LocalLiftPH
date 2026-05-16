@@ -36,6 +36,7 @@ use App\Http\Controllers\SellerController;
 use App\Http\Controllers\Seller\SellerPayoutController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\ShopFollowController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('frontend')->group(function () {
@@ -169,6 +170,7 @@ Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
     Route::patch('/products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('products.approve');
     Route::patch('/products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('products.reject');
     Route::get('/sellers', [SellerReviewController::class, 'index'])->name('sellers');
+    Route::get('/sellers/{seller}/documents/{type}', [SellerReviewController::class, 'document'])->name('sellers.documents.show');
     Route::patch('/sellers/{seller}/status', [SellerReviewController::class, 'updateStatus'])->name('sellers.status');
     Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders');
     Route::get('/payouts', [AdminPayoutController::class, 'index'])->name('payouts');
@@ -212,6 +214,8 @@ Route::middleware('buyer')->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('buyer.wishlist.index');
     Route::post('/wishlist/{product}', [WishlistController::class, 'store'])->name('buyer.wishlist.store');
     Route::delete('/wishlist/{product}', [WishlistController::class, 'destroy'])->name('buyer.wishlist.destroy');
+    Route::post('/shops/{user}/follow', [ShopFollowController::class, 'store'])->name('shops.follow');
+    Route::delete('/shops/{user}/follow', [ShopFollowController::class, 'destroy'])->name('shops.unfollow');
 
     Route::get('/messages', [MessageController::class, 'index'])->name('messages.index');
     Route::get('/messages/{conversation}', [MessageController::class, 'show'])->name('messages.show');

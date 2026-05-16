@@ -584,6 +584,18 @@
   color: var(--text-soft);
 }
 
+.checkout-price-original {
+  color: #7f8da3;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(255, 116, 116, 0.78);
+}
+
+.checkout-price-sale {
+  color: #ffdf6e;
+  font-weight: 800;
+}
+
 .summary-line,
 .summary-total {
   justify-content: space-between;

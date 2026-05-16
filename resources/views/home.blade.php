@@ -54,6 +54,25 @@
     </div>
   </section>
 
+  @if(($recentlyViewedProducts ?? collect())->isNotEmpty())
+    <section class="section">
+      <div class="container">
+        <div class="section-header">
+          <div>
+            <span class="section-kicker">Recently Viewed</span>
+            <h2 class="section-title">Pick up where you left off</h2>
+          </div>
+        </div>
+
+        <div class="products product-card-grid" data-skeleton-group data-skeleton-delay="420">
+          @foreach($recentlyViewedProducts as $product)
+            <x-product-card :product="$product" :fallback-image="asset('assets/image/heroBanner.png')" />
+          @endforeach
+        </div>
+      </div>
+    </section>
+  @endif
+
   <section class="section">
     <div class="container">
       <div class="section-header">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ShopFollow;
 use App\Models\Wishlist;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,26 @@ class WishlistController extends Controller
             ->latest()
             ->paginate(12);
 
-        return view('buyer.wishlist', compact('wishlists'));
+        $followedShops = ShopFollow::query()
+            ->with([
+                'seller' => function ($query) {
+                    $query
+                        ->with('sellerProfile')
+                        ->withCount([
+                            'products' => function ($productQuery) {
+                                $productQuery->visibleToBuyers();
+                            },
+                        ]);
+                },
+            ])
+            ->where('user_id', Auth::id())
+            ->whereHas('seller', function ($query) {
+                $query->visibleSellerShops();
+            })
+            ->latest()
+            ->get();
+
+        return view('buyer.wishlist', compact('wishlists', 'followedShops'));
     }
 
     public function store(Request $request, Product $product): RedirectResponse

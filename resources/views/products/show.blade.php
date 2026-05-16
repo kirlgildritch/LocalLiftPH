@@ -12,7 +12,11 @@ $isWishlisted = (bool) ($isWishlisted ?? false);
 $activeVariants = $product->variants->where('is_active', true)->values();
 $hasVariants = $activeVariants->isNotEmpty();
 $displayStock = $hasVariants ? (int) $activeVariants->sum('stock') : (int) $product->stock;
-$displayPrice = $hasVariants ? (float) $activeVariants->min('price') : (float) $product->price;
+$displayOriginalPrice = $hasVariants ? (float) $activeVariants->min('price') : (float) $product->price;
+$displayPrice = $hasVariants
+    ? (float) $activeVariants->map(fn($variant) => $product->discountedPrice((float) $variant->price))->min()
+    : $product->discountedPrice($displayOriginalPrice);
+$hasDiscount = $product->hasActiveDiscount() && $displayPrice < $displayOriginalPrice;
 $productReviewsToggleUrl = $showAllReviews
     ? route('products.show', $product) . '#product-reviews'
     : route('products.show', array_merge(request()->query(), ['product' => $product->getRouteKey(), 'show_reviews' => 'all'])) . '#product-reviews';
@@ -125,10 +129,16 @@ $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMedi
                     </div>
 
                     <div class="product-price" data-product-display-price>
+                        @if($hasDiscount)
+                            <span class="product-price__original">&#8369; {{ number_format($displayOriginalPrice, 2) }}</span>
+                        @endif
                         @if($hasVariants)
-                            Starts at &#8369; {{ number_format($displayPrice, 2) }}
+                            <span class="product-price__sale">Starts at &#8369; {{ number_format($displayPrice, 2) }}</span>
                         @else
-                            &#8369; {{ number_format($displayPrice, 2) }}
+                            <span class="product-price__sale">&#8369; {{ number_format($displayPrice, 2) }}</span>
+                        @endif
+                        @if($hasDiscount)
+                            <span class="product-price__badge">{{ $product->discountLabel() }}</span>
                         @endif
                     </div>
 
@@ -158,11 +168,17 @@ $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMedi
                                         class="variant-choice"
                                         data-variant-choice
                                         data-variant-id="{{ $variant->id }}"
-                                        data-variant-price="{{ (float) $variant->price }}"
+                                        data-variant-price="{{ $product->discountedPrice((float) $variant->price) }}"
+                                        data-variant-original-price="{{ (float) $variant->price }}"
                                         data-variant-stock="{{ (int) $variant->stock }}"
                                         {{ (int) $variant->stock <= 0 ? 'disabled' : '' }}>
                                         <strong>{{ $variant->displayName() }}</strong>
-                                        <small>&#8369; {{ number_format($variant->price, 2) }} | {{ (int) $variant->stock }} left</small>
+                                        <small>
+                                            @if($product->hasActiveDiscount() && $product->discountedPrice((float) $variant->price) < (float) $variant->price)
+                                                <span class="variant-price-original">&#8369; {{ number_format($variant->price, 2) }}</span>
+                                            @endif
+                                            &#8369; {{ number_format($product->discountedPrice((float) $variant->price), 2) }} | {{ (int) $variant->stock }} left
+                                        </small>
                                     </button>
                                 @endforeach
 
@@ -299,11 +315,17 @@ $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMedi
                                 class="variant-choice"
                                 data-variant-choice
                                 data-variant-id="{{ $variant->id }}"
-                                data-variant-price="{{ (float) $variant->price }}"
+                                data-variant-price="{{ $product->discountedPrice((float) $variant->price) }}"
+                                data-variant-original-price="{{ (float) $variant->price }}"
                                 data-variant-stock="{{ (int) $variant->stock }}"
                                 {{ (int) $variant->stock <= 0 ? 'disabled' : '' }}>
                                 <strong>{{ $variant->displayName() }}</strong>
-                                <small>&#8369; {{ number_format($variant->price, 2) }} | {{ (int) $variant->stock }} left</small>
+                                <small>
+                                    @if($product->hasActiveDiscount() && $product->discountedPrice((float) $variant->price) < (float) $variant->price)
+                                        <span class="variant-price-original">&#8369; {{ number_format($variant->price, 2) }}</span>
+                                    @endif
+                                    &#8369; {{ number_format($product->discountedPrice((float) $variant->price), 2) }} | {{ (int) $variant->stock }} left
+                                </small>
                             </button>
                         @endforeach
                     </div>
@@ -449,6 +471,23 @@ $reviewMediaRequestLabel = \App\Support\ReviewUploadLimit::humanSize($reviewMedi
                     @endforelse
                 </div>
             </section>
+
+            @if(($recentlyViewedProducts ?? collect())->isNotEmpty())
+                <section class="panel detail-card">
+                    <div class="detail-header">
+                        <div>
+                            <span class="section-kicker">Recently Viewed</span>
+                            <h2>Viewed by you</h2>
+                        </div>
+                    </div>
+
+                    <div class="related-grid product-card-grid" data-skeleton-group data-skeleton-delay="420">
+                        @foreach($recentlyViewedProducts as $recentProduct)
+                            <x-product-card :product="$recentProduct" />
+                        @endforeach
+                    </div>
+                </section>
+            @endif
         </div>
     </div>
 </section>

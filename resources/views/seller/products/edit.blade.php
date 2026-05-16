@@ -147,6 +147,27 @@
                                         </div>
 
                                         <div class="form-group">
+                                            <label for="discount_type">Discount Type</label>
+                                            <select id="discount_type" name="discount_type">
+                                                <option value="">No discount</option>
+                                                <option value="percent" {{ old('discount_type', $product->discount_type) === 'percent' ? 'selected' : '' }}>Percentage</option>
+                                                <option value="fixed" {{ old('discount_type', $product->discount_type) === 'fixed' ? 'selected' : '' }}>Fixed amount</option>
+                                            </select>
+                                            @error('discount_type')
+                                                <span class="error-text">{{ $message }}</span>
+                                            @enderror
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label for="discount_value">Discount Value</label>
+                                            <input type="number" id="discount_value" name="discount_value"
+                                                value="{{ old('discount_value', $product->discount_value ?? '') }}" placeholder="Optional" step="0.01" min="0">
+                                            @error('discount_value')
+                                                <span class="error-text">{{ $message }}</span>
+                                            @enderror
+                                        </div>
+
+                                        <div class="form-group">
                                             <label for="stock">Stock</label>
                                             <input type="number" id="stock" name="stock"
                                                 value="{{ old('stock', $product->stock ?? '') }}" placeholder="0">

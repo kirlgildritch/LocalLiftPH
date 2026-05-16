@@ -15,6 +15,9 @@
     $averageRating = round((float) ($product->reviews_avg_rating ?? 0), 1);
     $sellerProfile = $product->user?->sellerProfile;
     $locationLabel = \App\Support\LocationBrowsing::matchLabel($sellerProfile, $buyerLocation);
+    $originalPrice = (float) ($product->price ?? 0);
+    $discountedPrice = $product->discountedPrice($originalPrice);
+    $hasDiscount = $product->hasActiveDiscount() && $discountedPrice < $originalPrice;
 @endphp
 
 <a href="{{ $resolvedHref }}" class="market-product-card product-card-link skeleton-shell is-loading {{ $cardClass }}" data-skeleton-item data-skeleton-kind="product-card">
@@ -56,8 +59,17 @@
         @endisset
 
         <div class="market-product-card__price skeleton skeleton-text">
-            <span class="market-product-card__currency">&#8369;</span>
-            {{ number_format($product->price, 2) }}
+            @if($hasDiscount)
+                <span class="market-product-card__price-original">&#8369; {{ number_format($originalPrice, 2) }}</span>
+                <span class="market-product-card__price-sale">
+                    <span class="market-product-card__currency">&#8369;</span>
+                    {{ number_format($discountedPrice, 2) }}
+                </span>
+                <span class="market-product-card__discount-badge">{{ $product->discountLabel() }}</span>
+            @else
+                <span class="market-product-card__currency">&#8369;</span>
+                {{ number_format($originalPrice, 2) }}
+            @endif
         </div>
     </div>
 </a>
