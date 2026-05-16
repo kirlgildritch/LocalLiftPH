@@ -39,3 +39,67 @@ test('users can logout', function () {
     $this->assertGuest();
     $response->assertRedirect('/');
 });
+
+test('seller can authenticate only through seller guard', function () {
+    $seller = User::factory()->create([
+        'is_seller' => true,
+        'is_admin' => false,
+    ]);
+
+    $response = $this->post(route('seller.login.store'), [
+        'email' => $seller->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($seller, 'seller');
+    $response->assertRedirect(route('seller.dashboard'));
+});
+
+test('buyer cannot authenticate through seller guard', function () {
+    $buyer = User::factory()->create([
+        'is_seller' => false,
+        'is_admin' => false,
+    ]);
+
+    $response = $this->post(route('seller.login.store'), [
+        'email' => $buyer->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertGuest('seller');
+    $response
+        ->assertRedirect(route('seller.login'))
+        ->assertSessionHasErrors('email');
+});
+
+test('admin can authenticate only through admin guard', function () {
+    $admin = User::factory()->create([
+        'is_seller' => false,
+        'is_admin' => true,
+    ]);
+
+    $response = $this->post(route('admin.login.store'), [
+        'email' => $admin->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticatedAs($admin, 'admin');
+    $response->assertRedirect(route('admin.dashboard'));
+});
+
+test('non admin cannot authenticate through admin guard', function () {
+    $seller = User::factory()->create([
+        'is_seller' => true,
+        'is_admin' => false,
+    ]);
+
+    $response = $this->post(route('admin.login.store'), [
+        'email' => $seller->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertGuest('admin');
+    $response
+        ->assertRedirect(route('admin.login'))
+        ->assertSessionHasErrors('email');
+});

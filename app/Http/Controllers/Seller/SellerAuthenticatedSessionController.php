@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
-use App\Models\Seller as SellerProfile;
+use App\Http\Requests\Seller\SellerLoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,12 +30,9 @@ class SellerAuthenticatedSessionController extends Controller
         return view('seller.auth.login');
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(SellerLoginRequest $request): RedirectResponse
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+        $credentials = $request->validated();
 
         if (! Auth::guard('seller')->attempt($credentials, $request->boolean('remember'))) {
             return back()

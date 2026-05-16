@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Seller\UpdateOrderShippingStatusRequest;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Notifications\SellerNotificationService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class SellerOrderController extends Controller
 {
@@ -29,7 +28,7 @@ class SellerOrderController extends Controller
         return view('seller.orders', compact('orders'));
     }
 
-    public function updateShippingStatus(Request $request, Order $order, SellerNotificationService $sellerNotifications): RedirectResponse
+    public function updateShippingStatus(UpdateOrderShippingStatusRequest $request, Order $order, SellerNotificationService $sellerNotifications): RedirectResponse
     {
         $order->loadMissing(['items.product', 'items.variant', 'user']);
 
@@ -43,13 +42,7 @@ class SellerOrderController extends Controller
                 ->with('error', 'This order can no longer be updated.');
         }
 
-        $validated = $request->validate([
-            'shipping_status' => ['required', 'string', Rule::in($allowedStatuses)],
-        ], [
-            'shipping_status.in' => 'Invalid shipping status transition.',
-        ]);
-
-        $shippingStatus = $validated['shipping_status'];
+        $shippingStatus = (string) $request->validated('shipping_status');
 
         $updates = [
             'shipping_status' => $shippingStatus,

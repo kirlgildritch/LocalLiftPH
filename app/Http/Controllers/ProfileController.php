@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Notifications\AdminActivityNotification;
 use Illuminate\Support\Facades\Hash;
+use App\Http\Requests\Buyer\UpdateBuyerProfileRequest;
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\AdminActivityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -48,7 +47,7 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-   public function update(ProfileUpdateRequest $request): RedirectResponse
+   public function update(ProfileUpdateRequest $request, AdminActivityService $adminActivity): RedirectResponse
 {
     $user = $request->user();
 
@@ -106,14 +105,7 @@ class ProfileController extends Controller
     $user->save();
 
     if ($changedFields !== []) {
-        $this->notifyAdmins(
-            new AdminActivityNotification(
-                'seller_review',
-                'Seller profile updated',
-                ($user->name ?? 'A seller') . ' updated their seller profile: ' . $this->formatFieldList($changedFields) . '.',
-                'admin.sellers',
-            )
-        );
+        $adminActivity->sellerProfileUpdated($user, $changedFields);
     }
 
     return Redirect::route('seller.profile')->with('success', 'Profile updated successfully.');
@@ -146,19 +138,11 @@ class ProfileController extends Controller
     ]);
 }
 
-public function buyerUpdate(Request $request)
+public function buyerUpdate(UpdateBuyerProfileRequest $request)
 {
     $user = $request->user();
 
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-        'phone' => 'nullable|string|max:20',
-        'address' => 'nullable|string|max:255',
-        'profile_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-        'current_password' => 'nullable|required_with:password',
-        'password' => 'nullable|confirmed|min:8',
-    ]);
+    $validated = $request->validated();
 
     $originalEmail = $user->email;
 
@@ -195,45 +179,15 @@ public function buyerUpdate(Request $request)
 
     $user->save();
 
+    if ($request->input('profile_context') === 'modal') {
+        return Redirect::back()->with('success', 'Profile updated successfully.');
+    }
+
     $redirectRoute = $request->routeIs('profile.*')
         ? 'profile.edit'
         : 'buyer.profile';
 
     return Redirect::route($redirectRoute)->with('success', 'Profile updated successfully.');
-    }
-
-    private function notifyAdmins(AdminActivityNotification $notification): void
-    {
-        User::query()
-            ->where(function ($query) {
-                $query->where('is_admin', true)
-                    ->orWhere('role', 'admin');
-            })
-            ->get()
-            ->each
-            ->notify($notification);
-    }
-
-    private function formatFieldList(array $fields): string
-    {
-        $fields = array_values(array_unique($fields));
-        $count = count($fields);
-
-        if ($count === 0) {
-            return 'details';
-        }
-
-        if ($count === 1) {
-            return $fields[0];
-        }
-
-        if ($count === 2) {
-            return $fields[0] . ' and ' . $fields[1];
-        }
-
-        $lastField = array_pop($fields);
-
-        return implode(', ', $fields) . ', and ' . $lastField;
     }
 
 }

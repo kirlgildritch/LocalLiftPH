@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Buyer\StoreOrderReturnRequest;
 use App\Models\Order;
 use App\Models\OrderReturnRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class OrderReturnRequestController extends Controller
 {
-    public function store(Request $request, Order $order): RedirectResponse
+    public function store(StoreOrderReturnRequest $request, Order $order): RedirectResponse
     {
         $this->authorize('view', $order);
         $order->loadMissing(['items.product', 'returnRequest']);
@@ -22,13 +22,7 @@ class OrderReturnRequestController extends Controller
                 ->with('error', 'Return/refund requests are available for completed orders within 7 days.');
         }
 
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'in:Damaged item,Wrong item received,Missing item,Item not as described,Quality issue,Other'],
-            'preferred_resolution' => ['required', 'string', 'in:refund,return_and_refund,replacement'],
-            'details' => ['required', 'string', 'min:10', 'max:1000'],
-            'evidence' => ['nullable', 'array', 'max:5'],
-            'evidence.*' => ['file', 'mimes:jpg,jpeg,png,webp,mp4,mov,avi,webm', 'max:10240'],
-        ]);
+        $validated = $request->validated();
 
         $returnRequest = OrderReturnRequest::create([
             'order_id' => $order->id,

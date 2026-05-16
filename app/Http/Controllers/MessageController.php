@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Events\ConversationMessageSent;
 use App\Events\ConversationRead;
 use App\Events\ConversationTypingUpdated;
+use App\Http\Requests\Message\ConversationTypingRequest;
+use App\Http\Requests\Message\StartConversationRequest;
+use App\Http\Requests\Message\StoreMessageRequest;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Product;
@@ -154,11 +157,6 @@ class MessageController extends Controller
         return "conversation:{$conversation->id}:typing:{$userId}";
     }
 
-    protected function messageAttachmentRules(): array
-    {
-        return ['nullable', 'file'];
-    }
-
     protected function storeMessageAttachment(Request $request): array
     {
         if (! $request->hasFile('image')) {
@@ -294,7 +292,19 @@ class MessageController extends Controller
             'buyer.sellerProfile:id,user_id,store_name,shop_logo',
             'seller:id,name,profile_image',
             'seller.sellerProfile:id,user_id,store_name,shop_logo',
-            'latestMessage:id,conversation_id,sender_id,product_id,message,image_path,video_path,read_at,created_at',
+            'latestMessage' => function ($query) {
+                $query->select([
+                    'messages.id',
+                    'messages.conversation_id',
+                    'messages.sender_id',
+                    'messages.product_id',
+                    'messages.message',
+                    'messages.image_path',
+                    'messages.video_path',
+                    'messages.read_at',
+                    'messages.created_at',
+                ]);
+            },
             'latestMessage.sender:id,name',
             'latestMessage.product:id,user_id,name,price,image',
             'latestMessage.product.user:id,name',
@@ -335,13 +345,7 @@ class MessageController extends Controller
 
     protected function authorizedConversation(Conversation $conversation): void
     {
-        $currentUserId = (int) $this->currentUserId();
-
-        abort_unless(
-            (int) $conversation->buyer_id === $currentUserId
-            || (int) $conversation->seller_id === $currentUserId,
-            403
-        );
+        $this->authorize('view', $conversation);
     }
 
     protected function resolveActiveConversation(Request $request, $conversations, ?Conversation $providedConversation = null): ?Conversation
@@ -481,16 +485,14 @@ class MessageController extends Controller
         ]);
     }
 
-    public function start(Request $request, User $seller, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
+    public function start(StartConversationRequest $request, User $seller, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
     {
         $this->touchCurrentUserPresence();
 
         abort_if((int) $seller->id === (int) $this->currentUserId(), 403);
         abort_unless($seller->isSeller(), 404);
 
-        $validated = $request->validate([
-            'product_id' => ['nullable', 'integer', 'exists:products,id'],
-        ]);
+        $validated = $request->validated();
 
         $conversation = Conversation::firstOrCreate([
             'buyer_id' => $this->currentUserId(),
@@ -536,16 +538,13 @@ class MessageController extends Controller
         return redirect()->route('messages.show', $conversation);
     }
 
-    public function store(Request $request, Conversation $conversation, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
+    public function store(StoreMessageRequest $request, Conversation $conversation, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
     {
         $this->touchCurrentUserPresence();
 
-        $this->authorizedConversation($conversation);
+        $this->authorize('sendMessage', $conversation);
 
-        $validated = $request->validate([
-            'message' => ['nullable', 'string', 'max:2000'],
-            'image' => $this->messageAttachmentRules(),
-        ]);
+        $validated = $request->validated();
 
         if (! filled($validated['message'] ?? null) && ! $request->hasFile('image')) {
             throw ValidationException::withMessages([
@@ -596,15 +595,13 @@ class MessageController extends Controller
         return redirect()->route($this->messageShowRouteName(), $conversation);
     }
 
-    public function typing(Request $request, Conversation $conversation): JsonResponse
+    public function typing(ConversationTypingRequest $request, Conversation $conversation): JsonResponse
     {
         $this->touchCurrentUserPresence();
 
-        $this->authorizedConversation($conversation);
+        $this->authorize('updateTyping', $conversation);
 
-        $validated = $request->validate([
-            'typing' => ['required', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         $cacheKey = $this->conversationTypingCacheKey($conversation, (int) $this->currentUserId());
 

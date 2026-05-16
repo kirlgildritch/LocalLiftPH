@@ -33,6 +33,28 @@ test('profile information can be updated', function () {
     $this->assertNull($user->email_verified_at);
 });
 
+test('buyer profile modal update redirects back to the previous page', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/')
+        ->patch(route('buyer.profile.update'), [
+            'name' => 'Modal User',
+            'email' => 'modal@example.com',
+            'profile_context' => 'modal',
+        ]);
+
+    $response
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/');
+
+    $user->refresh();
+
+    $this->assertSame('Modal User', $user->name);
+    $this->assertSame('modal@example.com', $user->email);
+});
+
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
 

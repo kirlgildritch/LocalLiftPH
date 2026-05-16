@@ -3,16 +3,15 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Seller\RespondToOrderReturnRequest;
 use App\Models\Order;
 use App\Models\OrderReturnRequest;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class OrderReturnRequestController extends Controller
 {
-    public function update(Request $request, OrderReturnRequest $returnRequest): RedirectResponse
+    public function update(RespondToOrderReturnRequest $request, OrderReturnRequest $returnRequest): RedirectResponse
     {
         $returnRequest->loadMissing('order');
         $seller = Auth::guard('seller')->user();
@@ -25,13 +24,7 @@ class OrderReturnRequestController extends Controller
                 ->with('error', 'This return/refund request has already been reviewed.');
         }
 
-        $validated = $request->validate([
-            'status' => ['required', Rule::in([
-                OrderReturnRequest::STATUS_APPROVED,
-                OrderReturnRequest::STATUS_REJECTED,
-            ])],
-            'seller_response' => ['required', 'string', 'min:5', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
         $updates = [
             'status' => $validated['status'],

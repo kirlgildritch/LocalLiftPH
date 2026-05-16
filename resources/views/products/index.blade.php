@@ -3,6 +3,9 @@
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/productsStyle.css') }}">
+    @php
+        $marketPaginationScript = asset('assets/js/market-pagination.js') . '?v=' . @filemtime(public_path('assets/js/market-pagination.js'));
+    @endphp
 
     <section class="market-page products-page">
         <div class="container">
@@ -261,50 +264,20 @@
                         </div>
                     @endif
 
-                    <div class="product-grid product-card-grid" data-skeleton-group data-skeleton-delay="420">
-                        @forelse($products as $product)
-                            <x-product-card :product="$product" :buyer-location="$buyerLocation" />
-                        @empty
-                            <div class="panel" style="padding: 20px;">
-                                <p>
-                                    @if(!empty($search))
-                                        No products found for "<strong>{{ $search }}</strong>".
-                                    @else
-                                        No products available yet.
-                                    @endif
-                                </p>
-                            </div>
-                        @endforelse
+                    <div
+                        data-market-pagination-root
+                        data-market-pagination-count="{{ max($products->count(), 12) }}"
+                        data-market-pagination-scroll-target=".market-main"
+                    >
+                        @include('products.partials.results', [
+                            'products' => $products,
+                            'search' => $search,
+                            'buyerLocation' => $buyerLocation,
+                        ])
                     </div>
-
-                    @if($products->hasPages())
-                        <div class="panel"
-                            style="padding: 16px 20px; margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-                            <p style="margin: 0; color: #9fb3c8; font-size: 14px;">
-                                Showing {{ $products->firstItem() }}-{{ $products->lastItem() }} of {{ $products->total() }}
-                                products
-                            </p>
-
-                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                @if($products->onFirstPage())
-                                    <span class="action-btn secondary-btn" style="opacity: 0.5; pointer-events: none;">Previous</span>
-                                @else
-                                    <a href="{{ $products->previousPageUrl() }}" class="action-btn secondary-btn">Previous</a>
-                                @endif
-
-                                <span style="color: #dbeafe; font-size: 14px;">Page {{ $products->currentPage() }} of
-                                    {{ $products->lastPage() }}</span>
-
-                                @if($products->hasMorePages())
-                                    <a href="{{ $products->nextPageUrl() }}" class="action-btn secondary-btn">Next</a>
-                                @else
-                                    <span class="action-btn secondary-btn" style="opacity: 0.5; pointer-events: none;">Next</span>
-                                @endif
-                            </div>
-                        </div>
-                    @endif
                 </div>
             </div>
         </div>
     </section>
+    <script src="{{ $marketPaginationScript }}" defer></script>
 @endsection

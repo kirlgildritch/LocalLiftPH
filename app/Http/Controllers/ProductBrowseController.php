@@ -10,9 +10,12 @@ use App\Models\Category;
 use App\Models\Review;
 use App\Models\Wishlist;
 use App\Support\LocationBrowsing;
+use App\Support\ReviewUploadLimit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Fluent;
 
 class ProductBrowseController extends Controller
 {
@@ -98,6 +101,16 @@ class ProductBrowseController extends Controller
             ->paginate(12)
             ->withQueryString();
 
+        $buyerLocation = $defaultAddress;
+
+        if ($request->ajax()) {
+            return response()->view('products.partials.results', compact(
+                'products',
+                'search',
+                'buyerLocation'
+            ));
+        }
+
         $categories = Category::withCount([
             'products' => function ($query) {
                 $query->visibleToBuyers();
@@ -128,8 +141,6 @@ class ProductBrowseController extends Controller
             ->latest()
             ->take(6)
             ->get();
-
-        $buyerLocation = $defaultAddress;
 
         return view('products.index', compact(
             'products',
@@ -281,6 +292,14 @@ class ProductBrowseController extends Controller
             ->take(3)
             ->get();
 
+        $productPage = $this->buildProductShowState(
+            $request,
+            $product,
+            $reviewableOrderItems,
+            $isWishlisted,
+            $showAllReviews
+        );
+
         return view('products.show', compact(
             'product',
             'relatedProducts',
@@ -288,7 +307,54 @@ class ProductBrowseController extends Controller
             'reviews',
             'showAllReviews',
             'initialReviewsLimit',
-            'isWishlisted'
+            'productPage'
         ));
+    }
+
+    private function buildProductShowState(
+        Request $request,
+        Product $product,
+        Collection $reviewableOrderItems,
+        bool $isWishlisted,
+        bool $showAllReviews
+    ): Fluent {
+        $buyer = Auth::guard('web')->user();
+        $ownsProduct = $buyer && (int) $product->user_id === (int) $buyer->id;
+        $canReviewProduct = $buyer && $buyer->isBuyer() && $reviewableOrderItems->isNotEmpty();
+        $reviewMediaEffectiveFileBytes = ReviewUploadLimit::effectiveSingleFileBytes()
+            ?? ReviewUploadLimit::appMaxFileBytes();
+        $reviewMediaRequestBytes = ReviewUploadLimit::effectiveRequestBytes();
+        $detailDisplayState = $product->detailDisplayState();
+
+        return new Fluent(array_merge($detailDisplayState, [
+            'ownsProduct' => $ownsProduct,
+            'canReportProduct' => (bool) $buyer && ! $ownsProduct,
+            'isWishlisted' => $isWishlisted,
+            'productReviewsToggleUrl' => $this->buildProductReviewsToggleUrl($request, $product, $showAllReviews),
+            'canReviewProduct' => $canReviewProduct,
+            'selectedReviewableOrderItem' => $canReviewProduct
+                ? ($reviewableOrderItems->firstWhere('id', (int) $request->integer('review_order_item')) ?? $reviewableOrderItems->first())
+                : null,
+            'reviewMedia' => new Fluent([
+                'maxFiles' => ReviewUploadLimit::maxFiles(),
+                'effectiveFileBytes' => $reviewMediaEffectiveFileBytes,
+                'requestBytes' => $reviewMediaRequestBytes,
+                'effectiveFileLabel' => ReviewUploadLimit::humanSize($reviewMediaEffectiveFileBytes),
+                'requestLabel' => ReviewUploadLimit::humanSize($reviewMediaRequestBytes),
+            ]),
+            'variantPreviewLimit' => 4,
+        ]));
+    }
+
+    private function buildProductReviewsToggleUrl(Request $request, Product $product, bool $showAllReviews): string
+    {
+        if ($showAllReviews) {
+            return route('products.show', $product) . '#product-reviews';
+        }
+
+        return route('products.show', array_merge($request->query(), [
+            'product' => $product->getRouteKey(),
+            'show_reviews' => 'all',
+        ])) . '#product-reviews';
     }
 }

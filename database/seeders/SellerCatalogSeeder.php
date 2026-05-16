@@ -287,7 +287,7 @@ class SellerCatalogSeeder extends Seeder
 
                 $category = $categories->get($item['category']);
 
-                if (! $category) {
+                if (!$category) {
                     continue;
                 }
 

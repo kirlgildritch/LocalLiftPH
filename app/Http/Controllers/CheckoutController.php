@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Checkout\CheckoutIndexRequest;
+use App\Http\Requests\Checkout\CheckoutStoreRequest;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\Product;
@@ -13,7 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
@@ -85,12 +86,9 @@ class CheckoutController extends Controller
             ->sortKeys();
     }
 
-    public function index(Request $request)
+    public function index(CheckoutIndexRequest $request)
     {
-        $validated = $request->validate([
-            'selected_cart_items' => ['nullable', 'array'],
-            'selected_cart_items.*' => ['integer'],
-        ]);
+        $validated = $request->validated();
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
             ->map(fn($id) => (int) $id)
@@ -145,6 +143,9 @@ class CheckoutController extends Controller
 
         $selectedCartItemIds = $cartItems->pluck('id')->values();
 
+        $paymentMethods = Order::paymentMethods();
+        $selectedPaymentMethod = old('payment_method', Order::PAYMENT_METHOD_COD);
+
         return view('checkout.index', [
             'cartItems' => $cartItems,
             'groupedCartItems' => $groupedCartItems,
@@ -156,18 +157,15 @@ class CheckoutController extends Controller
             'defaultAddress' => $defaultAddress,
             'hasSavedAddress' => true,
             'selectedCartItemIds' => $selectedCartItemIds,
-            'paymentMethods' => Order::paymentMethods(),
-            'selectedPaymentMethod' => old('payment_method', Order::PAYMENT_METHOD_COD),
+            'paymentMethods' => $paymentMethods,
+            'selectedPaymentMethod' => $selectedPaymentMethod,
+            'selectedPayment' => $paymentMethods[$selectedPaymentMethod] ?? reset($paymentMethods),
         ]);
     }
 
-    public function store(Request $request, SellerNotificationService $sellerNotifications)
+    public function store(CheckoutStoreRequest $request, SellerNotificationService $sellerNotifications)
     {
-        $validated = $request->validate([
-            'selected_cart_items' => ['nullable', 'array'],
-            'selected_cart_items.*' => ['integer'],
-            'payment_method' => ['required', Rule::in(array_keys(Order::paymentMethods()))],
-        ]);
+        $validated = $request->validated();
 
         $selectedCartItemIds = collect($validated['selected_cart_items'] ?? [])
             ->map(fn($id) => (int) $id)

@@ -3,36 +3,23 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReportActionRequest;
 use App\Models\Product;
 use App\Models\Report;
-use App\Models\ReportAction;
 use App\Models\Seller;
 use App\Models\User;
 use App\Notifications\SellerNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class AdminReportController extends Controller
 {
-    protected function availableActions(): array
-    {
-        return [
-            'warn_seller',
-            'delist_product',
-            'ban_product',
-            'suspend_seller',
-            'mark_resolved',
-            'dismiss_report',
-        ];
-    }
-
     public function index(): View
     {
+        $this->authorize('viewAny', Report::class);
         $reports = Report::with([
             'user',
             'product.category',
@@ -50,23 +37,21 @@ class AdminReportController extends Controller
 
     public function resolve(Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        return $this->applyAction(request()->merge([
+        $this->authorize('resolve', $report);
+        return $this->applyActionData([
             'action' => 'mark_resolved',
-        ]), $report, $sellerNotifications);
+            'admin_notes' => null,
+        ], $report, $sellerNotifications);
     }
 
-    public function action(Request $request, Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
+    public function action(ReportActionRequest $request, Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        return $this->applyAction($request, $report, $sellerNotifications);
+        $this->authorize('moderate', $report);
+        return $this->applyActionData($request->validated(), $report, $sellerNotifications);
     }
 
-    protected function applyAction(Request $request, Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
+    protected function applyActionData(array $validated, Report $report, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        $validated = $request->validate([
-            'action' => ['required', Rule::in($this->availableActions())],
-            'admin_notes' => ['nullable', 'string', 'max:2000'],
-        ]);
-
         $report->loadMissing([
             'product.user.sellerProfile',
             'seller.sellerProfile',

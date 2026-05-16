@@ -65,6 +65,15 @@ Administrators can log in through the admin access flow, view the admin dashboar
 - Composer
 - NPM
 
+## Documentation
+
+Presentation-ready supporting documents:
+
+- `docs/project-architecture-overview.md`
+- `docs/security-and-database-evidence.md`
+
+These documents summarize the system structure, security controls, database design, and the main Laravel patterns used in the project.
+
 ## Project Structure
 
 ### `app/`

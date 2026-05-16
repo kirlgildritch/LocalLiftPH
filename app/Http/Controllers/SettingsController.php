@@ -2,29 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Notifications\AdminActivityNotification;
-use Illuminate\Http\Request;
+use App\Http\Requests\Seller\UpdateSellerInventoryRequest;
+use App\Http\Requests\Seller\UpdateSellerPayoutRequest;
+use App\Http\Requests\Seller\UpdateSellerSettingsRequest;
+use App\Http\Requests\Seller\UpdateSellerStatusRequest;
 use App\Models\Seller;
+use App\Services\AdminActivityService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
 {
-    private function locationValidationRules(): array
-    {
-        return [
-            'street_address' => ['required', 'string', 'max:255'],
-            'region' => ['required', 'string', 'max:255'],
-            'province' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
-            'barangay' => ['required', 'string', 'max:255'],
-            'postal_code' => ['required', 'string', 'max:20'],
-            'landmark' => ['required', 'string', 'max:255'],
-        ];
-    }
-
     private function readableAddress(array $validated): string
     {
         return collect([
@@ -52,14 +40,9 @@ class SettingsController extends Controller
         return view('seller.settings', compact('seller'));
     }
 
-    public function update(Request $request)
+    public function update(UpdateSellerSettingsRequest $request, AdminActivityService $adminActivity)
     {
-        $validated = $request->validate([
-            'store_name' => 'required|string|max:255',
-            'store_description' => 'nullable|string|max:2000',
-            'contact_number' => 'required|string|max:20',
-            'shop_logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-        ] + $this->locationValidationRules());
+        $validated = $request->validated();
 
         $seller = $this->currentSeller();
 
@@ -117,14 +100,7 @@ class SettingsController extends Controller
         $seller->update($validated);
 
         if ($changedFields !== []) {
-            $this->notifyAdmins(
-                new AdminActivityNotification(
-                    'seller_review',
-                    'Seller shop settings updated',
-                    ($seller->store_name ?: (Auth::user()?->name ?? 'A seller')) . ' updated shop settings: ' . $this->formatFieldList($changedFields) . '.',
-                    'admin.sellers',
-                )
-            );
+            $adminActivity->sellerShopSettingsUpdated($seller->fresh('user'), $changedFields);
         }
 
         return back()->with('success', 'Shop updated successfully.');
@@ -138,19 +114,9 @@ class SettingsController extends Controller
         return view('seller.shop-preview', compact('seller', 'products'));
     }
 
-    public function updatePayout(Request $request)
+    public function updatePayout(UpdateSellerPayoutRequest $request, AdminActivityService $adminActivity)
     {
-        $validator = Validator::make($request->all(), [
-            'payout_method' => ['required', 'string', 'max:50'],
-            'payout_account_name' => ['required', 'string', 'max:255'],
-            'payout_account_number' => ['required', 'string', 'max:100'],
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->to(route('seller.settings') . '#payout')->withErrors($validator)->withInput();
-        }
-
-        $validated = $validator->validated();
+        $validated = $request->validated();
 
         $seller = $this->currentSeller();
 
@@ -173,37 +139,21 @@ class SettingsController extends Controller
         $seller->update($validated);
 
         if ($changedFields !== []) {
-            $this->notifyAdmins(
-                new AdminActivityNotification(
-                    'seller_review',
-                    'Seller payout details updated',
-                    ($seller->store_name ?: (Auth::user()?->name ?? 'A seller')) . ' updated payout details: ' . $this->formatFieldList($changedFields) . '.',
-                    'admin.payouts',
-                )
-            );
+            $adminActivity->sellerPayoutUpdated($seller->fresh('user'), $changedFields);
         }
 
         return redirect()->to(route('seller.settings') . '#payout')->with('success', 'Payout details saved.');
     }
 
-    public function updateInventory(Request $request)
+    public function updateInventory(UpdateSellerInventoryRequest $request, AdminActivityService $adminActivity)
     {
-        $validator = Validator::make($request->all(), [
-            'low_stock_threshold' => ['required', 'integer', 'min:0', 'max:9999'],
-            'hide_out_of_stock' => ['nullable', 'boolean'],
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->to(route('seller.settings') . '#inventory')->withErrors($validator)->withInput();
-        }
-
         $seller = $this->currentSeller();
 
         if (! $seller) {
             return redirect()->to(route('seller.settings') . '#inventory')->with('error', 'Seller record not found.');
         }
 
-        $validated = $validator->validated();
+        $validated = $request->validated();
         $updates = [
             'low_stock_threshold' => (int) $validated['low_stock_threshold'],
             'hide_out_of_stock' => $request->boolean('hide_out_of_stock'),
@@ -222,43 +172,21 @@ class SettingsController extends Controller
         $seller->update($updates);
 
         if ($changedFields !== []) {
-            $this->notifyAdmins(
-                new AdminActivityNotification(
-                    'seller_review',
-                    'Seller inventory settings updated',
-                    ($seller->store_name ?: (Auth::user()?->name ?? 'A seller')) . ' updated inventory settings: ' . $this->formatFieldList($changedFields) . '.',
-                    'admin.sellers',
-                )
-            );
+            $adminActivity->sellerInventoryUpdated($seller->fresh('user'), $changedFields);
         }
 
         return redirect()->to(route('seller.settings') . '#inventory')->with('success', 'Inventory settings saved.');
     }
 
-    public function updateStatus(Request $request)
+    public function updateStatus(UpdateSellerStatusRequest $request, AdminActivityService $adminActivity)
     {
-        $validator = Validator::make($request->all(), [
-            'shop_status' => ['required', 'string', 'in:open,temporarily_closed,vacation'],
-            'shop_status_until' => ['nullable', 'date', 'after_or_equal:today'],
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->to(route('seller.settings') . '#status')->withErrors($validator)->withInput();
-        }
-
         $seller = $this->currentSeller();
 
         if (! $seller) {
             return redirect()->to(route('seller.settings') . '#status')->with('error', 'Seller record not found.');
         }
 
-        $validated = $validator->validated();
-        if (($validated['shop_status'] ?? null) === Seller::SHOP_STATUS_TEMPORARILY_CLOSED && empty($validated['shop_status_until'])) {
-            return redirect()
-                ->to(route('seller.settings') . '#status')
-                ->withErrors(['shop_status_until' => 'Select an until date.'])
-                ->withInput();
-        }
+        $validated = $request->validated();
 
         $previousStatus = $seller->normalizedShopStatus();
         $previousUntil = $seller->shop_status_until?->toDateString();
@@ -278,50 +206,9 @@ class SettingsController extends Controller
                 $statusMessage .= ' until ' . $seller->shop_status_until->format('M d, Y');
             }
 
-            $this->notifyAdmins(
-                new AdminActivityNotification(
-                    'seller_review',
-                    'Seller shop status updated',
-                    ($seller->store_name ?: (Auth::user()?->name ?? 'A seller')) . ' changed shop status to ' . $statusMessage . '.',
-                    'admin.sellers',
-                )
-            );
+            $adminActivity->sellerStatusUpdated($seller->fresh('user'), $statusMessage);
         }
 
         return redirect()->to(route('seller.settings') . '#status')->with('success', 'Shop status saved.');
-    }
-
-    private function notifyAdmins(AdminActivityNotification $notification): void
-    {
-        User::query()
-            ->where(function ($query) {
-                $query->where('is_admin', true)
-                    ->orWhere('role', 'admin');
-            })
-            ->get()
-            ->each
-            ->notify($notification);
-    }
-
-    private function formatFieldList(array $fields): string
-    {
-        $fields = array_values(array_unique($fields));
-        $count = count($fields);
-
-        if ($count === 0) {
-            return 'details';
-        }
-
-        if ($count === 1) {
-            return $fields[0];
-        }
-
-        if ($count === 2) {
-            return $fields[0] . ' and ' . $fields[1];
-        }
-
-        $lastField = array_pop($fields);
-
-        return implode(', ', $fields) . ', and ' . $lastField;
     }
 }

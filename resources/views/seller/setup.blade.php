@@ -2,6 +2,9 @@
 
 @section('content')
     <link rel="stylesheet" href="{{ asset('assets/css/seller_setup.css') }}">
+    @php
+        $sellerSettingsScript = asset('assets/js/seller-settings-pages.js') . '?v=' . @filemtime(public_path('assets/js/seller-settings-pages.js'));
+    @endphp
 
     <section class="seller-setup-page">
         <div class="container seller-setup-shell">
@@ -173,26 +176,5 @@
         </div>
     </section>
 
-    <script>
-        function nextStep(stepNumber) {
-            document.querySelectorAll('.form-step').forEach(step => {
-                step.classList.remove('active');
-            });
-
-            document.querySelectorAll('.step-item').forEach(item => {
-                item.classList.remove('active', 'completed');
-            });
-
-            document.getElementById('step-' + stepNumber).classList.add('active');
-
-            document.querySelectorAll('.step-item').forEach(item => {
-                const itemStep = parseInt(item.getAttribute('data-step'));
-                if (itemStep < stepNumber) {
-                    item.classList.add('completed');
-                } else if (itemStep === stepNumber) {
-                    item.classList.add('active');
-                }
-            });
-        }
-    </script>
+    <script src="{{ $sellerSettingsScript }}" defer></script>
 @endsection

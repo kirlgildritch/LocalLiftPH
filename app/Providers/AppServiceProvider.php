@@ -3,8 +3,20 @@
 namespace App\Providers;
 
 use App\Models\Cart;
+use App\Models\Conversation;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\Report;
+use App\Models\Review;
+use App\Models\Seller;
 use App\Policies\OrderPolicy;
+use App\Policies\ConversationPolicy;
+use App\Policies\DatabaseNotificationPolicy;
+use App\Policies\ProductPolicy;
+use App\Policies\ReportPolicy;
+use App\Policies\ReviewPolicy;
+use App\Policies\SellerPolicy;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
@@ -46,7 +58,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Gate::policy(Conversation::class, ConversationPolicy::class);
+        Gate::policy(DatabaseNotification::class, DatabaseNotificationPolicy::class);
         Gate::policy(Order::class, OrderPolicy::class);
+        Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(Report::class, ReportPolicy::class);
+        Gate::policy(Review::class, ReviewPolicy::class);
+        Gate::policy(Seller::class, SellerPolicy::class);
 
         View::composer('layouts.app', function ($view) {
             $miniCartItems = collect();

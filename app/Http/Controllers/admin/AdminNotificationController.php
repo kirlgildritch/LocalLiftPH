@@ -13,6 +13,7 @@ class AdminNotificationController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', DatabaseNotification::class);
         $admin = auth('admin')->user();
 
         $notifications = $admin->notifications()
@@ -48,6 +49,7 @@ class AdminNotificationController extends Controller
 
     public function feed(): JsonResponse
     {
+        $this->authorize('viewAny', DatabaseNotification::class);
         $admin = auth('admin')->user();
         $notifications = $admin->notifications()->latest()->limit(5)->get();
 
@@ -74,7 +76,7 @@ class AdminNotificationController extends Controller
 
     public function markAsRead(Request $request, DatabaseNotification $notification): RedirectResponse|\Illuminate\Http\JsonResponse
     {
-        $this->authorizeAdminNotification($notification);
+        $this->authorize('update', $notification);
 
         $notification->markAsRead();
 
@@ -91,6 +93,7 @@ class AdminNotificationController extends Controller
 
     public function markAllAsRead(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
+        $this->authorize('clearRead', DatabaseNotification::class);
         $admin = auth('admin')->user();
         $markedCount = $admin->unreadNotifications()->count();
 
@@ -110,7 +113,7 @@ class AdminNotificationController extends Controller
 
     public function destroy(Request $request, DatabaseNotification $notification): RedirectResponse|\Illuminate\Http\JsonResponse
     {
-        $this->authorizeAdminNotification($notification);
+        $this->authorize('delete', $notification);
 
         $wasUnread = $notification->read_at === null;
         $notification->delete();
@@ -130,6 +133,7 @@ class AdminNotificationController extends Controller
 
     public function clearRead(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
+        $this->authorize('clearRead', DatabaseNotification::class);
         $admin = auth('admin')->user();
 
         $deletedCount = $admin
@@ -156,7 +160,7 @@ class AdminNotificationController extends Controller
 
     public function open(DatabaseNotification $notification): RedirectResponse
     {
-        $this->authorizeAdminNotification($notification);
+        $this->authorize('view', $notification);
 
         $notification->markAsRead();
 
@@ -171,14 +175,5 @@ class AdminNotificationController extends Controller
         }
 
         return redirect()->route('admin.notifications.index');
-    }
-
-    private function authorizeAdminNotification(DatabaseNotification $notification): void
-    {
-        abort_unless(
-            $notification->notifiable_type === get_class(auth('admin')->user())
-                && (string) $notification->notifiable_id === (string) auth('admin')->id(),
-            403
-        );
     }
 }

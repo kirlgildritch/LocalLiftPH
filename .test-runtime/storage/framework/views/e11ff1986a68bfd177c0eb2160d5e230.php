@@ -106,7 +106,7 @@
 
       <div class="featured-products-shell">
         <div class="products-carousel" data-featured-products-track>
-          <div class="products product-card-grid" data-skeleton-group data-skeleton-delay="420">
+          <div class="products product-card-grid">
             <?php $__empty_1 = true; $__currentLoopData = $featuredProducts ?? collect(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $product): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
               <?php if (isset($component)) { $__componentOriginal3fd2897c1d6a149cdb97b41db9ff827a = $component; } ?>
 <?php if (isset($attributes)) { $__attributesOriginal3fd2897c1d6a149cdb97b41db9ff827a = $attributes; } ?>

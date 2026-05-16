@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Seller\UpdateCartQuantityRequest;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -166,12 +167,8 @@ class CartController extends Controller
         return redirect()->back()->with('success', 'Product added to cart successfully.');
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateCartQuantityRequest $request, $id)
     {
-        $request->validate([
-            'quantity' => 'required|integer|min:1',
-        ]);
-
         $cartItem = Cart::with(['product', 'variant'])
             ->where('user_id', Auth::id())
             ->where('id', $id)
@@ -180,7 +177,7 @@ class CartController extends Controller
         $product = $cartItem->product;
         $variant = $cartItem->variant;
         $availableStock = max(0, (int) ($variant?->stock ?? $product?->stock ?? 0));
-        $requestedQuantity = (int) $request->quantity;
+        $requestedQuantity = (int) $request->validated('quantity');
 
         if ($availableStock <= 0) {
             $message = 'This product is out of stock.';

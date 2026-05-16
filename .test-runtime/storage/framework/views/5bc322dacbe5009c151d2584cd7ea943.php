@@ -20,6 +20,9 @@
     <?php if(file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot'))): ?>
         <?php echo app('Illuminate\Foundation\Vite')(['resources/js/app.js']); ?>
     <?php endif; ?>
+    <?php
+        $appLayoutScript = asset('assets/js/app-layout.js') . '?v=' . @filemtime(public_path('assets/js/app-layout.js'));
+    ?>
 </head>
 
 <body data-loading-scope="explicit">
@@ -43,22 +46,7 @@
         </div>
     <?php endif; ?>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toast = document.getElementById('toast-success');
-
-            if (toast) {
-                setTimeout(() => {
-                    toast.classList.add('toast-hide');
-
-                    setTimeout(() => {
-                        toast.remove();
-                    }, 400);
-                }, 3000);
-            }
-        });
-    </script>
-    <script src="<?php echo e(asset('assets/js/skeleton-loader.js')); ?>" defer></script>
+    <script src="<?php echo e($appLayoutScript); ?>" defer></script>
 </body>
 
 </html>

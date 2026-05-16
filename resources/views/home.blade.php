@@ -108,7 +108,7 @@
 
       <div class="featured-products-shell">
         <div class="products-carousel" data-featured-products-track>
-          <div class="products product-card-grid" data-skeleton-group data-skeleton-delay="420">
+          <div class="products product-card-grid">
             @forelse($featuredProducts ?? collect() as $product)
               <x-product-card :product="$product" :fallback-image="asset('assets/image/heroBanner.png')"
                 card-class="featured-product-card" />

@@ -3,36 +3,22 @@
 namespace App\Http\Controllers\Seller;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Seller\SubmitSellerApplicationRequest;
 use App\Models\Conversation;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Seller;
 use App\Models\SellerDocumentRequest;
-use App\Models\User;
-use App\Notifications\AdminActivityNotification;
 use App\Notifications\SellerModerationNotification;
+use App\Services\AdminActivityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SellerDashboardController extends Controller
 {
-    private function locationValidationRules(): array
-    {
-        return [
-            'street_address' => ['required', 'string', 'max:255'],
-            'region' => ['required', 'string', 'max:255'],
-            'province' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
-            'barangay' => ['required', 'string', 'max:255'],
-            'postal_code' => ['required', 'string', 'max:20'],
-            'landmark' => ['required', 'string', 'max:255'],
-        ];
-    }
-
     private function readableAddress(array $validated): string
     {
         return collect([
@@ -88,46 +74,12 @@ class SellerDashboardController extends Controller
         ));
     }
 
-    public function submitApplication(Request $request): RedirectResponse
+    public function submitApplication(SubmitSellerApplicationRequest $request, AdminActivityService $adminActivity): RedirectResponse
     {
         $user = Auth::guard('seller')->user();
         $existingSeller = Seller::with('latestDocumentRequest')->where('user_id', $user->id)->first();
         $latestDocumentRequest = $existingSeller?->latestDocumentRequest;
-        $needsResubmission = $latestDocumentRequest?->status === SellerDocumentRequest::STATUS_PENDING;
-
-        $validated = $request->validate([
-            'seller_type' => ['required', Rule::in(['individual', 'registered_business'])],
-            'full_name' => ['required', 'string', 'max:255'],
-            'age' => ['required', 'integer', 'min:18', 'max:120'],
-            'phone_number' => ['required', 'string', 'max:20'],
-            'email' => ['required', 'email', 'max:255'],
-            'valid_id_type' => ['required', 'string', 'max:100'],
-            'valid_id_number' => ['required', 'string', 'max:120'],
-            'valid_id_document' => [
-                Rule::requiredIf(! $existingSeller?->valid_id_path),
-                'nullable',
-                'file',
-                'mimes:jpg,jpeg,png,pdf,webp',
-                'max:4096',
-            ],
-            'business_permit' => [
-                Rule::requiredIf(
-                    $request->input('seller_type') === 'registered_business'
-                    && ! $existingSeller?->business_permit_path
-                ),
-                'nullable',
-                'file',
-                'mimes:jpg,jpeg,png,pdf,webp',
-                'max:4096',
-            ],
-            'requested_document' => [
-                Rule::requiredIf($needsResubmission),
-                'nullable',
-                'file',
-                'mimes:jpg,jpeg,png,pdf,webp',
-                'max:4096',
-            ],
-        ] + $this->locationValidationRules());
+        $validated = $request->validated();
 
         DB::transaction(function () use ($request, $validated, $existingSeller, $user, $latestDocumentRequest) {
             $seller = $existingSeller ?? new Seller(['user_id' => $user->id]);
@@ -187,34 +139,12 @@ class SellerDashboardController extends Controller
         $seller = Seller::with('latestDocumentRequest')->where('user_id', $user->id)->first();
         $isResubmission = $latestDocumentRequest?->status === SellerDocumentRequest::STATUS_PENDING;
 
-        $this->notifyAdmins(
-            new AdminActivityNotification(
-                'seller_review',
-                $isResubmission ? 'Seller documents resubmitted' : 'New seller application',
-                $isResubmission
-                    ? (($seller?->store_name ?: $validated['full_name']) . ' uploaded the requested verification documents.')
-                    : (($seller?->store_name ?: $validated['full_name']) . ' submitted a seller application for review.'),
-                'admin.sellers',
-            )
-        );
+        $adminActivity->sellerApplicationSubmitted($seller, $validated['full_name'], $isResubmission);
 
         return redirect()
             ->route('seller.dashboard')
             ->with('success', 'Application submitted. Your Seller Center access is pending admin review.');
     }
-
-    private function notifyAdmins(AdminActivityNotification $notification): void
-    {
-        User::query()
-            ->where(function ($query) {
-                $query->where('is_admin', true)
-                    ->orWhere('role', 'admin');
-            })
-            ->get()
-            ->each
-            ->notify($notification);
-    }
-
     private function resolveDashboardState(Request $request, ?Seller $seller, ?SellerDocumentRequest $latestDocumentRequest): string
     {
         if (! $seller) {

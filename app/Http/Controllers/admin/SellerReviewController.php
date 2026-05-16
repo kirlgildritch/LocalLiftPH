@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ReviewSellerApplicationRequest;
 use App\Models\Report;
 use App\Models\Seller;
 use App\Models\SellerDocumentRequest;
@@ -11,7 +12,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SellerReviewController extends Controller
@@ -27,6 +27,7 @@ class SellerReviewController extends Controller
 
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', Seller::class);
         $status = (string) $request->string('status', '');
         $search = trim((string) $request->string('search', ''));
         $perPage = 10;
@@ -94,19 +95,12 @@ class SellerReviewController extends Controller
         ]);
     }
 
-    public function updateStatus(Request $request, Seller $seller, SellerNotificationService $sellerNotifications): RedirectResponse
+    public function updateStatus(ReviewSellerApplicationRequest $request, Seller $seller, SellerNotificationService $sellerNotifications): RedirectResponse
     {
+        $this->authorize('reviewApplication', $seller);
         $requestMoreDocuments = $request->boolean('request_more_documents');
 
-        $validated = $request->validate([
-            'application_status' => ['required', Rule::in([Seller::STATUS_PENDING, Seller::STATUS_APPROVED, Seller::STATUS_REJECTED])],
-            'review_notes' => ['nullable', 'string', 'max:1000'],
-            'document_request_reason' => [
-                Rule::requiredIf($requestMoreDocuments),
-                'nullable',
-                Rule::in(array_keys($this->documentRequestReasons())),
-            ],
-        ]);
+        $validated = $request->validated();
 
         if ($requestMoreDocuments) {
             DB::transaction(function () use ($seller, $validated) {

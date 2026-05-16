@@ -21,4 +21,19 @@ class OrderPolicy
     {
         return $user->isSeller() && (int) ($order->seller_id ?? 0) === (int) $user->id;
     }
+
+    public function buyAgain(User $user, Order $order): bool
+    {
+        return $this->view($user, $order);
+    }
+
+    public function cancel(User $user, Order $order): bool
+    {
+        return $this->view($user, $order);
+    }
+
+    public function confirmReceived(User $user, Order $order): bool
+    {
+        return $this->view($user, $order);
+    }
 }

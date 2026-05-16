@@ -157,12 +157,14 @@
                         </div>
                     @endif
 
-                    <div class="shops-grid" data-skeleton-group data-skeleton-delay="420">
+                    <div class="shops-grid">
                         @forelse($shops as $shop)
-                            @php($locationLabel = \App\Support\LocationBrowsing::matchLabel($shop->sellerProfile, $buyerLocation))
-                            <article class="shop-card panel skeleton-shell is-loading" data-skeleton-item data-skeleton-kind="shop-card">
+                            @php
+                                $locationLabel = \App\Support\LocationBrowsing::matchLabel($shop->sellerProfile, $buyerLocation);
+                            @endphp
+                            <article class="shop-card panel">
                                 <div class="shop-logo">
-                                    <div class="shop-logo-frame skeleton skeleton-image">
+                                    <div class="shop-logo-frame">
                                         @if(!empty($shop->sellerProfile?->shop_logo))
                                             <img src="{{ asset('storage/' . $shop->sellerProfile->shop_logo) }}" alt="Shop Logo" loading="lazy" decoding="async">
                                         @else
@@ -174,7 +176,7 @@
                                 </div>
 
                                 <div class="shop-card-body">
-                                    <div class="shop-card-badge-row skeleton skeleton-text">
+                                    <div class="shop-card-badge-row">
                                         <span class="shop-badge">
                                             <i class="fa-solid fa-store"></i>
                                             Local Seller
@@ -182,24 +184,24 @@
                                     </div>
 
                                     <div class="shop-title-row">
-                                        <h3 class="skeleton skeleton-text">{{ $shop->sellerProfile?->store_name ?? $shop->name }}</h3>
+                                        <h3>{{ $shop->sellerProfile?->store_name ?? $shop->name }}</h3>
                                         <x-seller-trust-badge :seller="$shop->sellerProfile" compact icon-only />
                                     </div>
 
-                                    <div class="shop-products skeleton skeleton-text">
+                                    <div class="shop-products">
                                         <i class="fa-solid fa-bag-shopping"></i>
                                         <span>{{ $shop->products_count }} product{{ $shop->products_count != 1 ? 's' : '' }}
                                             available</span>
                                     </div>
 
                                     @if($locationLabel)
-                                        <div class="shop-location skeleton skeleton-text">
+                                        <div class="shop-location">
                                             <i class="fa-solid fa-location-dot"></i>
                                             <span>{{ $locationLabel }}</span>
                                         </div>
                                     @endif
 
-                                    <a href="{{ route('shops.show', $shop->id) }}" class="action-btn primary-btn skeleton skeleton-button">
+                                    <a href="{{ route('shops.show', $shop->id) }}" class="action-btn primary-btn">
                                         <span class="btn-left">
                                             <i class="fa-solid fa-store"></i>
                                             Visit Shop

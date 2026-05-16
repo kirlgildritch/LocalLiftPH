@@ -2,14 +2,17 @@
 
 namespace App\Http\Controllers\Seller;
 
+use App\Http\Requests\Seller\DestroyProductMediaRequest;
+use App\Http\Requests\Seller\ReplyToProductReviewRequest;
+use App\Http\Requests\Seller\StoreProductRequest;
+use App\Http\Requests\Seller\UpdateProductRequest;
 use App\Models\Category;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Review;
-use App\Models\User;
-use App\Notifications\AdminActivityNotification;
 use App\Notifications\SellerNotificationService;
+use App\Services\AdminActivityService;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Request;
@@ -18,6 +21,23 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
+    private function ownedProductQuery()
+    {
+        return Product::query()->where('user_id', Auth::guard('seller')->id());
+    }
+
+    private function ownedProductOrFail(int|string $id, array $relations = []): Product
+    {
+        return $this->ownedProductQuery()
+            ->with($relations)
+            ->findOrFail($id);
+    }
+
+    private function ensureOwnedProduct(Product $product): void
+    {
+        abort_unless((int) $product->user_id === (int) Auth::guard('seller')->id(), 404);
+    }
+
     private function calculateShippingFee(float $weight, float $widthCm, float $lengthCm, float $heightCm): float
     {
         $volumetricWeight = ($widthCm * $lengthCm * $heightCm) / 5000;
@@ -137,21 +157,6 @@ class ProductController extends Controller
         }
 
         return true;
-    }
-
-    private function variantValidationRules(): array
-    {
-        return [
-            'has_variants' => 'nullable|boolean',
-            'variants' => 'nullable|array|max:60',
-            'variants.*.id' => 'nullable|integer',
-            'variants.*.name' => 'nullable|string|max:120',
-            'variants.*.sku' => 'nullable|string|max:80',
-            'variants.*.price' => 'nullable|numeric|min:0',
-            'variants.*.stock' => 'nullable|integer|min:0',
-            'variants.*.is_active' => 'nullable|boolean',
-            'variants.*.image' => 'nullable|image|max:51200',
-        ];
     }
 
     private function normalizedVariantRows(Request $request): array
@@ -282,7 +287,7 @@ class ProductController extends Controller
             $currentTab = 'live';
         }
 
-        $baseQuery = Product::where('user_id', Auth::id());
+        $baseQuery = Product::where('user_id', Auth::guard('seller')->id());
 
         $statusCounts = [
             'live' => (clone $baseQuery)
@@ -315,7 +320,7 @@ class ProductController extends Controller
         ])
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
-            ->where('user_id', Auth::id());
+            ->where('user_id', Auth::guard('seller')->id());
 
         switch ($currentTab) {
             case 'sold_out':
@@ -351,6 +356,7 @@ class ProductController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Product::class);
         $categories = Category::orderBy('name')->get();
 
         return view('seller.add_product', compact('categories'));
@@ -358,30 +364,16 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        $product = Product::with(['media', 'variants'])->where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+        $product = $this->ownedProductOrFail($id, ['media', 'variants']);
+        $this->authorize('update', $product);
         $categories = Category::orderBy('name')->get();
 
         return view('seller.products.edit', compact('product', 'categories'));
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request, AdminActivityService $adminActivity)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'price' => 'required|numeric',
-            'stock' => 'required|integer',
-            'condition' => 'required|in:new,used',
-            'description' => 'required|string',
-            'weight' => 'required|numeric|min:0.01',
-            'width_cm' => 'required|numeric|min:0.01',
-            'length_cm' => 'required|numeric|min:0.01',
-            'height_cm' => 'required|numeric|min:0.01',
-            'image' => 'nullable|image|max:51200',
-            'media' => 'nullable|array|max:12',
-            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
-        ] + $this->variantValidationRules());
-
+        $this->authorize('create', Product::class);
         $shippingFee = $this->calculateShippingFee(
             (float) $request->weight,
             (float) $request->width_cm,
@@ -415,21 +407,15 @@ class ProductController extends Controller
 
         $this->syncProductVariants($product, $request);
 
-        $this->notifyAdmins(
-            new AdminActivityNotification(
-                'products',
-                'New product awaiting approval',
-                $request->name . ' was submitted by ' . (auth()->user()?->name ?? 'a seller') . ' for review.',
-                'admin.products',
-            )
-        );
+        $adminActivity->productSubmitted($request->name, auth()->user()?->name ?? 'a seller');
 
         return redirect()->back()->with('success', 'Product submitted for approval.');
     }
 
-    public function update(Request $request, $id, SellerNotificationService $sellerNotifications)
+    public function update(UpdateProductRequest $request, $id, SellerNotificationService $sellerNotifications, AdminActivityService $adminActivity)
     {
-        $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+        $product = $this->ownedProductOrFail($id);
+        $this->authorize('update', $product);
         $originalName = $product->name;
         $originalStock = (int) $product->stock;
         $sellerName = auth()->user()?->name ?? 'a seller';
@@ -447,21 +433,7 @@ class ProductController extends Controller
             'height_cm' => (string) $product->height_cm,
         ];
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'condition' => 'required|in:new,used',
-            'description' => 'required|string',
-            'weight' => 'required|numeric|min:0.01',
-            'width_cm' => 'required|numeric|min:0.01',
-            'length_cm' => 'required|numeric|min:0.01',
-            'height_cm' => 'required|numeric|min:0.01',
-            'image' => 'nullable|image|max:51200',
-            'media' => 'nullable|array|max:12',
-            'media.*' => 'file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v|max:51200',
-        ] + $this->variantValidationRules());
+        $validated = $request->validated();
 
         $shippingFee = $this->calculateShippingFee(
             (float) $validated['weight'],
@@ -534,20 +506,7 @@ class ProductController extends Controller
         $sellerNotifications->checkProductStock($product, $originalStock);
         $updatedProductName = $validated['name'];
         if ($changedFields !== []) {
-            $message = $originalName !== $updatedProductName
-                ? $originalName . ' was updated by ' . $sellerName . ' and renamed to ' . $updatedProductName
-                : $updatedProductName . ' was updated by ' . $sellerName;
-
-            $message .= '. Changed: ' . $this->formatFieldList($changedFields) . '.';
-
-            $this->notifyAdmins(
-                new AdminActivityNotification(
-                    'products',
-                    'Product updated by seller',
-                    $message,
-                    'admin.products',
-                )
-            );
+            $adminActivity->productUpdated($originalName, $updatedProductName, $sellerName, $changedFields);
         }
 
         return redirect()
@@ -555,13 +514,12 @@ class ProductController extends Controller
             ->with('success', 'Product updated successfully.');
     }
 
-    public function destroyMedia(Request $request, Product $product)
+    public function destroyMedia(DestroyProductMediaRequest $request, Product $product)
     {
-        abort_unless((int) $product->user_id === (int) Auth::guard('seller')->id(), 403);
+        $this->ensureOwnedProduct($product);
+        $this->authorize('manageMedia', $product);
 
-        $validated = $request->validate([
-            'path' => ['required', 'string'],
-        ]);
+        $validated = $request->validated();
 
         if (! $this->removeMarkedProductMedia($product, [$validated['path']])) {
             return response()->json([
@@ -574,9 +532,10 @@ class ProductController extends Controller
         ]);
     }
 
-    public function destroy($id)
+    public function destroy($id, AdminActivityService $adminActivity)
     {
-        $product = Product::where('user_id', Auth::guard('seller')->id())->findOrFail($id);
+        $product = $this->ownedProductOrFail($id);
+        $this->authorize('delete', $product);
         $productName = $product->name;
         $sellerName = auth()->user()?->name ?? 'a seller';
 
@@ -603,14 +562,7 @@ class ProductController extends Controller
 
         $product->delete();
 
-        $this->notifyAdmins(
-            new AdminActivityNotification(
-                'products',
-                'Product deleted by seller',
-                $productName . ' was deleted by ' . $sellerName . '.',
-                'admin.products',
-            )
-        );
+        $adminActivity->productDeleted($productName, $sellerName);
 
         return redirect()
             ->route('seller.products.index')
@@ -619,11 +571,12 @@ class ProductController extends Controller
 
     public function reviews($id)
     {
-        $product = Product::with('category')
+        $product = $this->ownedProductQuery()
+            ->with('category')
             ->withAvg('reviews', 'rating')
             ->withCount('reviews')
-            ->where('user_id', Auth::guard('seller')->id())
             ->findOrFail($id);
+        $this->authorize('viewSellerReviews', $product);
 
         $reviews = $product->reviews()
             ->with(['user', 'media'])
@@ -633,14 +586,13 @@ class ProductController extends Controller
         return view('seller.products.reviews', compact('product', 'reviews'));
     }
 
-    public function replyToReview(Request $request, Product $product, Review $review)
+    public function replyToReview(ReplyToProductReviewRequest $request, Product $product, Review $review)
     {
-        abort_unless((int) $product->user_id === (int) Auth::guard('seller')->id(), 403);
+        $this->ensureOwnedProduct($product);
+        $this->authorize('reply', $review);
         abort_unless((int) $review->product_id === (int) $product->id, 404);
 
-        $validated = $request->validate([
-            'seller_reply' => ['required', 'string', 'max:1000'],
-        ]);
+        $validated = $request->validated();
 
         $review->update([
             'seller_reply' => trim($validated['seller_reply']),
@@ -650,39 +602,5 @@ class ProductController extends Controller
         return redirect()
             ->route('seller.products.reviews', $product)
             ->with('success', 'Reply posted under the buyer review.');
-    }
-
-    private function notifyAdmins(AdminActivityNotification $notification): void
-    {
-        User::query()
-            ->where(function ($query) {
-                $query->where('is_admin', true)
-                    ->orWhere('role', 'admin');
-            })
-            ->get()
-            ->each
-            ->notify($notification);
-    }
-
-    private function formatFieldList(array $fields): string
-    {
-        $fields = array_values(array_unique($fields));
-        $count = count($fields);
-
-        if ($count === 0) {
-            return 'details';
-        }
-
-        if ($count === 1) {
-            return $fields[0];
-        }
-        
-        if ($count === 2) {
-            return $fields[0] . ' and ' . $fields[1];
-        }
-
-        $lastField = array_pop($fields);
-
-        return implode(', ', $fields) . ', and ' . $lastField;
     }
 }

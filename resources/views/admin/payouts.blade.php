@@ -47,13 +47,13 @@
                                             <form method="POST" action="{{ route('admin.payouts.paid', $payout) }}" class="admin-payouts-inline-form">
                                                 @csrf
                                                 @method('PATCH')
-                                                <input type="text" name="reference_number" value="{{ old('reference_number') }}" placeholder="Reference">
-                                                <button type="submit" class="action-btn action-btn--primary">Mark Paid</button>
+                                                <input type="text" name="reference_number" value="{{ old('reference_number') }}" placeholder="Reference number">
+                                                <button type="submit" class="action-button action-button--success admin-payouts-submit">Mark Paid</button>
                                             </form>
-                                            <form method="POST" action="{{ route('admin.payouts.reject', $payout) }}">
+                                            <form method="POST" action="{{ route('admin.payouts.reject', $payout) }}" class="admin-payouts-reject-form">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" class="action-btn action-btn--ghost">Reject</button>
+                                                <button type="submit" class="action-button action-button--danger admin-payouts-submit">Reject</button>
                                             </form>
                                         </div>
                                     @else
@@ -112,8 +112,8 @@
 
         .admin-payouts-actions {
             display: grid;
-            gap: 0.5rem;
-            min-width: 180px;
+            gap: 0.75rem;
+            min-width: 272px;
         }
 
         .admin-payouts-inline-form {
@@ -123,18 +123,29 @@
 
         .admin-payouts-inline-form input {
             width: 100%;
-            min-height: 2.5rem;
-            padding: 0 0.85rem;
+            min-height: 2.8rem;
+            padding: 0 0.95rem;
             border: 1px solid var(--border);
-            border-radius: 0.8rem;
+            border-radius: 14px;
             background: var(--surface);
             color: var(--text);
+            font: inherit;
         }
 
         .admin-payouts-inline-form input:focus {
             outline: none;
             border-color: rgba(59, 111, 214, 0.4);
             box-shadow: 0 0 0 3px rgba(59, 111, 214, 0.1);
+        }
+
+        .admin-payouts-submit {
+            width: 100%;
+            justify-content: center;
+            min-height: 2.8rem;
+        }
+
+        .admin-payouts-reject-form {
+            display: block;
         }
 
         .admin-payouts-muted {
@@ -186,6 +197,12 @@
         .pagination-button.is-disabled {
             opacity: 0.5;
             pointer-events: none;
+        }
+
+        @media (max-width: 720px) {
+            .admin-payouts-actions {
+                min-width: 220px;
+            }
         }
     </style>
 @endpush

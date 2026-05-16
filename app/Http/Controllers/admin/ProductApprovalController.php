@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\BulkUpdateProductsRequest;
+use App\Http\Requests\Admin\RejectProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Report;
@@ -12,7 +14,6 @@ use App\Notifications\SellerNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ProductApprovalController extends Controller
@@ -43,11 +44,9 @@ class ProductApprovalController extends Controller
         };
     }
 
-    protected function buildRejectionReason(Request $request): ?string
+    protected function resolveRejectionReason(?string $key, string $custom = ''): ?string
     {
-        $key = (string) $request->input('rejection_reason_key', '');
-        $custom = trim((string) $request->input('rejection_reason_custom', ''));
-        $reason = $this->rejectionReasons()[$key] ?? null;
+        $reason = $this->rejectionReasons()[$key ?? ''] ?? null;
 
         if (! $reason && $custom === '') {
             return null;
@@ -62,6 +61,7 @@ class ProductApprovalController extends Controller
 
     public function index(Request $request): View
     {
+        $this->authorize('moderate', Product::class);
         $currentTab = (string) $request->string('status', 'pending');
         if (! in_array($currentTab, $this->availableTabs(), true)) {
             $currentTab = 'pending';
@@ -135,6 +135,7 @@ class ProductApprovalController extends Controller
 
     public function approve(Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
     {
+        $this->authorize('approve', $product);
         $product->update([
             'status' => Product::STATUS_APPROVED,
             'is_active' => 1,
@@ -147,14 +148,15 @@ class ProductApprovalController extends Controller
         return back()->with('success', $product->name . ' approved successfully.');
     }
 
-    public function reject(Request $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
+    public function reject(RejectProductRequest $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        $request->validate([
-            'rejection_reason_key' => ['nullable', Rule::in(array_keys($this->rejectionReasons()))],
-            'rejection_reason_custom' => ['nullable', 'string', 'max:500'],
-        ]);
+        $this->authorize('reject', $product);
+        $validated = $request->validated();
 
-        $rejectionReason = $this->buildRejectionReason($request);
+        $rejectionReason = $this->resolveRejectionReason(
+            (string) ($validated['rejection_reason_key'] ?? ''),
+            trim((string) ($validated['rejection_reason_custom'] ?? ''))
+        );
         if (! $rejectionReason) {
             return back()->with('error', 'Select a rejection reason.');
         }
@@ -171,15 +173,10 @@ class ProductApprovalController extends Controller
         return back()->with('success', 'Product rejected.');
     }
 
-    public function bulkUpdate(Request $request, SellerNotificationService $sellerNotifications): RedirectResponse
+    public function bulkUpdate(BulkUpdateProductsRequest $request, SellerNotificationService $sellerNotifications): RedirectResponse
     {
-        $validated = $request->validate([
-            'action' => ['required', Rule::in(['approve', 'reject'])],
-            'product_ids' => ['required', 'array', 'min:1'],
-            'product_ids.*' => ['integer', 'exists:products,id'],
-            'rejection_reason_key' => ['nullable', Rule::in(array_keys($this->rejectionReasons()))],
-            'rejection_reason_custom' => ['nullable', 'string', 'max:500'],
-        ]);
+        $this->authorize('bulkModerate', Product::class);
+        $validated = $request->validated();
 
         $products = Product::with('user.sellerProfile')->whereIn('id', $validated['product_ids'])->get();
 
@@ -197,7 +194,10 @@ class ProductApprovalController extends Controller
             return back()->with('success', 'Selected products approved.');
         }
 
-        $rejectionReason = $this->buildRejectionReason($request);
+        $rejectionReason = $this->resolveRejectionReason(
+            (string) ($validated['rejection_reason_key'] ?? ''),
+            trim((string) ($validated['rejection_reason_custom'] ?? ''))
+        );
         if (! $rejectionReason) {
             return back()->with('error', 'Select a rejection reason.');
         }

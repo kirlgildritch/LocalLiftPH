@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Buyer\SaveAddressRequest;
 use App\Models\Address;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,33 +14,6 @@ class AddressController extends Controller
     protected function redirectTarget(Request $request): string
     {
         return $request->input('return_to') ?: route('buyer.addresses');
-    }
-
-    protected function validatedAddress(Request $request): array
-    {
-        return $request->validate([
-            'full_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'region' => 'required|string|max:255',
-            'province' => 'required|string|max:255',
-            'city' => 'required|string|max:255',
-            'barangay' => 'required|string|max:255',
-            'street_address' => 'required|string|max:255',
-            'postal_code' => 'required|string|max:20',
-            'landmark' => 'required|string|max:255',
-            'label' => 'nullable|string|max:50',
-            'is_default' => 'nullable|boolean',
-        ], [
-            'full_name.required' => 'Please enter the recipient name.',
-            'phone.required' => 'Please enter the phone number.',
-            'region.required' => 'Please select a region.',
-            'province.required' => 'Please select a province.',
-            'city.required' => 'Please select a city or municipality.',
-            'barangay.required' => 'Please select a barangay.',
-            'street_address.required' => 'Please enter the street address.',
-            'postal_code.required' => 'Please enter the postal code.',
-            'landmark.required' => 'Please enter a landmark.',
-        ]);
     }
 
     protected function ownedAddressOrFail(Address $address): Address
@@ -68,9 +42,9 @@ class AddressController extends Controller
         return view('buyer.add_address', compact('returnTo'));
     }
 
-    public function store(Request $request)
+    public function store(SaveAddressRequest $request)
     {
-        $validated = $this->validatedAddress($request);
+        $validated = $request->validated();
 
         DB::transaction(function () use ($validated) {
             if (($validated['is_default'] ?? false) || ! Address::where('user_id', Auth::id())->exists()) {
@@ -87,10 +61,10 @@ class AddressController extends Controller
             ->with('success', 'Address saved successfully.');
     }
 
-    public function update(Request $request, Address $address)
+    public function update(SaveAddressRequest $request, Address $address)
     {
         $address = $this->ownedAddressOrFail($address);
-        $validated = $this->validatedAddress($request);
+        $validated = $request->validated();
 
         DB::transaction(function () use ($address, $validated) {
             if (($validated['is_default'] ?? false) || $address->is_default) {

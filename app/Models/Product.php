@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Cart;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\OrderItem;
+use Illuminate\Support\Collection;
 
 class Product extends Model
 {
@@ -107,7 +108,48 @@ class Product extends Model
             ->withCount('reviews');
     }
 
-    public function getGalleryMediaAttribute()
+    public function resolvedActiveVariants(): Collection
+    {
+        if ($this->relationLoaded('variants')) {
+            return $this->variants->where('is_active', true)->values();
+        }
+
+        if ($this->relationLoaded('activeVariants')) {
+            return $this->getRelation('activeVariants')->values();
+        }
+
+        return $this->activeVariants()->get();
+    }
+
+    public function roundedAverageRating(int $precision = 1): float
+    {
+        return round((float) ($this->reviews_avg_rating ?? 0), $precision);
+    }
+
+    public function detailDisplayState(): array
+    {
+        $galleryMedia = $this->gallery_media ?? collect();
+        $activeVariants = $this->resolvedActiveVariants();
+        $hasVariants = $activeVariants->isNotEmpty();
+        $displayStock = $hasVariants ? (int) $activeVariants->sum('stock') : (int) $this->stock;
+        $displayPrice = $hasVariants ? (float) $activeVariants->min('price') : (float) $this->price;
+        $initialQuantity = $hasVariants ? 0 : ($displayStock > 0 ? 1 : 0);
+
+        return [
+            'averageRating' => $this->roundedAverageRating(),
+            'galleryMedia' => $galleryMedia,
+            'initialMedia' => $galleryMedia->first(),
+            'activeVariants' => $activeVariants,
+            'hasVariants' => $hasVariants,
+            'displayStock' => $displayStock,
+            'displayPrice' => $displayPrice,
+            'initialQuantity' => $initialQuantity,
+            'purchaseMaxStock' => max(0, $hasVariants ? 0 : $displayStock),
+            'initialPurchaseTotal' => (! $hasVariants && $displayStock > 0) ? $displayPrice : 0.0,
+        ];
+    }
+
+    public function getGalleryMediaAttribute(): Collection
     {
         $gallery = collect();
         $seenPaths = [];

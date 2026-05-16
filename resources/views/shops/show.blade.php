@@ -3,12 +3,14 @@
 
 @section('content')
 <link rel="stylesheet" href="{{ asset('assets/css/shop_details.css') }}">
-@php($ownsShop = auth()->check() && (int) $user->id === (int) auth()->id())
-@php($shopCategories = $products->groupBy(fn($product) => $product->category?->name ?? 'Uncategorized'))
-@php($canReportSeller = auth('web')->check() && !$ownsShop)
-@php($shopReviewsToggleUrl = $showAllReviews
-    ? route('shops.show', $user) . '#shop-reviews'
-    : route('shops.show', array_merge(request()->query(), ['user' => $user->getRouteKey(), 'show_reviews' => 'all'])) . '#shop-reviews')
+@php
+    $ownsShop = auth()->check() && (int) $user->id === (int) auth()->id();
+    $shopCategories = $products->groupBy(fn ($product) => $product->category?->name ?? 'Uncategorized');
+    $canReportSeller = auth('web')->check() && ! $ownsShop;
+    $shopReviewsToggleUrl = $showAllReviews
+        ? route('shops.show', $user) . '#shop-reviews'
+        : route('shops.show', array_merge(request()->query(), ['user' => $user->getRouteKey(), 'show_reviews' => 'all'])) . '#shop-reviews';
+@endphp
 
 <section class="shop-detail-page">
     <div class="container">
@@ -235,7 +237,7 @@
                         </div>
                     </div>
 
-                    <div class="product-grid product-card-grid" data-skeleton-group data-skeleton-delay="420">
+                    <div class="product-grid product-card-grid">
                         @forelse($products as $product)
                             <x-product-card :product="$product" />
                         @empty

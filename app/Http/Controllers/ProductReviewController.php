@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductReview\StoreProductReviewRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -16,26 +17,10 @@ use Illuminate\Support\Facades\Auth;
 
 class ProductReviewController extends Controller
 {
-    public function store(Request $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
+    public function store(StoreProductReviewRequest $request, Product $product, SellerNotificationService $sellerNotifications): RedirectResponse|JsonResponse
     {
         $maxFiles = ReviewUploadLimit::maxFiles();
-        $maxFileKilobytes = ReviewUploadLimit::appMaxFileKilobytes();
-
-        $this->normalizeFileInput($request, 'review_media');
-        $this->normalizeFileInput($request, 'review_image');
-        $this->normalizeFileInput($request, 'review_video');
-
-        $validated = $request->validate([
-            'order_item_id' => ['required', 'integer'],
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
-            'comment' => ['nullable', 'string', 'max:1500'],
-            'review_media' => ['nullable', 'array', 'max:' . $maxFiles],
-            'review_media.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:' . $maxFileKilobytes],
-            'review_image' => ['nullable', 'array', 'max:' . $maxFiles],
-            'review_image.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:' . $maxFileKilobytes],
-            'review_video' => ['nullable', 'array', 'max:' . $maxFiles],
-            'review_video.*' => ['file', 'mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi,webm,mkv,3gp,m4v', 'max:' . $maxFileKilobytes],
-        ]);
+        $validated = $request->validated();
 
         $uploadedFiles = [
             ...$this->uploadedFiles($request, 'review_media'),
@@ -148,20 +133,6 @@ class ProductReviewController extends Controller
             fn ($file) => $file instanceof UploadedFile
         ));
     }
-
-    private function normalizeFileInput(Request $request, string $key): void
-    {
-        if (! $request->hasFile($key)) {
-            return;
-        }
-
-        $files = $request->file($key);
-
-        if ($files instanceof UploadedFile) {
-            $request->files->set($key, [$files]);
-        }
-    }
-
     private function applyReviewableOrderItemConstraints($query, Product $product): void
     {
         $query->where('product_id', $product->id)

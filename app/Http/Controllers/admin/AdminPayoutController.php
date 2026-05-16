@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\MarkPayoutPaidRequest;
 use App\Models\Order;
 use App\Models\SellerPayout;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AdminPayoutController extends Controller
@@ -22,15 +22,13 @@ class AdminPayoutController extends Controller
         return view('admin.payouts', compact('payouts'));
     }
 
-    public function markPaid(Request $request, SellerPayout $payout): RedirectResponse
+    public function markPaid(MarkPayoutPaidRequest $request, SellerPayout $payout): RedirectResponse
     {
         if ($payout->status !== SellerPayout::STATUS_PENDING) {
             return back()->with('warning', 'This payout is already processed.');
         }
 
-        $validated = $request->validate([
-            'reference_number' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         DB::transaction(function () use ($payout, $validated): void {
             $payout->update([

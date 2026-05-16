@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Buyer\CancelOrderRequest;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\OrderCancellation;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Notifications\SellerNotificationService;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -44,13 +46,7 @@ class OrderController extends Controller
             ->groupBy('shipping_status')
             ->pluck('count', 'shipping_status');
 
-        $checkoutGroupCounts = Order::query()
-            ->where('user_id', Auth::id())
-            ->get(['id', 'checkout_group'])
-            ->groupBy(fn(Order $order) => $order->checkoutGroupKey())
-            ->map(fn($group) => $group->count());
-
-        return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts', 'checkoutGroupCounts'));
+        return view('buyer.orders', compact('orders', 'currentStatus', 'statusCounts'));
     }
 
     public function show(Order $order)
@@ -70,13 +66,7 @@ class OrderController extends Controller
             ->latest('id')
             ->get();
 
-        $groupSummary = [
-            'items' => (int) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->itemCount()),
-            'subtotal' => (float) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->subtotalAmount()),
-            'shipping' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->shipping_fee),
-            'total' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->total_price),
-            'shops' => (int) $groupOrders->count(),
-        ];
+        $groupSummary = $this->buildGroupSummary($groupOrders);
 
         return view('buyer.order-show', [
             'order' => $order,
@@ -87,7 +77,7 @@ class OrderController extends Controller
 
     public function buyAgain(Order $order)
     {
-        $this->authorize('view', $order);
+        $this->authorize('buyAgain', $order);
 
         $order->load(['items.product.activeVariants', 'items.variant']);
 
@@ -117,9 +107,9 @@ class OrderController extends Controller
         return redirect()->route('cart.index')->with('success', 'Items added to cart again.');
     }
 
-    public function cancel(Request $request, Order $order, SellerNotificationService $sellerNotifications)
+    public function cancel(CancelOrderRequest $request, Order $order, SellerNotificationService $sellerNotifications)
     {
-        $this->authorize('view', $order);
+        $this->authorize('cancel', $order);
         $order->loadMissing('items');
 
         if (!$order->canBeCancelled()) {
@@ -128,11 +118,7 @@ class OrderController extends Controller
                 ->with('error', 'Only orders before shipment can be cancelled.');
         }
 
-        $validated = $request->validate([
-            'reasons' => ['required', 'array', 'min:1'],
-            'reasons.*' => ['string', 'in:Changed my mind,Item price too high,Found better price elsewhere,Item damaged / defective,Delivery delay,Other'],
-            'other_reason' => ['nullable', 'string', 'max:500'],
-        ]);
+        $validated = $request->validated();
 
         $selectedReasons = collect($validated['reasons'] ?? [])
             ->filter()
@@ -140,13 +126,6 @@ class OrderController extends Controller
             ->values();
 
         $otherReason = trim((string) ($validated['other_reason'] ?? ''));
-
-        if ($selectedReasons->contains('Other') && $otherReason === '') {
-            return redirect()
-                ->route('buyer.orders.show', $order)
-                ->withErrors(['other_reason' => 'Provide a custom reason when selecting Other.'])
-                ->withInput();
-        }
 
         if (!$selectedReasons->contains('Other')) {
             $otherReason = null;
@@ -163,35 +142,7 @@ class OrderController extends Controller
                 ]
             );
 
-            $restockByProduct = $order->items
-                ->filter(fn ($item) => filled($item->product_id))
-                ->groupBy('product_id')
-                ->map(fn ($items) => (int) $items->sum('quantity'));
-
-            $restockByVariant = $order->items
-                ->filter(fn ($item) => filled($item->product_variant_id))
-                ->groupBy('product_variant_id')
-                ->map(fn ($items) => (int) $items->sum('quantity'));
-
-            if ($restockByVariant->isNotEmpty()) {
-                ProductVariant::query()
-                    ->whereIn('id', $restockByVariant->keys())
-                    ->lockForUpdate()
-                    ->get()
-                    ->each(function (ProductVariant $variant) use ($restockByVariant): void {
-                        $variant->increment('stock', (int) ($restockByVariant[$variant->id] ?? 0));
-                    });
-            }
-
-            if ($restockByProduct->isNotEmpty()) {
-                Product::query()
-                    ->whereIn('id', $restockByProduct->keys())
-                    ->lockForUpdate()
-                    ->get()
-                    ->each(function (Product $product) use ($restockByProduct): void {
-                        $product->increment('stock', (int) ($restockByProduct[$product->id] ?? 0));
-                    });
-            }
+            $this->restoreOrderInventory($order);
 
             $order->update([
                 'status' => Order::STATUS_CANCELLED,
@@ -210,7 +161,7 @@ class OrderController extends Controller
 
     public function confirmReceived(Order $order, SellerNotificationService $sellerNotifications)
     {
-        $this->authorize('view', $order);
+        $this->authorize('confirmReceived', $order);
 
         if (!$order->canConfirmReceipt()) {
             return redirect()
@@ -231,5 +182,49 @@ class OrderController extends Controller
         return redirect()
             ->route('buyer.orders.show', $order)
             ->with('success', 'Order marked as received successfully.');
+    }
+
+    protected function buildGroupSummary(EloquentCollection $groupOrders): array
+    {
+        return [
+            'items' => (int) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->itemCount()),
+            'subtotal' => (float) $groupOrders->sum(fn(Order $groupOrder) => $groupOrder->subtotalAmount()),
+            'shipping' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->shipping_fee),
+            'total' => (float) $groupOrders->sum(fn(Order $groupOrder) => (float) $groupOrder->total_price),
+            'shops' => (int) $groupOrders->count(),
+        ];
+    }
+
+    protected function restoreOrderInventory(Order $order): void
+    {
+        $restockByProduct = $order->items
+            ->filter(fn ($item) => filled($item->product_id))
+            ->groupBy('product_id')
+            ->map(fn ($items) => (int) $items->sum('quantity'));
+
+        $restockByVariant = $order->items
+            ->filter(fn ($item) => filled($item->product_variant_id))
+            ->groupBy('product_variant_id')
+            ->map(fn ($items) => (int) $items->sum('quantity'));
+
+        if ($restockByVariant->isNotEmpty()) {
+            ProductVariant::query()
+                ->whereIn('id', $restockByVariant->keys())
+                ->lockForUpdate()
+                ->get()
+                ->each(function (ProductVariant $variant) use ($restockByVariant): void {
+                    $variant->increment('stock', (int) ($restockByVariant[$variant->id] ?? 0));
+                });
+        }
+
+        if ($restockByProduct->isNotEmpty()) {
+            Product::query()
+                ->whereIn('id', $restockByProduct->keys())
+                ->lockForUpdate()
+                ->get()
+                ->each(function (Product $product) use ($restockByProduct): void {
+                    $product->increment('stock', (int) ($restockByProduct[$product->id] ?? 0));
+                });
+        }
     }
 }
