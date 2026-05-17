@@ -40,10 +40,18 @@
         <div class="footer-col">
             <h4>Connect</h4>
             <ul>
-                <li><i class="fa-brands fa-facebook-f"></i> Facebook</li>
-                <li><i class="fa-brands fa-instagram"></i> Instagram</li>
-                <li><i class="fa-brands fa-tiktok"></i> TikTok</li>
-                <li><i class="fa-solid fa-envelope"></i> support@locallift.ph</li>
+                <a href="https://www.facebook.com/localliftph" target="_blank" rel="noopener noreferrer">
+                    <li><i class="fa-brands fa-facebook-f"></i> Facebook</li>
+                </a>
+                <a href="https://www.instagram.com/localliftph/" target="_blank" rel="noopener noreferrer">
+                    <li><i class="fa-brands fa-instagram"></i> Instagram</li>
+                </a>
+                <a href="https://www.tiktok.com/@localliftph" target="_blank" rel="noopener noreferrer">
+                    <li><i class="fa-brands fa-tiktok"></i> TikTok</li>
+                </a>
+                <a href="mailto:support@locallift.ph">
+                    <li><i class="fa-solid fa-envelope"></i> support@locallift.ph</li>
+                </a>
             </ul>
         </div>
     </div>
