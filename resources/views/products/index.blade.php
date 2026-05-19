@@ -121,18 +121,36 @@
 
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
                                 @foreach($shops as $shop)
+                                    @php
+                                        $sellerProfile = $shop->sellerProfile;
+                                        $shopName = $sellerProfile?->store_name ?: $shop->name;
+                                        $shopDescription = $sellerProfile?->store_description;
+                                        $shopLogo = $sellerProfile?->shop_logo;
+                                    @endphp
                                     <div style="padding: 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;">
                                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
-                                            <img src="{{ !empty($shop->profile_image) ? asset('storage/' . $shop->profile_image) : asset('assets/images/default-product.png') }}"
-                                                alt="{{ $shop->name }}"
-                                                style="width: 52px; height: 52px; object-fit: cover; border-radius: 50%;">
+                                            @if(!empty($shopLogo))
+                                                <img src="{{ asset('storage/' . $shopLogo) }}"
+                                                    alt="{{ $shopName }} logo"
+                                                    style="width: 52px; height: 52px; object-fit: cover; border-radius: 50%;">
+                                            @else
+                                                <div style="width: 52px; height: 52px; display: grid; place-items: center; flex: 0 0 52px; border-radius: 50%; background: rgba(255,255,255,0.08); color: #bbdefb;">
+                                                    <i class="fa-solid fa-store"></i>
+                                                </div>
+                                            @endif
                                             <div>
-                                                <h4 style="margin: 0;">{{ $shop->name }}</h4>
+                                                <h4 style="margin: 0;">{{ $shopName }}</h4>
                                                 <small style="color: #9fb3c8;">
                                                     {{ $shop->products_count }} product{{ $shop->products_count != 1 ? 's' : '' }}
                                                 </small>
                                             </div>
                                         </div>
+
+                                        @if(!empty($shopDescription))
+                                            <p style="margin: 0 0 12px; color: #9fb3c8; line-height: 1.5;">
+                                                {{ \Illuminate\Support\Str::limit($shopDescription, 90) }}
+                                            </p>
+                                        @endif
 
                                         <a href="{{ route('shops.show', $shop->id) }}" class="action-btn secondary-btn">
                                             Visit Shop

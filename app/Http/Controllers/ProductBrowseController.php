@@ -74,7 +74,8 @@ class ProductBrowseController extends Controller
             }
         ])->orderBy('name')->get();
 
-        $shops = User::withCount([
+        $shops = User::with('sellerProfile')
+            ->withCount([
             'products' => function ($query) {
                 $query->visibleToBuyers();
             }
